@@ -4,9 +4,12 @@ import (
 	"byteport/models"
 	"fmt"
 	"log"
+	"net/http"
+	"strings"
 	"time"
 
 	"aidanwoods.dev/go-paseto"
+	"github.com/gin-gonic/gin"
 	"github.com/zalando/go-keyring"
 )
 const (
@@ -17,10 +20,10 @@ const (
 func storeSymmetricKey(key string) error {
     return keyring.Set(keyringService, keyringUser, key)
 }
-
 func getSymmetricKey() (string, error) {
     return keyring.Get(keyringService, keyringUser)
 }
+
 func InitAuthSystem() error {
 	keyHex := generateSymmetricKey()
 	err := storeSymmetricKey(keyHex)
@@ -81,6 +84,7 @@ func AuthenticateRequest(encryptedToken string) (*models.User, error) {
 	if err != nil {
 		return nil, err
 	}
+	user.Password = "";
 
 	return &user, nil
 }
@@ -107,4 +111,43 @@ func ValidateToken(encryptedToken string) (bool, *paseto.Token, error) {
 
 
 	return true, token, nil
+}
+func AuthMiddleware() gin.HandlerFunc {
+    return func(c *gin.Context) {
+        // Extract token from headers
+        authToken, _ := c.Cookie("authToken")
+        if authToken == "" {
+            c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header missing"})
+            c.Abort()
+            return
+        }
+
+        // Validate token and get user
+        tokenString := strings.TrimPrefix(authToken, "Bearer ")
+        valid, token, err := ValidateToken(tokenString)
+        if err != nil || !valid {
+            c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
+            c.Abort()
+            return
+        }
+
+        userID,_ := token.GetString("user-id")
+        if userID == "" {
+            c.JSON(http.StatusUnauthorized, gin.H{"error": "User ID not found in token"})
+            c.Abort()
+            return
+        }
+
+        // Retrieve user from database
+        var user models.User
+        if err := models.DB.Where("uuid = ?", userID).First(&user).Error; err != nil {
+            c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
+            c.Abort()
+            return
+        }
+
+        // Set user in context
+        c.Set("user", user)
+        c.Next()
+    }
 }

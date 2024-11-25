@@ -1,17 +1,10 @@
 package models
 
-import (
-	"gorm.io/gorm"
-)
-
 type User struct {
-    gorm.Model
-	// primary key uuid
 	UUID       string `gorm:"type:text;primaryKey"`
     Name     string `gorm:"not null"`
     Email    string `gorm:"unique;not null"`
-    Password string `gorm:"not null"`
-	EncryptedToken string `gorm:"-" json:"encrypted_token"`
+    Password string `gorm:"not null" `
     AwsCreds     AwsCreds     `gorm:"embedded;embeddedPrefix:aws_"`
     OpenAICreds  OpenAICreds  `gorm:"embedded;embeddedPrefix:openai_"`
     Portfolio    Portfolio    `gorm:"embedded;embeddedPrefix:portfolio_"`
@@ -37,4 +30,20 @@ type Git struct {
     AuthMethod      string `gorm:"column:auth_method"`
     AuthKey         string `gorm:"column:auth_key"`
     TargetDirectory string `gorm:"column:target_directory"`
+}
+type LoginRequest struct {
+    Email    string `json:"email"`
+    Password string `json:"password"`
+}
+type SignupRequest struct {
+    Name     string `json:"name"`
+    Email    string `json:"email"`
+    Password string `json:"password"`
+}
+// contains everything not in signup request but in the original user object
+type LinkRequest struct {
+    AwsCreds     AwsCreds     `gorm:"embedded;embeddedPrefix:aws_"`
+    OpenAICreds  OpenAICreds  `gorm:"embedded;embeddedPrefix:openai_"`
+    Portfolio    Portfolio    `gorm:"embedded;embeddedPrefix:portfolio_"`
+    Git          Git          `gorm:"embedded;embeddedPrefix:git_"`
 }
