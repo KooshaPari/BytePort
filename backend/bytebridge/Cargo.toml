@@ -1,0 +1,12 @@
+[package]
+name = "bytebridge"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+volo = "0.10.3"
+volo-build = "0.10.17"
+volo-cli = "0.10.4"
+volo-grpc = "0.10.4"
+volo-http = "0.2.14"
+volo-macros = "0.10.0"
