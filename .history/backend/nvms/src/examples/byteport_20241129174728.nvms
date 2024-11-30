@@ -1,0 +1,5 @@
+FROM: aws-ubuntu:minimal
+
+NAME: byteport
+DESCRIPTION: "BytePort is a Deployment Management System for SWE Professionals"
+VERSION: "1.0.0"

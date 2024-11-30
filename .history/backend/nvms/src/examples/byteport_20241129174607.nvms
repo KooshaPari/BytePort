@@ -1,0 +1,36 @@
+FROM: aws-ubuntu:minimal
+NAME: byteport-backend
+
+# Core service configuration
+SERVICES:
+  backend:
+    PATH: ./src/backend
+    BUILD:
+      - go build -o byteport
+    PORT: 5150
+    ENV:
+      - DB_PATH=/data/byteport.db
+      - ENV=production
+      - LOG_LEVEL=info
+    VOLUMES:
+      - /data  # For SQLite persistence
+
+# Resource allocation
+RESOURCES:
+  CPU: 1
+  MEMORY: 1GB
+  STORAGE: 10GB
+
+# Network setup
+NETWORK:
+  PORT_MAPPINGS:
+    - "5150:5150"  # API port
+  SECURITY:
+    INBOUND:
+      - "TCP 5150 ANY"  # Allow incoming API traffic
+
+# Basic monitoring
+MONITORING:
+  HEALTH_CHECK:
+    PATH: /health
+    INTERVAL: 30s
