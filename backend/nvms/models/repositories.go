@@ -48,6 +48,7 @@ type Repository struct {
 	ForksCount      uint   `gorm:"not null" json:"forks_count"`
 	MirrorURL       string `gorm:"null" json:"mirror_url"`
 	Archived        bool   `gorm:"not null" json:"archived"`
+	ArchiveURL	  string `gorm:"null" json:"archive_url"`
 	Disabled        bool   `gorm:"not null" json:"disabled"`
 	OpenIssuesCount uint   `gorm:"not null" json:"open_issues_count"`
 	License         string `gorm:"null" json:"license"`
