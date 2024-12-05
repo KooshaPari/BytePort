@@ -16,7 +16,7 @@ import (
 
 // Main function to download and extract the GitHub repository
 func TestZip(c *gin.Context) {
-	archiveURL := "https://api.github.com/repos/KooshaPari/odin-dash/zipball/main"
+	archiveURL := "https://api.github.com/repos/KooshaPari/BytePort/zipball/main"
 	var project models.Project
 	err := c.ShouldBindJSON(&project)
 	if err != nil {

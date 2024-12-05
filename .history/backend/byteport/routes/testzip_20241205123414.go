@@ -16,7 +16,7 @@ import (
 
 // Main function to download and extract the GitHub repository
 func TestZip(c *gin.Context) {
-	archiveURL := "https://api.github.com/repos/KooshaPari/odin-dash/zipball/main"
+	archiveURL := "https://api.github.com/repos/KooshaPari/BytePort/zipball/main"
 	var project models.Project
 	err := c.ShouldBindJSON(&project)
 	if err != nil {
@@ -57,8 +57,6 @@ func TestZip(c *gin.Context) {
 		fmt.Println(" -", file)
 	}
 	fmt.Printf("Total files: %d\n", len(fileList))
-	// return contents of readme
-	c.JSON(http.StatusOK, gin.H{"files": fileList, "fileMap": fileMap})
 }
 
 // Function to download the repository archive
@@ -95,7 +93,7 @@ func downloadRepo(archiveURL, authToken string) (*http.Response, error) {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		fmt.Println("Response: ", resp)
+		fmt.Pt
 		return nil, fmt.Errorf("unexpected response status: %s", resp.Status)
 	}
 	return resp, nil

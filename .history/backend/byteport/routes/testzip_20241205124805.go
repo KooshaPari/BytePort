@@ -68,7 +68,7 @@ func downloadRepo(archiveURL, authToken string) (*http.Response, error) {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 	req.Header.Add("User-Agent", "Byteport")
-	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", authToken))
+	//req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", authToken))
 	req.Header.Add("Accept", "application/vnd.github+json")
 
 	client := &http.Client{}

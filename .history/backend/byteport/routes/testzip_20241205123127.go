@@ -16,21 +16,20 @@ import (
 
 // Main function to download and extract the GitHub repository
 func TestZip(c *gin.Context) {
-	archiveURL := "https://api.github.com/repos/KooshaPari/odin-dash/zipball/main"
+	archiveURL := "https://api.github.com/repos/KooshaPari/BytePort/zipball/main"
 	var project models.Project
 	err := c.ShouldBindJSON(&project)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	user := project.User
+	user := project.user
 	encryptedToken := user.Git.Token
 	authToken, err := lib.DecryptSecret(encryptedToken)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to decrypt Git token"})
 		return
 	}
-	fmt.Println("Auth token: ", authToken)
 
 	// Download the repository archive
 	fmt.Println("Downloading repository archive...")
@@ -57,8 +56,6 @@ func TestZip(c *gin.Context) {
 		fmt.Println(" -", file)
 	}
 	fmt.Printf("Total files: %d\n", len(fileList))
-	// return contents of readme
-	c.JSON(http.StatusOK, gin.H{"files": fileList, "fileMap": fileMap})
 }
 
 // Function to download the repository archive
@@ -95,7 +92,6 @@ func downloadRepo(archiveURL, authToken string) (*http.Response, error) {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		fmt.Println("Response: ", resp)
 		return nil, fmt.Errorf("unexpected response status: %s", resp.Status)
 	}
 	return resp, nil
