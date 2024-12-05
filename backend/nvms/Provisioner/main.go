@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"nvms/lib"
 	"nvms/models"
+	"path"
 	"strings"
 
 	spinhttp "github.com/fermyon/spin/sdk/go/v2/http"
@@ -24,9 +25,9 @@ func getArchiveURL(archiveURL string) string {
 }
 
 func init() {
-
     spinhttp.Handle(func(w http.ResponseWriter, r *http.Request) {
         fmt.Println("Received request")
+        
         var project models.Project
         body, err := io.ReadAll(r.Body)
         if err != nil {
@@ -52,27 +53,28 @@ func init() {
 
         zipResp, err := DownloadRepo(w, r, archiveURL, authToken)
         if err != nil {
+            fmt.Println("Error downloading zip file: ", err)
             http.Error(w, err.Error(), http.StatusInternalServerError)
-        }
-
-        defer zipResp.Body.Close()
+            return
+        } 
         fmt.Println("Processing zip file...")
-        
+
+
+
         zipReader, err := processZip(zipResp, w,r)
         if err != nil {
+            fmt.Println("Error processing zip file: ", err)
             http.Error(w, err.Error(), http.StatusInternalServerError)
             return
         }
         fmt.Println("Reading zip file...")
-        nvmsFile, readmeFile, err := readZip(zipReader)
-        if err != nil {
-            http.Error(w, err.Error(), http.StatusInternalServerError)
-            return
-        }
-        fmt.Println("NVMS File: ", nvmsFile)
-        fmt.Println("Readme File: ", readmeFile)
+        fileList, fileMap := readZip(zipReader)
+        fmt.Println("Extracted files:")
         response := map[string]interface{}{
             "status": "success",
+            "files": fileList,
+            "fileMap": fileMap,
+            "fileCount": len(fileList),
             "repository": map[string]string{
                 "name": project.Name,
                 "url": project.Repository.ArchiveURL,
@@ -84,51 +86,50 @@ func init() {
             http.Error(w, "Failed to encode response", http.StatusInternalServerError)
             return
         }
-
     })
 }
-func readFileFromZip(f *zip.File) (string, error) {
-	rc, err := f.Open()
-	if err != nil {
-        fmt.Println("Error opening file: ", err)
-		return "", err
-	}
-	defer rc.Close()
-
-	var buf bytes.Buffer
-	if _, err = io.Copy(&buf, rc); err != nil {
-		return "", err
-	}
-	return buf.String(), nil
-}
-func readZip(r *zip.Reader) (string,string,error) {
+func readZip(zipReader *zip.Reader) ([]string, map[string][]byte) {
     
-        	var nvmsFile, readmeFile string
-            var err error
-	for _, f := range r.File {
-		// Check for *.nvms file
-		if strings.HasSuffix(f.Name, ".nvms") && nvmsFile == "" {
-			nvmsFile, err = readFileFromZip(f)
-			if err != nil {
-				return "", "", err
-			}
-		}
-		// Check for README.* file
-		if strings.HasPrefix(strings.ToLower(f.Name), "readme.") && readmeFile == "" {
-			readmeFile, err = readFileFromZip(f)
-			if err != nil {
-				return "", "", err
-			}
-		}
-		// Break early if both files are found
-		if nvmsFile != "" && readmeFile != "" {
-			break
-		}
-	}
-	return nvmsFile, readmeFile, nil
+        fileMap := make(map[string][]byte)
+        var fileList []string
+        for _, file := range zipReader.File {
+            if file.FileInfo().IsDir() {
+                continue
+            }
+
+            parts := strings.Split(file.Name, "/")
+            if len(parts) > 1 {
+                parts = parts[1:]
+            }
+            relativePath := path.Join(parts...)
+            fmt.Printf("File: %s, Method: %d\n", file.Name, file.Method)
+
+            if file.Method != zip.Deflate && file.Method != zip.Store {
+                fmt.Printf("Warning: Unsupported compression method %d for file %s\n", file.Method, file.Name)
+                continue
+            }
+            rc, err := file.Open()
+            if err != nil {
+                fmt.Printf("Warning: Could not open file %s: %v\n", file.Name, err)
+                continue
+            }
+
+            content, err := io.ReadAll(rc)
+            rc.Close()
+            
+            if err != nil {
+                fmt.Printf("Warning: Could not read file %s: %v\n", file.Name, err)
+                continue
+            }
+
+            fileMap[relativePath] = content
+            fileList = append(fileList, relativePath)
+        }
+        return fileList, fileMap;
 
 }
 func processZip(zipResp *http.Response, w http.ResponseWriter, r *http.Request) (*zip.Reader, error) {
+    fmt.Println("Processing zip file...")
      zipBytes, err := io.ReadAll(zipResp.Body)
         if err != nil {
             http.Error(w, fmt.Sprintf("Failed to read zip file: %v", err), http.StatusInternalServerError)
@@ -155,7 +156,7 @@ func DownloadRepo(w http.ResponseWriter, r *http.Request, archiveURL string, aut
          
         }
         req.Header.Add("User-Agent", "Byteport") // Set user agent  
-        req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", authToken)) // Add token to headers
+        //req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", authToken)) // Add token to headers
         req.Header.Add("Accept", "application/vnd.github+json") // Set accept header to GitHub API
         //fmt.Println("HEAD: ", req.Header)
         // print out full request
@@ -166,14 +167,40 @@ func DownloadRepo(w http.ResponseWriter, r *http.Request, archiveURL string, aut
         
         }
         defer resp.Body.Close()
+        fmt.Println("Checking for Redirect...")
+        fmt.Println("Status: ", resp.StatusCode)
+        fmt.Println("Response: ", resp)
+        // Check for redirect
         var zipResp *http.Response
         if resp.StatusCode != http.StatusFound && resp.StatusCode != http.StatusOK {
             http.Error(w, fmt.Sprintf("Expected redirect or file, got: %s", resp.Status), resp.StatusCode)
            
         }
-        
-        zipResp = resp
-        
+        if(resp.StatusCode == http.StatusFound){
+            fmt.Println("Found, Redirecting...")
+            // Get redirect URL from Location header
+            redirectURL := resp.Header.Get("Location")
+            if redirectURL == "" {
+                http.Error(w, "No redirect URL provided", http.StatusInternalServerError)
+              
+            }
+
+            fmt.Println("Redirect URL: ", redirectURL)
+            redirReq, err := http.NewRequest("GET", redirectURL, nil)
+            zipResp, err := spinhttp.Send(redirReq)
+            if err != nil {
+                http.Error(w, fmt.Sprintf("Failed to download zip: %v", err), http.StatusInternalServerError)
+             
+            }
+            defer zipResp.Body.Close()
+
+            if zipResp.StatusCode != http.StatusOK {
+                http.Error(w, fmt.Sprintf("Failed to download zip, status: %s", zipResp.Status), zipResp.StatusCode)
+               
+            }
+        }else{
+            zipResp = resp
+        }
         return zipResp, nil
 }
 func main() {}

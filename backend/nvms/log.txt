@@ -1,12 +1,99 @@
 Received request
-Received request
-Archive URL:  https://api.github.com/repos/KooshaPari/odin-dash/{file}{/refs}
 Archive URL:  https://api.github.com/repos/KooshaPari/odin-dash/{file}{/refs}
 Initial Archive URL:  https://api.github.com/repos/KooshaPari/odin-dash/zipball
-Initial Archive URL:  https://api.github.com/repos/KooshaPari/odin-dash/zipball
-Processing zip file...
+Checking for Redirect...
+Status:  200
+Response:  FULL RESPONSE
 Processing zip file...
 Reading zip file...
+File: KooshaPari-odin-dash-e628e86/.github/workflows/static.yml, Method: 8
 Reading zip file...
-Error opening file:  zip: unsupported compression algorithm
-Error opening file:  zip: unsupported compression algorithm
+File: KooshaPari-odin-dash-e628e86/.github/workflows/static.yml, Method: 8
+Warning: Could not open file KooshaPari-odin-dash-e628e86/.github/workflows/static.yml: zip: unsupported compression algorithm
+File: KooshaPari-odin-dash-e628e86/Communities.svg, Method: 8
+Warning: Could not open file KooshaPari-odin-dash-e628e86/Communities.svg: zip: unsupported compression algorithm
+File: KooshaPari-odin-dash-e628e86/Dashboard.svg, Method: 8
+Warning: Could not open file KooshaPari-odin-dash-e628e86/Dashboard.svg: zip: unsupported compression algorithm
+File: KooshaPari-odin-dash-e628e86/History.svg, Method: 8
+Warning: Could not open file KooshaPari-odin-dash-e628e86/History.svg: zip: unsupported compression algorithm
+File: KooshaPari-odin-dash-e628e86/README.md, Method: 0
+Warning: Could not open file KooshaPari-odin-dash-e628e86/README.md: zip: unsupported compression algorithm
+Warning: Could not open file KooshaPari-odin-dash-e628e86/.github/workflows/static.yml: zip: unsupported compression algorithm
+File: KooshaPari-odin-dash-e628e86/Communities.svg, Method: 8
+Warning: Could not open file KooshaPari-odin-dash-e628e86/Communities.svg: zip: unsupported compression algorithm
+File: KooshaPari-odin-dash-e628e86/Dashboard.svg, Method: 8
+Warning: Could not open file KooshaPari-odin-dash-e628e86/Dashboard.svg: zip: unsupported compression algorithm
+File: KooshaPari-odin-dash-e628e86/History.svg, Method: 8
+Warning: Could not open file KooshaPari-odin-dash-e628e86/History.svg: zip: unsupported compression algorithm
+File: KooshaPari-odin-dash-e628e86/README.md, Method: 0
+Warning: Could not open file KooshaPari-odin-dash-e628e86/README.md: zip: unsupported compression algorithm
+File: KooshaPari-odin-dash-e628e86/Tasks.svg, Method: 8
+Warning: Could not open file KooshaPari-odin-dash-e628e86/Tasks.svg: zip: unsupported compression algorithm
+File: KooshaPari-odin-dash-e628e86/Tasks.svg, Method: 8
+Warning: Could not open file KooshaPari-odin-dash-e628e86/Tasks.svg: zip: unsupported compression algorithm
+File: KooshaPari-odin-dash-e628e86/dash.js, Method: 0
+Warning: Could not open file KooshaPari-odin-dash-e628e86/dash.js: zip: unsupported compression algorithm
+File: KooshaPari-odin-dash-e628e86/dash.js, Method: 0
+Warning: Could not open file KooshaPari-odin-dash-e628e86/dash.js: zip: unsupported compression algorithm
+File: KooshaPari-odin-dash-e628e86/home.svg, Method: 8
+Warning: Could not open file KooshaPari-odin-dash-e628e86/home.svg: zip: unsupported compression algorithm
+File: KooshaPari-odin-dash-e628e86/home.svg, Method: 8
+Warning: Could not open file KooshaPari-odin-dash-e628e86/home.svg: zip: unsupported compression algorithm
+File: KooshaPari-odin-dash-e628e86/index.html, Method: 8
+Warning: Could not open file KooshaPari-odin-dash-e628e86/index.html: zip: unsupported compression algorithm
+File: KooshaPari-odin-dash-e628e86/messages.svg, Method: 8
+Warning: Could not open file KooshaPari-odin-dash-e628e86/messages.svg: zip: unsupported compression algorithm
+File: KooshaPari-odin-dash-e628e86/noti.svg, Method: 8
+Warning: Could not open file KooshaPari-odin-dash-e628e86/noti.svg: zip: unsupported compression algorithm
+File: KooshaPari-odin-dash-e628e86/index.html, Method: 8
+Warning: Could not open file KooshaPari-odin-dash-e628e86/index.html: zip: unsupported compression algorithm
+File: KooshaPari-odin-dash-e628e86/messages.svg, Method: 8
+Warning: Could not open file KooshaPari-odin-dash-e628e86/messages.svg: zip: unsupported compression algorithm
+File: KooshaPari-odin-dash-e628e86/noti.svg, Method: 8
+Warning: Could not open file KooshaPari-odin-dash-e628e86/noti.svg: zip: unsupported compression algorithm
+File: KooshaPari-odin-dash-e628e86/odin.nvms, Method: 8
+Warning: Could not open file KooshaPari-odin-dash-e628e86/odin.nvms: zip: unsupported compression algorithm
+File: KooshaPari-odin-dash-e628e86/odin.nvms, Method: 8
+Warning: Could not open file KooshaPari-odin-dash-e628e86/odin.nvms: zip: unsupported compression algorithm
+File: KooshaPari-odin-dash-e628e86/privacy.svg, Method: 8
+File: KooshaPari-odin-dash-e628e86/privacy.svg, Method: 8
+Warning: Could not open file KooshaPari-odin-dash-e628e86/privacy.svg: zip: unsupported compression algorithm
+File: KooshaPari-odin-dash-e628e86/profile-LIGHT.svg, Method: 8
+Warning: Could not open file KooshaPari-odin-dash-e628e86/privacy.svg: zip: unsupported compression algorithm
+File: KooshaPari-odin-dash-e628e86/profile-LIGHT.svg, Method: 8
+Warning: Could not open file KooshaPari-odin-dash-e628e86/profile-LIGHT.svg: zip: unsupported compression algorithm
+File: KooshaPari-odin-dash-e628e86/profile.svg, Method: 8
+Warning: Could not open file KooshaPari-odin-dash-e628e86/profile-LIGHT.svg: zip: unsupported compression algorithm
+File: KooshaPari-odin-dash-e628e86/profile.svg, Method: 8
+Warning: Could not open file KooshaPari-odin-dash-e628e86/profile.svg: zip: unsupported compression algorithm
+File: KooshaPari-odin-dash-e628e86/search.svg, Method: 8
+Warning: Could not open file KooshaPari-odin-dash-e628e86/search.svg: zip: unsupported compression algorithm
+File: KooshaPari-odin-dash-e628e86/settings.svg, Method: 8
+Warning: Could not open file KooshaPari-odin-dash-e628e86/settings.svg: zip: unsupported compression algorithm
+File: KooshaPari-odin-dash-e628e86/share.svg, Method: 8
+Warning: Could not open file KooshaPari-odin-dash-e628e86/share.svg: zip: unsupported compression algorithm
+File: KooshaPari-odin-dash-e628e86/star.svg, Method: 8
+Warning: Could not open file KooshaPari-odin-dash-e628e86/star.svg: zip: unsupported compression algorithm
+File: KooshaPari-odin-dash-e628e86/style.css, Method: 8
+Warning: Could not open file KooshaPari-odin-dash-e628e86/style.css: zip: unsupported compression algorithm
+File: KooshaPari-odin-dash-e628e86/support.svg, Method: 8
+Warning: Could not open file KooshaPari-odin-dash-e628e86/support.svg: zip: unsupported compression algorithm
+Warning: Could not open file KooshaPari-odin-dash-e628e86/profile.svg: zip: unsupported compression algorithm
+File: KooshaPari-odin-dash-e628e86/search.svg, Method: 8
+Warning: Could not open file KooshaPari-odin-dash-e628e86/search.svg: zip: unsupported compression algorithm
+File: KooshaPari-odin-dash-e628e86/settings.svg, Method: 8
+Warning: Could not open file KooshaPari-odin-dash-e628e86/settings.svg: zip: unsupported compression algorithm
+File: KooshaPari-odin-dash-e628e86/share.svg, Method: 8
+Warning: Could not open file KooshaPari-odin-dash-e628e86/share.svg: zip: unsupported compression algorithm
+File: KooshaPari-odin-dash-e628e86/star.svg, Method: 8
+Warning: Could not open file KooshaPari-odin-dash-e628e86/star.svg: zip: unsupported compression algorithm
+File: KooshaPari-odin-dash-e628e86/style.css, Method: 8
+Warning: Could not open file KooshaPari-odin-dash-e628e86/style.css: zip: unsupported compression algorithm
+File: KooshaPari-odin-dash-e628e86/support.svg, Method: 8
+Warning: Could not open file KooshaPari-odin-dash-e628e86/support.svg: zip: unsupported compression algorithm
+File: KooshaPari-odin-dash-e628e86/watch.svg, Method: 8
+Warning: Could not open file KooshaPari-odin-dash-e628e86/watch.svg: zip: unsupported compression algorithm
+Extracted files:
+File: KooshaPari-odin-dash-e628e86/watch.svg, Method: 8
+Warning: Could not open file KooshaPari-odin-dash-e628e86/watch.svg: zip: unsupported compression algorithm
+Extracted files:
