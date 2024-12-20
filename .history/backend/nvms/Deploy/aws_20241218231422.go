@@ -202,14 +202,19 @@ if [[ -f "go.mod" ]]; then
 # Add Go to path
 dnf install -y golang
 # Set Go environment
-export GOPATH=/root/go
-export GOMODCACHE=$GOPATH/pkg/mod
-export PATH=$PATH:/usr/local/go/bin:$GOPATH/bin
-# Create necessary directories
-mkdir -p $GOPATH
-mkdir -p $GOMODCACHE
-# Set permissions
-chmod -R 777 $GOPATH
+    export GOPATH=/root/go
+    export GOMODCACHE=$GOPATH/pkg/mod
+    export PATH=$PATH:/usr/local/go/bin:$GOPATH/bin
+    
+    # Create necessary directories
+    mkdir -p $GOPATH
+    mkdir -p $GOMODCACHE
+    
+    # Verify Go installation
+    go version
+    
+    # Set permissions
+    chmod -R 777 $GOPATH
 # Verify installation
 go version
 elif [[ -f "package.json" ]]; then

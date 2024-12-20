@@ -208,8 +208,9 @@ export PATH=$PATH:/usr/local/go/bin:$GOPATH/bin
 # Create necessary directories
 mkdir -p $GOPATH
 mkdir -p $GOMODCACHE
+    
 # Set permissions
-chmod -R 777 $GOPATH
+    chmod -R 777 $GOPATH
 # Verify installation
 go version
 elif [[ -f "package.json" ]]; then

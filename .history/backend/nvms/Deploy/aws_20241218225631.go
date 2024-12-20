@@ -198,18 +198,14 @@ cd %s
 
 # Install build dependencies based on service type
 if [[ -f "go.mod" ]]; then
+    log "Installing Go..."
+    wget https://go.dev/dl/go1.23.4.linux-amd64.tar.gz
+rm -rf /usr/local/go 
+tar -C /usr/local -xzf go1.23.4.linux-amd64.tar.gz
 
 # Add Go to path
 dnf install -y golang
-# Set Go environment
-export GOPATH=/root/go
-export GOMODCACHE=$GOPATH/pkg/mod
-export PATH=$PATH:/usr/local/go/bin:$GOPATH/bin
-# Create necessary directories
-mkdir -p $GOPATH
-mkdir -p $GOMODCACHE
-# Set permissions
-chmod -R 777 $GOPATH
+
 # Verify installation
 go version
 elif [[ -f "package.json" ]]; then
