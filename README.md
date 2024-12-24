@@ -1,3 +1,9 @@
+# Byteport
+## An IAC Deployment + UX Generation platform for Software Developer Portfolios
+## With One IAC File Defining your Application Structured and related infra, Byteport deploys your project from your github repository onto your aws cloud platform, then utilizing chatgpt(soon llama) to then send object templates for additions to demonstration/portfolio sites to display and provide interaction access to these projects (and show them off automagically!)
+### [Example](https://drive.google.com/file/d/1ZJeQOPHCNY1aHjXprNrmxMNi9hZaYSPW/view?usp=sharing)
+### Refer to [Fixit-Go](https://github.com/kooshapari/fixit-go) [Chatta](https://github.com/kooshapari/chatta) For Project Examples, [Slickport](https://github.com/kooshapari/slickport) for Portfolio integration example
+## GPT YAP BELOW (outdated) 
 # Project Manifesto: **BytePort** - MicroVM Cloud Management and Portfolio Integration
 
 ```
