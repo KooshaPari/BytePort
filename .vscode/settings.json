@@ -1,6 +1,20 @@
 {
 	"files.associations": {
 		"*.nvms": "yaml"
-	}
-	
+	},
+	"sqltools.connections": [
+		{
+			"previewLimit": 50,
+			"driver": "SQLite",
+			"database": "${workspaceFolder:BytePort}/Backend/database.db",
+			"name": "Byteport"
+		},
+		{
+			"previewLimit": 50,
+			"driver": "SQLite",
+			"name": "Tester",
+			"database": "D:\\koosh\\Downloads\\database.db"
+		}
+	],
+	"sqltools.useNodeRuntime": true
 }

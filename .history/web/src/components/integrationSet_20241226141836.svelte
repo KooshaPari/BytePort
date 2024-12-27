@@ -1,0 +1,1 @@
+<Button.Root on:click={() => terminateInstance(project)}>Terminate(X)</Button.Root>

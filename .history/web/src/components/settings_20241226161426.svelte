@@ -1,0 +1,143 @@
+<script lang="ts">
+  import { superForm } from 'sveltekit-superforms/client';
+  import { zodClient } from 'sveltekit-superforms/adapters';
+  import type { SuperValidated } from 'sveltekit-superforms';
+  import { formSchema } from './schema';
+
+  // Define default form values
+  const defaultFormValues = {
+    github: '',
+    aws: { 
+      accessKey: '', 
+      secretKey: '' 
+    },
+    openai: '',
+    demo: { 
+      endpoint: '', 
+      apiKey: '' 
+    },
+    modal: 'local' as const
+  };
+
+  export let data: { form?: SuperValidated<typeof formSchema> };
+  export let item: string;
+
+  // Initialize form with default values if data.form is undefined
+  const { form, validate, enhance } = superForm(
+    data?.form ?? defaultFormValues,
+    {
+      validators: zodClient(formSchema),
+      dataType: 'json',
+      // Ensure form is valid before submitting
+      onSubmit: ({ form, data }) => {
+        // Optional: Add any pre-submission validation here
+        return { form, data };
+      },
+      // Handle validation errors
+      onError: ({ result }) => {
+        console.error('Form validation failed:', result);
+      }
+    }
+  );
+</script>
+ 
+
+<form method="POST" class="space-y-8" use:enhance>
+	{#if item == 'integrations'}
+		<div class="openAICard align-center flex flex-row gap-3">
+			<Form.Field class=" " name="github" form={$form}>
+				<Form.Control let:attrs>
+					<Form.Label>Github Integration</Form.Label>
+					<Input {...attrs} bind:value={$form.github} />
+				</Form.Control>
+				<Form.FieldErrors />
+			</Form.Field>
+			<Form.Field class=" " name="aws" form={$form}>
+				<Form.Control let:attrs>
+					<Form.Label>AWS Access Key</Form.Label>
+					<Input {...attrs} bind:value={$form.aws.accessKey} />
+					<Form.Label>AWS Secret Key</Form.Label>
+					<Input {...attrs} bind:value={$form.aws.secretKey} />
+				</Form.Control>
+				<Form.FieldErrors />
+			</Form.Field>
+			<Form.Field form={$form} name="modal" class="flex flex-col justify-center">
+				<Popover.Root>
+					<Form.Control let:attrs>
+						<Form.Label>Modals</Form.Label>
+						<Popover.Trigger
+							role="combobox"
+							class={cn(
+								buttonVariants({ variant: 'outline' }),
+								'w-[200px] justify-between',
+								!$form.modal && 'text-muted-foreground'
+							)}
+							{...attrs}
+						>
+							{modals.find((modal) => modal.value === $form.modal)?.label || 'Select a modal'}
+							<CaretSort class="ml-2 size-4 shrink-0 opacity-50" />
+						</Popover.Trigger>
+						<input hidden value={$form.modal} name={attrs.name} />
+					</Form.Control>
+					<Popover.Content class="w-[200px] p-0">
+						<Command.Root>
+							<Command.List>
+								{#each modals as modal}
+									<Command.Item
+										{...form}
+										value={modal.label}
+										onSelect={() => {
+											$form.modal = modal.value;
+											validate('modal');
+										}}
+									>
+										<Check
+											class={cn(
+												'mr-2 size-4',
+												modal.value === $form.modal ? 'opacity-100' : 'opacity-0'
+											)}
+										/>
+										{modal.label}
+									</Command.Item>
+								{/each}
+							</Command.List>
+						</Command.Root>
+					</Popover.Content>
+				</Popover.Root>
+			</Form.Field>
+			<Form.Field class=" " name="openai" form={$form}>
+				<Form.Control let:attrs>
+					<Form.Label>OpenAI Key</Form.Label>
+					<Input
+						class={cn(
+							!$form.modal.includes('openai') && [
+								'text-muted-foreground',
+								'bg-muted',
+								'border-dark-surfaceContainerLow'
+							]
+						)}
+						disabled={!$form.modal.includes('openai')}
+						{...attrs}
+						bind:value={$form.openai}
+					/>
+				</Form.Control>
+				<Form.FieldErrors />
+			</Form.Field>
+		</div>
+		<Form.Field class=" " name="demo" form={$form}>
+			<Form.Control let:attrs>
+				<Form.Label>Portfolio URL</Form.Label>
+				<Input {...attrs} bind:value={$form.demo.endpoint} />
+				<Form.Label>Portfolio Key</Form.Label>
+				<Input {...attrs} bind:value={$form.demo.apiKey} />
+			</Form.Control>
+			<Form.FieldErrors />
+		</Form.Field>
+	{/if}
+
+	<Form.Button>Save {item}</Form.Button>
+</form>
+
+{#if browser}
+	<SuperDebug data={$form} />
+{/if}
