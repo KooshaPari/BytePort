@@ -1,0 +1,10 @@
+NAME: "fixitGo"
+DESCRIPTION: "basic todolist"
+SERVICES:
+- NAME: "backend"
+  PATH: "./backend"
+  PORT: 8081
+
+- NAME: "main"
+  PATH: "./frontend"
+  PORT: 8080

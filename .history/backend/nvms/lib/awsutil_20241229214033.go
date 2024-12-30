@@ -56,34 +56,34 @@ func DetectBuildPack(files []string, service models.Service) (*models.BuildPack,
     }
     buildpacks := []models.BuildPack{
         {
-        Name: "Spin",
-        DetectFiles: []string{"spin.toml"},
-        Packages: []string{"rust", "cargo", "golang", "spin"},  // Base requirements
-        PreBuild: []string{
-            // Install Spin CLI
-            "curl -fsSL https://developer.fermyon.com/downloads/install.sh | bash",
-            "mv spin /usr/local/bin/",
-            // Set up environment
-            "export SPIN_HOME=/root/.spin",
-            "mkdir -p $SPIN_HOME",
-        },
-        Build: []string{
-            // Build all components regardless of language
-            "spin build",
-        },
-        Start: "spin up --listen 0.0.0.0",  // Expose on port 80
-        RuntimeVersions: map[string]string{
-            "spin.toml": `spin_version = ["'](\d+\.\d+\.\d+)["']`,
-        },
-        EnvVars: map[string]string{
-            "SPIN_HOME": "/root/.spin",
-            "RUST_BACKTRACE": "1",  // Helpful for debugging
-            "GOPATH": "/root/go",   // For Go components
-            // Necessary for TinyGo compilation
-            "GOROOT": "/usr/local/go",
-            "TINYGO_ROOT": "/usr/local/tinygo",
-        },
+    Name: "Spin",
+    DetectFiles: []string{"spin.toml"},
+    Packages: []string{"rust", "cargo", "golang", "spin"},  // Base requirements
+    PreBuild: []string{
+        // Install Spin CLI
+        "curl -fsSL https://developer.fermyon.com/downloads/install.sh | bash",
+        "mv spin /usr/local/bin/",
+        // Set up environment
+        "export SPIN_HOME=/root/.spin",
+        "mkdir -p $SPIN_HOME",
     },
+    Build: []string{
+        // Build all components regardless of language
+        "spin build",
+    },
+    Start: "spin up --listen 0.0.0.0:80",  // Expose on port 80
+    RuntimeVersions: map[string]string{
+        "spin.toml": `spin_version = ["'](\d+\.\d+\.\d+)["']`,
+    },
+    EnvVars: map[string]string{
+        "SPIN_HOME": "/root/.spin",
+        "RUST_BACKTRACE": "1",  // Helpful for debugging
+        "GOPATH": "/root/go",   // For Go components
+        // Necessary for TinyGo compilation
+        "GOROOT": "/usr/local/go",
+        "TINYGO_ROOT": "/usr/local/tinygo",
+    },
+},
         {
             Name: "Go",
             DetectFiles: []string{"go.mod", "go.sum"},

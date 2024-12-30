@@ -71,7 +71,7 @@ func DetectBuildPack(files []string, service models.Service) (*models.BuildPack,
             // Build all components regardless of language
             "spin build",
         },
-        Start: "spin up --listen 0.0.0.0",  // Expose on port 80
+        Start: "spin up --listen 0.0.0.0:80",  // Expose on port 80
         RuntimeVersions: map[string]string{
             "spin.toml": `spin_version = ["'](\d+\.\d+\.\d+)["']`,
         },
