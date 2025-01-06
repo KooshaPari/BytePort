@@ -3,6 +3,29 @@
 ## With One IAC File Defining your Application Structured and related infra, Byteport deploys your project from your github repository onto your aws cloud platform, then utilizing chatgpt(soon llama) to then send object templates for additions to demonstration/portfolio sites to display and provide interaction access to these projects (and show them off automagically!)
 ### [Example](https://drive.google.com/file/d/1ZJeQOPHCNY1aHjXprNrmxMNi9hZaYSPW/view?usp=sharing)
 ### Refer to [Fixit-Go](https://github.com/kooshapari/fixit-go) [Chatta](https://github.com/kooshapari/chatta) For Project Examples, [Slickport](https://github.com/kooshapari/slickport) for Portfolio integration example
+## Quickstart
+### Prepwork:
+- Install SpinCLI, golang etc
+- Clone Project, open 3 terminals -> backend\byteport -> spin build up, backend\nvms -> go run main.go , frontend\web -> npm i -> npm run dev
+- Grab Demosite and startup(if you don't want to setup api routes rn either remove the demonstrator call in the deploy function OR clone and run slickport with npm run dev and provide localhost:5180, ILOVEKUSHPAPI for credentials)
+- localhost:5173/signup -> signup -> first time setup -> home -> ready
+### Deploy Prep
+- Grab an application and in the root create a README.md, and an odin.nvms, follow pattern below:
+NAME: app
+DESCRIPTION: basic todo
+SERVICES:
+- NAME: "main" (REQUIRED - Points to url/, typically for frontend)
+-   PATH: "./frontend"
+-   PORT: 8080
+-   ENV={hello=hi} (not tested)
+- NAME: "backend""
+-   PATH: "./backend"
+-   PORT: 8081
+- Readme will be fed as part of prompt to describe your project and add context, do a quick detailed bullet list etc
+- map all API URLs in your program to /service/apiaction other than main which takes /*
+- If too lazy refer to Chatta or Fixit-Go repos which are ready for byteport deployment
+### Deploy
+- Go to UI, pick repo, write name and descr(rest are useless atm) deploy, wait a bit (no user ui progress indication atm refer to spin instance in terminal), check portfolio and dashboard, instance now avail.
 ## GPT YAP BELOW (outdated) 
 # Project Manifesto: **BytePort** - MicroVM Cloud Management and Portfolio Integration
 
