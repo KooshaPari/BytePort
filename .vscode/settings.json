@@ -16,5 +16,9 @@
 			"database": "D:\\koosh\\Downloads\\database.db"
 		}
 	],
-	"sqltools.useNodeRuntime": true
+	"sqltools.useNodeRuntime": true,
+	"editor.defaultFormatter": "golang.go",
+	"[ignore]": {
+		"editor.defaultFormatter": "foxundermoon.shell-format"
+	}
 }

@@ -1,0 +1,12 @@
+package ec2
+/*
+HTTP/1.1 200
+Content-type: application/json
+
+{
+   "clientToken": "string",
+   "imagePipelineArn": "string",
+   "requestId": "string"
+}
+*/
+type CreatePipelineResponse

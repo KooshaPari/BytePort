@@ -106,7 +106,7 @@ func (c *Client) newRequest(ctx context.Context, method string, params map[strin
     }
     u.RawQuery = query.Encode()
 
-    fmt.Printf("Request URL: %s\n", u.String())
+   
 
     // Create request with minimal headers
     req, err := http.NewRequestWithContext(ctx, method, u.String(), nil)
@@ -117,7 +117,7 @@ func (c *Client) newRequest(ctx context.Context, method string, params map[strin
     req.Header.Set("host", u.Host)
     req.Header.Set("user-agent", "byteport")
 
-    fmt.Printf("Request headers: %+v\n", req.Header)
+  
 	 
     return req, nil
 }
@@ -175,7 +175,7 @@ func (c *Client) do(req *http.Request) (*http.Response, error) {
 		fmt.Println("Response: ", resp)
         var errorResponse aws.ErrorResponse
         if err := xml.NewDecoder(resp.Body).Decode(&errorResponse); err != nil {
-			fmt.Println("Error parsing response: ", err)
+			fmt.Println("Error parsing response: ", err);
             return nil, fmt.Errorf("failed to parse error response: %w", err)
         }
 		fmt.Println("Error response: ", errorResponse)
@@ -186,8 +186,7 @@ func (c *Client) do(req *http.Request) (*http.Response, error) {
 }
 func (c *Client) CreateListener(ctx context.Context, name string, loadBalancerArn string, targetGroupArn string)  (*CreateListenerResponse,error) {
 	fmt.Println("Creating listener: ", name)
-	fmt.Println("LoadBalancerArn: ", loadBalancerArn)
-	fmt.Println("TargetGroupArn: ", targetGroupArn)
+	 
 	params := map[string]string{
 		"Action": "CreateListener",
 		"LoadBalancerArn":  loadBalancerArn,
