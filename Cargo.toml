@@ -1,0 +1,29 @@
+[package]
+name = "byteport"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "byteport"
+path = "src/lib.rs"
+
+[dependencies]
+tokio = { version = "1.35", features = ["full"] }
+bytes = "1.5"
+tokio-util = { version = "0.7", features = ["codec"] }
+futures = "0.3"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "1.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+crc32fast = "1.3"
+tokio-tungstenite = "0.21"
+
+# QUIC support
+quinn = "0.10"
+rcgen = "0.11"
+rustls = { version = "0.21", features = ["dangerous_configuration"] }
+
+[dev-dependencies]
+tokio-test = "0.4"

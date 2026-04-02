@@ -1,0 +1,60 @@
+//! QUIC transport implementation stub for BytePort
+//!
+//! Note: Full QUIC implementation requires quinn 0.11+ which has a different API.
+//! This is a placeholder that will be implemented when upgrading dependencies.
+
+use std::net::SocketAddr;
+use tracing::info;
+
+use crate::error::{BytePortError, Result};
+use crate::protocol::Frame;
+
+/// QUIC server stub
+pub struct QuicServer;
+
+impl QuicServer {
+    /// This is a stub - QUIC not yet implemented
+    pub async fn bind(_addr: impl Into<SocketAddr>) -> Result<Self> {
+        Err(BytePortError::Protocol("QUIC not yet implemented - requires quinn 0.11+".into()))
+    }
+}
+
+/// QUIC client stub  
+pub struct QuicClient;
+
+impl QuicClient {
+    /// This is a stub - QUIC not yet implemented
+    pub async fn connect(_addr: impl Into<SocketAddr>) -> Result<QuicConnection> {
+        Err(BytePortError::Protocol("QUIC not yet implemented - requires quinn 0.11+".into()))
+    }
+}
+
+/// QUIC connection stub
+pub struct QuicConnection;
+
+impl QuicConnection {
+    /// This is a stub - QUIC not yet implemented
+    pub async fn send_frame(&self, _frame: &Frame) -> Result<()> {
+        Err(BytePortError::Protocol("QUIC not yet implemented".into()))
+    }
+    
+    /// This is a stub - QUIC not yet implemented
+    pub async fn recv_frame(&self) -> Result<Frame> {
+        Err(BytePortError::Protocol("QUIC not yet implemented".into()))
+    }
+    
+    /// This is a stub - QUIC not yet implemented
+    pub fn close(&self) {}
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_quic_stub() {
+        // QUIC is a stub for now
+        let result = QuicServer::bind("127.0.0.1:0").await;
+        assert!(result.is_err());
+    }
+}
