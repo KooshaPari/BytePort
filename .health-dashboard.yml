@@ -1,0 +1,70 @@
+# Project Health Dashboard Configuration
+# Generated: 2026-04-02
+# For: BytePort
+
+project:
+  name: BytePort
+  language: rust
+  repository: https://github.com/KooshaPari/BytePort
+  
+health_dimensions:
+  documentation:
+    required_files:
+      - CLAUDE.md
+      - README.md
+      - CONTRIBUTING.md
+      - LICENSE
+      - CHANGELOG.md
+    present_files:
+      - CLAUDE.md
+      - README.md
+      - CONTRIBUTING.md
+      - LICENSE
+      - CHANGELOG.md
+    score: 100
+    weight: 15
+  
+  test_coverage:
+    target: 80
+    tool: cargo-tarpaulin
+    codecov_enabled: true
+    weight: 20
+  
+  security:
+    tools:
+      - cargo-audit
+      - cargo-deny
+      - codeql
+    deny_toml_enabled: true
+    weight: 25
+  
+  dependencies:
+    check_outdated: true
+    tool: cargo-outdated
+    weight: 15
+  
+  compliance:
+    required_configs:
+      - deny.toml
+      - codecov.yml
+    present_configs:
+      - deny.toml
+      - codecov.yml
+    score: 100
+    weight: 15
+  
+  code_quality:
+    linters:
+      - clippy
+      - rustfmt
+    weight: 10
+
+reporting:
+  dashboard_endpoint: http://localhost:3000/api/health/projects
+  scan_interval: 3600
+  
+audit_results:
+  overall_score: 95
+  health_band: excellent
+  missing_files: []
+  recommendations: []
