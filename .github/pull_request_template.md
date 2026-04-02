@@ -1,58 +1,107 @@
-## Pull Request
+## Description
 
-### Summary
+<!-- Brief description of the changes -->
 
-<!-- Brief description of what this PR does -->
+Closes #(issue number)
 
-### Type of Change
+## Type of Change
 
-- [ ] Feature (new functionality)
-- [ ] Bug fix (non-breaking change)
-- [ ] Refactor (code restructuring, no functionality change)
-- [ ] Documentation (docs only)
-- [ ] CI/CD (builds, tests, linting)
-- [ ] Security (vulnerability fix)
+<!-- Mark relevant items with [x] -->
 
-### Related Issue(s)
+- [ ] 🐛 Bug fix (non-breaking change which fixes an issue)
+- [ ] ✨ New feature (non-breaking change which adds functionality)
+- [ ] 💥 Breaking change (fix or feature that would cause existing functionality to not work as expected)
+- [ ] 📚 Documentation update
+- [ ] ⚡ Performance improvement
+- [ ] ♻️ Code refactoring
+- [ ] 🔧 Configuration change
+- [ ] 🧪 Test update
 
-<!-- Link to related issues: Fixes #123, Related to #456 -->
+## Changes Made
 
-### Testing
+<!-- List the specific changes made in this PR -->
 
-- [ ] Tests added/updated
-- [ ] All tests pass locally: `cargo test --workspace`
-- [ ] Linting passes: `cargo clippy --workspace -- -D warnings`
-- [ ] Formatting correct: `cargo fmt -- --check`
+- 
+- 
+- 
 
-### Checklist
+## Testing
 
-- [ ] My code follows the project's coding standards
-- [ ] I have self-reviewed my code
-- [ ] I have added comments for complex logic
-- [ ] I have updated documentation (if applicable)
-- [ ] No new warnings introduced
-- [ ] I have linked the PR to any related issues
+<!-- Describe the testing you've done -->
 
-### Additional Context
+- [ ] Unit tests added/updated
+- [ ] Integration tests added/updated
+- [ ] E2E tests added/updated
+- [ ] Manual testing performed
+- [ ] All tests pass locally (`cargo test`)
 
-<!-- Any additional context about this PR -->
+### Test Results
 
-### Agent Notes
+<!-- Paste test output if relevant -->
+```
+```
 
-<!-- Notes from the agent that worked on this PR -->
+## Quality Checks
+
+<!-- Confirm all quality gates pass -->
+
+- [ ] Code follows project style guidelines (rustfmt, clippy)
+- [ ] Self-review completed - I have reviewed my own code
+- [ ] No new warnings or errors introduced
+- [ ] Documentation updated (if applicable)
+- [ ] Comments added for complex logic
+- [ ] No hardcoded secrets or credentials
+- [ ] No performance regressions introduced
+
+## Security
+
+<!-- For security-sensitive changes -->
+
+- [ ] No sensitive data exposed
+- [ ] Input validation implemented
+- [ ] Authentication/authorization checks in place
+- [ ] Dependencies updated and audited
+
+## Documentation
+
+<!-- Check if documentation needs updates -->
+
+- [ ] README.md updated (if user-facing changes)
+- [ ] AGENTS.md updated (if agent behavior affected)
+- [ ] API documentation updated (if applicable)
+- [ ] Architecture Decision Record created (if significant change)
+
+## AgilePlus Tracking
+
+<!-- Link to AgilePlus spec if applicable -->
+
+- [ ] AgilePlus spec linked: `specs/XX-XXXX/`
+- [ ] Work package status updated
+- [ ] FR traceability maintained (FR-XXX-NNN comments in code)
+
+## Screenshots / Visuals
+
+<!-- If applicable, add screenshots, diagrams, or recordings -->
+
+## Deployment Notes
+
+<!-- Any special deployment considerations -->
+
+- Database migrations required: No
+- Environment variables added: None
+- Feature flags required: None
+- Breaking changes for API consumers: None
+
+## Reviewer Notes
+
+<!-- Any specific areas you'd like reviewers to focus on -->
 
 ---
 
-### Reviewer Checklist
-
-- [ ] Code is correct and logically sound
+**Checklist for Reviewers:**
+- [ ] Code quality meets standards
 - [ ] Tests are comprehensive and passing
-- [ ] Documentation is accurate and up-to-date
-- [ ] No unintended side effects
+- [ ] Documentation is clear
 - [ ] Security considerations addressed
-
-### Merge Requirements
-
-- [ ] CI/CD pipeline passes
-- [ ] At least one approval from @kooshapari
-- [ ] No unresolved review comments
+- [ ] Performance impact assessed
+- [ ] AgilePlus compliance verified
