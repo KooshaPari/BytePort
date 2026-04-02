@@ -17,3 +17,12 @@ target/
 *.pdb
 
 *.sqlite
+
+# Next.js
+.next/
+node_modules/
+dist/
+*.tsbuildinfo
+
+# BytePort
+backend/database.db
