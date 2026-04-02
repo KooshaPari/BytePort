@@ -1,70 +1,66 @@
-# Project Health Dashboard Configuration
-# Generated: 2026-04-02
-# For: BytePort
-
+# Health Dashboard Configuration for BytePort
+# Traceability: HD-003
+---
 project:
   name: BytePort
   language: rust
-  repository: https://github.com/KooshaPari/BytePort
-  
-health_dimensions:
+  description: BytePort - Data serialization library
+  tier: tier2
+
+dimensions:
   documentation:
-    required_files:
-      - CLAUDE.md
-      - README.md
-      - CONTRIBUTING.md
-      - LICENSE
-      - CHANGELOG.md
-    present_files:
-      - CLAUDE.md
-      - README.md
-      - CONTRIBUTING.md
-      - LICENSE
-      - CHANGELOG.md
-    score: 100
     weight: 15
+    files:
+      - CLAUDE.md
+      - README.md
+      - CONTRIBUTING.md
+      - LICENSE
+      - CHANGELOG.md
+    required: true
   
   test_coverage:
-    target: 80
-    tool: cargo-tarpaulin
-    codecov_enabled: true
     weight: 20
+    thresholds:
+      min_line_coverage: 80
+      min_branch_coverage: 70
+    codecov: true
   
   security:
-    tools:
+    weight: 25
+    scanners:
       - cargo-audit
       - cargo-deny
-      - codeql
-    deny_toml_enabled: true
-    weight: 25
+      - trivy
+    alert_severity: high
   
   dependencies:
-    check_outdated: true
-    tool: cargo-outdated
     weight: 15
+    freshness_threshold_days: 90
+    outdated_tolerance: 5
   
   compliance:
-    required_configs:
-      - deny.toml
-      - codecov.yml
-    present_configs:
-      - deny.toml
-      - codecov.yml
-    score: 100
     weight: 15
+    required_files:
+      - deny.toml
+      - clippy.toml
+      - .pre-commit-config.yaml
+      - codecov.yml
+      - rust-toolchain.toml
+      - nextest.toml
+    github_workflows_required: true
   
   code_quality:
+    weight: 10
     linters:
       - clippy
       - rustfmt
-    weight: 10
+    max_complexity: 15
 
-reporting:
-  dashboard_endpoint: http://localhost:3000/api/health/projects
-  scan_interval: 3600
-  
-audit_results:
-  overall_score: 95
-  health_band: excellent
-  missing_files: []
-  recommendations: []
+alerts:
+  critical_threshold: 0
+  poor_threshold: 60
+  frequency_hours: 24
+
+integration:
+  github_repo: KooshaPari/BytePort
+  codecov_repo: KooshaPari/BytePort
