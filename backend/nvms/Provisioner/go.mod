@@ -1,8 +1,6 @@
 module provisioner
 
-go 1.23.0
-
-toolchain go1.23.4
+go 1.24.0
 
 require github.com/fermyon/spin-go-sdk v0.0.0-20240918180601-c2d4ef2e0904
 
@@ -15,8 +13,8 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/julienschmidt/httprouter v1.3.0 // indirect
 	github.com/zalando/go-keyring v0.2.6 // indirect
-	golang.org/x/crypto v0.35.0 // indirect
-	golang.org/x/sys v0.30.0 // indirect
+	golang.org/x/crypto v0.45.0 // indirect
+	golang.org/x/sys v0.38.0 // indirect
 )
 
 require nvms v0.0.0
