@@ -1,0 +1,29 @@
+name: Go CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  go-build-test:
+    name: Go build + test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: backend/byteport
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache-dependency-path: backend/byteport/go.sum
+      - name: go build
+        run: go build ./...
+      - name: go test
+        run: go test ./...
+      - name: go vet
+        run: go vet ./...
