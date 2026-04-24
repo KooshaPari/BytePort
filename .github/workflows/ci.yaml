@@ -20,7 +20,7 @@ jobs:
           - backend/nvms
     steps:
       - name: Checkout the code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
@@ -43,7 +43,7 @@ jobs:
           - backend/nvms
     steps:
       - name: Checkout the code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
@@ -61,7 +61,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout the code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
