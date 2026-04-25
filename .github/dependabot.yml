@@ -1,28 +1,72 @@
 version: 2
 updates:
   - package-ecosystem: "cargo"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-    open-pull-requests-limit: 5
-    labels: ["dependencies", "automated"]
-  - package-ecosystem: "npm"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-    open-pull-requests-limit: 5
-    labels: ["dependencies", "automated"]
+    directory: "/frontend/web/src-tauri"
+    schedule: { interval: "weekly", day: "monday" }
+    groups:
+      cargo:
+        patterns: ["*"]
+    open-pull-requests-limit: 10
   - package-ecosystem: "gomod"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-      day: "monday"
+    directory: "/backend/byteport"
+    schedule: { interval: "weekly", day: "tuesday" }
+    groups:
+      go:
+        patterns: ["*"]
+    open-pull-requests-limit: 10
+  - package-ecosystem: "gomod"
+    directory: "/backend/bytebridge/ByteBridge"
+    schedule: { interval: "weekly", day: "tuesday" }
+    groups:
+      go:
+        patterns: ["*"]
     open-pull-requests-limit: 5
-    labels: ["dependencies", "automated"]
+  - package-ecosystem: "gomod"
+    directory: "/backend/nvms"
+    schedule: { interval: "weekly", day: "tuesday" }
+    groups:
+      go:
+        patterns: ["*"]
+    open-pull-requests-limit: 5
+  - package-ecosystem: "gomod"
+    directory: "/backend/nvms/Builder"
+    schedule: { interval: "weekly", day: "tuesday" }
+    groups:
+      go:
+        patterns: ["*"]
+    open-pull-requests-limit: 5
+  - package-ecosystem: "gomod"
+    directory: "/backend/nvms/Demonstrator"
+    schedule: { interval: "weekly", day: "tuesday" }
+    groups:
+      go:
+        patterns: ["*"]
+    open-pull-requests-limit: 5
+  - package-ecosystem: "gomod"
+    directory: "/backend/nvms/Provisioner"
+    schedule: { interval: "weekly", day: "tuesday" }
+    groups:
+      go:
+        patterns: ["*"]
+    open-pull-requests-limit: 5
+  - package-ecosystem: "npm"
+    directory: "/frontend/web"
+    schedule: { interval: "weekly", day: "wednesday" }
+    groups:
+      npm:
+        patterns: ["*"]
+    open-pull-requests-limit: 10
+  - package-ecosystem: "npm"
+    directory: "/.github/frontend"
+    schedule: { interval: "weekly", day: "wednesday" }
+    groups:
+      npm:
+        patterns: ["*"]
+    open-pull-requests-limit: 5
   - package-ecosystem: "github-actions"
     directory: "/"
-    schedule:
-      interval: "weekly"
-    labels: ["dependencies", "github-actions"]
+    schedule: { interval: "weekly", day: "friday" }
+    groups:
+      actions:
+        patterns: ["*"]
+    open-pull-requests-limit: 5
