@@ -1,4 +1,36 @@
-# Byteport
+# BytePort
+
+## What is this
+
+**BytePort is a self-hosted IaC deployment + portfolio platform for developer projects.** Define one manifest (`odin.nvms`) at your repo root and BytePort provisions a MicroVM-backed deployment on your own cloud, registers the resulting endpoints with a portfolio site, and uses an LLM to generate showcase metadata for each project.
+
+### Canonical stack
+
+This README previously disagreed with itself (Loco.rs / Rust / Tauri / SvelteKit references appeared in different sections). The actual shipping stack is:
+
+- **Backend:** Go 1.25 — `backend/byteport` (Gin + GORM + SQLite, PASETO auth, AWS SDK)
+- **Frontend:** SvelteKit 2 + Svelte 5 + Tailwind 4, packaged as a **Tauri 2** desktop/mobile shell — `frontend/web`
+- **MicroVM runtime:** Spin / `nvms` Go service — `backend/nvms`
+- **Dev orchestration:** `./start dev` (tmux) and `./start prod` — see below
+- **Persistence:** SQLite via GORM
+
+There is no Rust workspace at the repo root; previous mentions of Loco.rs were aspirational and have been removed. The Rust toolchain only appears via Tauri's bundler under `frontend/web`.
+
+### Running it
+
+```sh
+./start dev     # tmux session: SvelteKit dev (port 5173) + `air` hot-reload Go backend
+./start prod    # builds the SvelteKit frontend, runs `npm start`, then `go run main.go`
+```
+
+`./start` requires `tmux` (dev mode), `npm`, and `go`. Edit the hardcoded paths inside `./start` if your checkout is not at `~/temp-PRODVERCEL/Rust/webApp/byte_port` — that path is a leftover from the original author's machine and will be parameterized in a follow-up.
+
+### Credentials
+
+Demo portfolio integration (Slickport) expects credentials you set yourself. **Do not** use any credential string copied from an older revision of this README; replace `<YOUR_API_KEY>` placeholders with values from your own deployment.
+
+---
+
 ## An IAC Deployment + UX Generation platform for Software Developer Portfolios
 ## With One IAC File Defining your Application Structured and related infra, Byteport deploys your project from your github repository onto your aws cloud platform, then utilizing chatgpt(soon llama) to then send object templates for additions to demonstration/portfolio sites to display and provide interaction access to these projects (and show them off automagically!)
 ### [Example](https://drive.google.com/file/d/1ZJeQOPHCNY1aHjXprNrmxMNi9hZaYSPW/view?usp=sharing)
@@ -7,7 +39,7 @@
 ### Prepwork:
 - Install SpinCLI, golang etc
 - Clone Project, open 3 terminals -> backend\byteport -> spin build up, backend\nvms -> go run main.go , frontend\web -> npm i -> npm run dev
-- Grab Demosite and startup(if you don't want to setup api routes rn either remove the demonstrator call in the deploy function OR clone and run slickport with npm run dev and provide localhost:5180, ILOVEKUSHPAPI for credentials)
+- Grab Demosite and startup(if you don't want to setup api routes rn either remove the demonstrator call in the deploy function OR clone and run slickport with npm run dev and provide localhost:5180, <YOUR_API_KEY> for credentials)
 - localhost:5173/signup -> signup -> first time setup -> home -> ready
 ### Deploy Prep
 - Grab an application and in the root create a README.md, and an odin.nvms, follow pattern below:
