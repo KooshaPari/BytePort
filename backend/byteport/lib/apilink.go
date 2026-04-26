@@ -1,13 +1,19 @@
 package lib
 
 import (
-	"byteport/models"
 	"bytes"
-	"io"
-	"os/exec"
-
+	"context"
 	"fmt"
+	"io"
+	"net"
 	"net/http"
+	"net/url"
+	"os"
+	"os/exec"
+	"strings"
+	"time"
+
+	"byteport/models"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -16,17 +22,24 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 )
 
+const portfolioAllowedHostsEnv = "BYTEPORT_PORTFOLIO_API_ALLOWED_HOSTS"
+
 // ValidatePortfolioAPI validates the provided portfolio API key and endpoint.
 func ValidatePortfolioAPI(rootEndpoint, apiKey string) error {
 	fmt.Println("Validating Portfolio API...")
-	fmt.Println("URI: "+rootEndpoint+"/byteport")
-	req, err := http.NewRequest("GET", rootEndpoint+"/byteport", nil)
+	validationURL, err := portfolioValidationURL(rootEndpoint)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("URI: " + validationURL)
+	req, err := http.NewRequest("GET", validationURL, nil)
 	if err != nil {
 		return fmt.Errorf("failed to create request: %v", err)
 	}
 	req.Header.Set("Authorization", "Bearer "+apiKey)
 
-	client := &http.Client{}
+	client := ssrfSafePortfolioClient()
 	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to connect to Portfolio API: %v", err)
@@ -43,12 +56,153 @@ func ValidatePortfolioAPI(rootEndpoint, apiKey string) error {
 		return fmt.Errorf("invalid Portfolio API Key or URL. Status code: %d", resp.StatusCode)
 	}
 
- 
 	fmt.Println("Portfolio API validated successfully.")
 	return nil
 }
 
+func portfolioValidationURL(rootEndpoint string) (string, error) {
+	trimmed := strings.TrimSpace(rootEndpoint)
+	if trimmed == "" {
+		return "", fmt.Errorf("portfolio API root endpoint is required")
+	}
 
+	parsed, err := url.Parse(trimmed)
+	if err != nil {
+		return "", fmt.Errorf("invalid Portfolio API URL: %v", err)
+	}
+	if parsed.Scheme != "https" && parsed.Scheme != "http" {
+		return "", fmt.Errorf("portfolio API URL must use http or https")
+	}
+	if parsed.Host == "" {
+		return "", fmt.Errorf("portfolio API URL must include a host")
+	}
+	if parsed.User != nil {
+		return "", fmt.Errorf("portfolio API URL must not include credentials")
+	}
+	if parsed.RawQuery != "" || parsed.Fragment != "" {
+		return "", fmt.Errorf("portfolio API URL must not include query strings or fragments")
+	}
+	if err := validatePortfolioHost(parsed.Hostname()); err != nil {
+		return "", err
+	}
+
+	parsed.Path = strings.TrimRight(parsed.Path, "/")
+	parsed.RawPath = ""
+	parsed.RawQuery = ""
+	parsed.Fragment = ""
+	return parsed.JoinPath("byteport").String(), nil
+}
+
+func validatePortfolioHost(host string) error {
+	host = strings.TrimSuffix(strings.ToLower(strings.TrimSpace(host)), ".")
+	if host == "" {
+		return fmt.Errorf("portfolio API URL must include a host")
+	}
+	if isLocalhostName(host) {
+		if allowsPrivatePortfolioHost(host) {
+			return nil
+		}
+		return fmt.Errorf("portfolio API host localhost is not allowed unless explicitly allowlisted")
+	}
+	if ip := net.ParseIP(host); ip != nil {
+		if !isPublicIP(ip) && !allowsPrivatePortfolioHost(host) {
+			return fmt.Errorf("portfolio API host must be public unless explicitly allowlisted")
+		}
+	}
+	if allowedHosts := portfolioAllowedHosts(); len(allowedHosts) > 0 {
+		for _, allowed := range allowedHosts {
+			if hostMatchesAllowedPortfolioHost(host, allowed) {
+				return nil
+			}
+		}
+		return fmt.Errorf("portfolio API host %q is not in %s", host, portfolioAllowedHostsEnv)
+	}
+	return nil
+}
+
+func portfolioAllowedHosts() []string {
+	raw := os.Getenv(portfolioAllowedHostsEnv)
+	if strings.TrimSpace(raw) == "" {
+		return nil
+	}
+
+	hosts := strings.Split(raw, ",")
+	allowed := make([]string, 0, len(hosts))
+	for _, host := range hosts {
+		normalized := strings.TrimSuffix(strings.ToLower(strings.TrimSpace(host)), ".")
+		if normalized != "" {
+			allowed = append(allowed, normalized)
+		}
+	}
+	return allowed
+}
+
+func hostMatchesAllowedPortfolioHost(host, allowed string) bool {
+	switch {
+	case strings.HasPrefix(allowed, "*."):
+		suffix := strings.TrimPrefix(allowed, "*")
+		return strings.HasSuffix(host, suffix) && host != strings.TrimPrefix(suffix, ".")
+	case strings.HasPrefix(allowed, "."):
+		return strings.HasSuffix(host, allowed) && host != strings.TrimPrefix(allowed, ".")
+	default:
+		return host == allowed
+	}
+}
+
+func allowsPrivatePortfolioHost(host string) bool {
+	for _, allowed := range portfolioAllowedHosts() {
+		if !strings.HasPrefix(allowed, "*.") && !strings.HasPrefix(allowed, ".") && host == allowed {
+			return true
+		}
+	}
+	return false
+}
+
+func ssrfSafePortfolioClient() *http.Client {
+	dialer := &net.Dialer{Timeout: 10 * time.Second}
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.DialContext = func(ctx context.Context, network, address string) (net.Conn, error) {
+		host, port, err := net.SplitHostPort(address)
+		if err != nil {
+			return nil, fmt.Errorf("invalid Portfolio API address: %v", err)
+		}
+		ips, err := net.DefaultResolver.LookupIP(ctx, "ip", host)
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve Portfolio API host: %v", err)
+		}
+		privateHostAllowed := allowsPrivatePortfolioHost(strings.TrimSuffix(strings.ToLower(host), "."))
+		for _, ip := range ips {
+			if !isPublicIP(ip) && !privateHostAllowed {
+				return nil, fmt.Errorf("portfolio API host resolved to a non-public address")
+			}
+		}
+		return dialer.DialContext(ctx, network, net.JoinHostPort(host, port))
+	}
+
+	return &http.Client{
+		Timeout:   15 * time.Second,
+		Transport: transport,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			if err := validatePortfolioHost(req.URL.Hostname()); err != nil {
+				return err
+			}
+			return nil
+		},
+	}
+}
+
+func isPublicIP(ip net.IP) bool {
+	return !(ip.IsLoopback() ||
+		ip.IsPrivate() ||
+		ip.IsLinkLocalUnicast() ||
+		ip.IsLinkLocalMulticast() ||
+		ip.IsMulticast() ||
+		ip.IsUnspecified())
+}
+
+func isLocalhostName(host string) bool {
+	return host == "localhost" || strings.HasSuffix(host, ".localhost")
+}
 
 // ValidateGit validates the GitHub app connection and fetches repositories for a user.
 func ValidateGit(user models.User) error {
@@ -60,8 +214,6 @@ func ValidateGit(user models.User) error {
 	if result.Error != nil {
 		return fmt.Errorf("failed to retrieve Git secrets for user: %v", result.Error)
 	}
-	
-
 
 	// Ensure the user has already linked GitHub
 	if user.Git.Token == "" {
