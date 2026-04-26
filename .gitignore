@@ -17,3 +17,7 @@ target/
 *.pdb
 
 *.sqlite
+
+# BytePort build outputs (Scorecard BinaryArtifacts FP cleanup)
+backend/byteport/tmp/
+byteport
