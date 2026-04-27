@@ -1,0 +1,40 @@
+### HEADER
+FROM: aws-ubuntu:minimal
+NAME: byteport
+DESCRIPTION: "BytePort is a Deployment Management System for SWE Professionals"
+VERSION: "0.1.2"
+
+### DEFINITIONS
+TEMPLATES:
+  high:
+    CPU: 8
+    MEMORY: 8
+    GPU: false
+  med:
+    CPU: 4
+    MEMORY: 4
+    GPU: false
+  low:
+    CPU: 2
+    MEMORY: 2
+    GPU: false
+
+SERVICES:
+  backend:
+    PATH: ./backend/byteport
+    BUILD: go run main.go
+    PORT: 8081
+    ENV:
+      ENCRYPTION_KEY: t1rSGxkBSy38s8+JNLvHkvJAax4zO/KRsli27VSu6Ks=
+    RESOURCES: ${template:low}
+
+  frontend:
+    PATH: ./frontend
+    BUILD: npm run dev
+    PORT: 5173
+  RESOURCES: ${template:low}
+
+NETWORK:
+  
+AWS:
+  REGION: us-east-1

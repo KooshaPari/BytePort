@@ -1,0 +1,12 @@
+FROM: aws-ubuntu:minimal
+NAME: portfolio
+
+SERVICES:
+  web:
+    PATH: ./build
+    BUILD: npm run build
+    PORT: 80
+
+NETWORK:
+  DOMAIN: portfolio.example.com
+  SSL: true

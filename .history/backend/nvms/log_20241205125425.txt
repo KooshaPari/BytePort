@@ -1,0 +1,29 @@
+Received request
+
+Archive URL:  https://api.github.com/repos/KooshaPari/odin-dash/{file}{/refs}
+Initial Archive URL:  https://api.github.com/repos/KooshaPari/odin-dash/zipball
+Processing zip file...
+Reading zip file...
+panic: runtime error: nil pointer dereference
+Reading zip file...
+panic: runtime error: nil pointer dereference
+2024-12-05T19:53:56.673211Z ERROR spin_trigger_http::server: Error processing request: error while executing at wasm backtrace:
+    0: 0x19502 - main!runtime.runtimePanicAt.llvm.12178518592012615027
+    1: 0x77921 - main!<wasm function 580>
+    2: 0x43ad - main!runtime.nilPanic
+    3: 0x75e66 - main!spin_http_handle_http_request
+    4: 0x772bf - main!__wasm_export_spin_http_handle_http_request
+    5: 0x961dc - wit-component:adapter:wasi_snapshot_preview1!fermyon:spin/inbound-http#handle-request
+
+Caused by:
+    wasm trap: wasm `unreachable` instruction executed
+2024-12-05T19:53:56.673211Z ERROR spin_trigger_http::server: Error processing request: error while executing at wasm backtrace:
+    0: 0x19502 - main!runtime.runtimePanicAt.llvm.12178518592012615027
+    1: 0x77921 - main!<wasm function 580>
+    2: 0x43ad - main!runtime.nilPanic
+    3: 0x75e66 - main!spin_http_handle_http_request
+    4: 0x772bf - main!__wasm_export_spin_http_handle_http_request
+    5: 0x961dc - wit-component:adapter:wasi_snapshot_preview1!fermyon:spin/inbound-http#handle-request
+
+Caused by:
+    wasm trap: wasm `unreachable` instruction executed

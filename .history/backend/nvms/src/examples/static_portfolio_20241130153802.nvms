@@ -1,0 +1,333 @@
+```yaml
+# Base Configuration
+FROM: aws-ubuntu:ml-gpu
+NAME: enterprise-platform
+DESCRIPTION: "Enterprise-grade distributed system with ML capabilities"
+VERSION: 1.0.0
+
+# Resource Templates
+TEMPLATES:
+  high-compute:
+    CPU: 8
+    MEMORY: 32GB
+    GPU: true
+  high-memory:
+    CPU: 4
+    MEMORY: 64GB
+  standard:
+    CPU: 2
+    MEMORY: 8GB
+
+# Core Cluster Configuration
+CLUSTER:
+  api-gateway:
+    INSTANCES: 5-20
+    PATH: ./services/api
+    BUILD:
+      - cargo build --release
+      - cargo test
+      - cargo audit
+    RESOURCES: ${template:high-compute}
+    SCALE:
+      CPU_THRESHOLD: 70
+      MEMORY_THRESHOLD: 80
+      REQUEST_RATE: 10000
+    HEALTH:
+      PATH: /health
+      INTERVAL: 30s
+      TIMEOUT: 5s
+      RETRIES: 3
+
+  ml-inference:
+    INSTANCES: 2-10
+    PATH: ./services/ml
+    BUILD: 
+      - python -m pip install -r requirements.txt
+      - python -m pytest
+      - python setup.py install
+    RESOURCES:
+      CPU: 16
+      MEMORY: 64GB
+      GPU: "nvidia-t4"
+    SCALE:
+      GPU_UTILIZATION: 80
+      QUEUE_LENGTH: 1000
+    ENV:
+      MODEL_PATH: ${aws:s3:models}/latest
+      CUDA_VISIBLE_DEVICES: 0,1
+
+  event-processor:
+    INSTANCES: 10-50
+    PATH: ./services/events
+    BUILD: ./build.sh
+    RESOURCES: ${template:high-memory}
+    SCALE:
+      MESSAGE_RATE: 50000
+      LATENCY_THRESHOLD: 100ms
+
+# Service Definitions
+SERVICES:
+  frontend:
+    PATH: ./services/frontend
+    BUILD:
+      - npm ci
+      - npm run test
+      - npm run build
+    PORT: 3000
+    ENV:
+      API_URL: ${aws:alb:url}
+      CDN_URL: ${aws:cloudfront:url}
+      AUTH_SECRET: ${env:AUTH_SECRET}
+    RESOURCES: ${template:standard}
+
+  websocket:
+    PATH: ./services/websocket
+    BUILD: cargo build --release
+    PORT: 8080
+    PROTOCOLS: ["wss"]
+    RESOURCES: ${template:standard}
+
+  metrics:
+    PATH: ./services/metrics
+    BUILD: go build
+    PORT: 9090
+    RESOURCES: ${template:high-memory}
+
+# AWS Services Configuration
+AWS:
+  REGION: us-east-1
+  MULTI_REGION:
+    - REGION: eu-west-1
+      SERVICES: ["frontend", "api-gateway"]
+    - REGION: ap-southeast-1
+      SERVICES: ["frontend"]
+
+  VPC:
+    CIDR: 10.0.0.0/16
+    SUBNETS:
+      PUBLIC:
+        - CIDR: 10.0.1.0/24
+          AZ: a
+        - CIDR: 10.0.2.0/24
+          AZ: b
+      PRIVATE:
+        - CIDR: 10.0.3.0/24
+          AZ: a
+        - CIDR: 10.0.4.0/24
+          AZ: b
+
+  SERVICES:
+    - TYPE: Aurora
+      ENGINE: postgres
+      MODE: CLUSTER
+      VERSION: "13.7"
+      INSTANCES: 3
+      SIZE: db.r6g.2xlarge
+      BACKUP:
+        RETENTION: 7d
+        WINDOW: "03:00-04:00"
+      PARAMETERS:
+        max_connections: 1000
+        shared_buffers: "8GB"
+
+    - TYPE: ElastiCache
+      ENGINE: redis
+      MODE: CLUSTER
+      VERSION: "6.x"
+      SHARDS: 3
+      REPLICAS: 2
+      SIZE: cache.r6g.xlarge
+      PARAMETERS:
+        maxmemory-policy: volatile-lru
+        
+    - TYPE: OpenSearch
+      MODE: CLUSTER
+      VERSION: "2.5"
+      INSTANCES: 5
+      SIZE: r6g.2xlarge.search
+      VOLUME_SIZE: 100
+      
+    - TYPE: MSK
+      NAME: event-stream
+      VERSION: "2.8.1"
+      BROKERS: 3
+      SIZE: kafka.m5.2xlarge
+      STORAGE: 1000
+      PARTITIONS: 100
+      RETENTION: 7d
+      
+    - TYPE: DynamoDB
+      TABLES:
+        - NAME: users
+          PARTITION_KEY: id
+          SORT_KEY: email
+          RCU: 5000
+          WCU: 1000
+          GSI:
+            - NAME: email-index
+              PARTITION_KEY: email
+        - NAME: sessions
+          PARTITION_KEY: session_id
+          TTL: session_expiry
+          
+    - TYPE: SQS
+      QUEUES:
+        - NAME: tasks
+          TYPE: FIFO
+          RETENTION: 14d
+          VISIBILITY: 5m
+          DLQ: true
+        
+    - TYPE: SNS
+      TOPICS:
+        - NAME: notifications
+          FIFO: true
+          SUBSCRIPTIONS:
+            - PROTOCOL: sqs
+              ENDPOINT: ${aws:sqs:tasks}
+        
+    - TYPE: S3
+      BUCKETS:
+        - NAME: ${env:PROJECT_NAME}-assets
+          VERSIONING: true
+          LIFECYCLE:
+            - PREFIX: logs/
+              EXPIRATION: 90d
+            - PREFIX: temp/
+              EXPIRATION: 1d
+
+# Network Configuration
+NETWORK:
+  DOMAIN: platform.example.com
+  SSL:
+    PROVIDER: "acm"
+    EMAIL: "admin@example.com"
+  
+  LOAD_BALANCER:
+    TYPE: ALB
+    SSL: true
+    STICKY_SESSIONS: true
+    WAF:
+      RULES:
+        - NAME: rate-limit
+          RATE: 2000
+        - NAME: geo-block
+          COUNTRIES: ["CN", "RU"]
+    
+  CDN:
+    ENABLED: true
+    PRICE_CLASS: 200
+    CACHE_POLICY:
+      DEFAULT_TTL: 86400
+      MIN_TTL: 0
+      MAX_TTL: 31536000
+      
+  SECURITY:
+    VPC: true
+    PRIVATE_SUBNETS: true
+    WAF: true
+    SHIELD: true
+    DDOS_PROTECTION: true
+    RULES:
+      INBOUND:
+        - "TCP 80 ANY"
+        - "TCP 443 ANY"
+        - "TCP 8080 VPC"
+      OUTBOUND:
+        - "TCP ANY VPC"
+        - "TCP 443 ANY"
+
+# Monitoring Configuration
+MONITORING:
+  PROVIDER: cloudwatch
+  METRICS:
+    - NAME: cpu_utilization
+      THRESHOLD: 80
+      PERIOD: 1m
+    - NAME: memory_utilization
+      THRESHOLD: 85
+      PERIOD: 1m
+    - NAME: request_latency
+      THRESHOLD: 500
+      PERIOD: 1m
+    - NAME: error_rate
+      THRESHOLD: 1
+      PERIOD: 5m
+      
+  LOGGING:
+    RETENTION: 30d
+    EXPORT:
+      - TYPE: s3
+        BUCKET: ${aws:s3:logs}
+      - TYPE: opensearch
+        INDEX: platform-logs
+        
+  TRACING:
+    ENABLED: true
+    PROVIDER: xray
+    SAMPLING_RATE: 0.1
+    
+  ALERTS:
+    - TYPE: cpu_high
+      THRESHOLD: 85
+      WINDOW: 5m
+      ACTIONS:
+        - sns:${aws:sns:alerts}
+    - TYPE: error_spike
+      THRESHOLD: 5
+      WINDOW: 1m
+      ACTIONS:
+        - sns:${aws:sns:alerts}
+        - pagerduty:${env:PAGERDUTY_KEY}
+
+# Deployment Configuration
+DEPLOYMENT:
+  STRATEGY: rolling
+  BATCH_SIZE: 25%
+  HEALTH_CHECK_GRACE: 30s
+  TIMEOUT: 10m
+  ROLLBACK:
+    ENABLED: true
+    THRESHOLD: 10
+
+# Backup Configuration
+BACKUP:
+  ENABLED: true
+  RETENTION: 30d
+  SCHEDULE: "0 0 * * *"
+  DESTINATIONS:
+    - TYPE: s3
+      BUCKET: ${aws:s3:backups}
+      ENCRYPTION: true
+    - TYPE: snapshot
+      RETENTION: 7d
+
+# Maintenance Configuration
+MAINTENANCE:
+  UPDATES:
+    SECURITY: automatic
+    SYSTEM: manual
+    SCHEDULE: "0 2 * * SUN"
+  PATCHING:
+    ENABLED: true
+    SEVERITY: critical
+    AUTO_APPROVE: true
+```
+
+This NVMS file includes:
+1. Complex cluster configurations
+2. Multi-region deployment
+3. Advanced AWS service configurations
+4. Comprehensive monitoring setup
+5. Sophisticated networking rules
+6. Detailed security configurations
+7. Resource templates
+8. Environment variable references
+9. AWS resource references
+10. Complex scaling rules
+
+Would you like me to:
+1. Break down any specific section in detail?
+2. Add more configuration options?
+3. Explain the relationships between components?
+4. Show how to validate specific sections?

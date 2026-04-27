@@ -1,0 +1,26 @@
+#!/bin/sh
+cleanup() {
+    echo "Cleaning up..."
+    pkill -P $$ 
+    exit 0
+}
+trap cleanup SIGINT EXIT
+if [ "$1" = "prod" ]; then
+    echo "Starting in production mode..."
+    cd frontend
+    npm run build
+    npm run start &
+    cd ../backend
+    go run main.go 
+elif [ "$1" = "dev" ]; then
+    echo "Starting in development mode..."
+    cd frontend
+    npm run dev -- --port 8080 &
+    cd ../backend
+    go run main.go 
+else
+    echo "Usage: $0 {dev|prod}"
+    exit 1
+fi
+
+wait

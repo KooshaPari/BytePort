@@ -1,0 +1,10 @@
+NAME: "BytePort"
+DESCRIPTION: "IAC Deployment Platform Powered By Spin and Gin-Gonic"
+SERVICES:
+- NAME: "api"
+  PATH: "./backend"
+  PORT: 8081
+
+- NAME: "main"
+  PATH: "./frontend"
+  PORT: 8080
