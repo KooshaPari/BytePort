@@ -1,3 +1,0 @@
-[database]
-type = "sqlite"
-url = "${DATABASE_URL}" 
