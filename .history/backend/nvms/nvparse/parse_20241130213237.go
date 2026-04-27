@@ -1,6 +1,0 @@
-package nvparse;
-
-import (
-	"fmt"
-	
-)
