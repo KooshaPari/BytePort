@@ -80,6 +80,8 @@
 		"tailwind-scrollbar": "^4.0.2"
 	},
 	"overrides": {
+		"cookie": "^0.7.0",
+		"prismjs": "^1.30.0",
 		"minimatch": "9.0.9",
 		"devalue": "5.7.1",
 		"effect": "3.21.2",
@@ -91,6 +93,8 @@
 		"validator": "13.15.35"
 	},
 	"resolutions": {
+		"cookie": "^0.7.0",
+		"prismjs": "^1.30.0",
 		"minimatch": "9.0.9",
 		"devalue": "5.7.1",
 		"effect": "3.21.2",
