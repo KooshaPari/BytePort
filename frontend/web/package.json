@@ -80,8 +80,10 @@
 		"tailwind-scrollbar": "^4.0.2"
 	},
 	"overrides": {
+		"cookie": "0.7.0",
 		"esbuild": "0.25.0",
 		"postcss": "8.5.10",
+		"prismjs": "1.30.0",
 		"tmp": "0.2.4",
 		"uuid": "14.0.0",
 		"minimatch": "9.0.9",
@@ -95,8 +97,10 @@
 		"validator": "13.15.35"
 	},
 	"resolutions": {
+		"cookie": "0.7.0",
 		"esbuild": "0.25.0",
 		"postcss": "8.5.10",
+		"prismjs": "1.30.0",
 		"tmp": "0.2.4",
 		"uuid": "14.0.0",
 		"minimatch": "9.0.9",
