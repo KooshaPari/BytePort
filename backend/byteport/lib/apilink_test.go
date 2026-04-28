@@ -1,6 +1,8 @@
 package lib
 
 import (
+	"context"
+	"net"
 	"strings"
 	"testing"
 )
@@ -134,5 +136,33 @@ func TestPortfolioValidationURLAllowsExplicitDevLoopbackHost(t *testing.T) {
 	want := "http://localhost:5180/byteport"
 	if got != want {
 		t.Fatalf("portfolioValidationURL = %q, want %q", got, want)
+	}
+}
+
+func TestValidatedPortfolioDialAddressPinsPublicIP(t *testing.T) {
+	t.Setenv(portfolioAllowedHostsEnv, "")
+	publicIP := net.IPv4(8, 8, 8, 8).String()
+
+	got, err := validatedPortfolioDialAddress(context.Background(), publicIP, "443")
+	if err != nil {
+		t.Fatalf("validatedPortfolioDialAddress returned error: %v", err)
+	}
+
+	want := net.JoinHostPort(publicIP, "443")
+	if got != want {
+		t.Fatalf("validatedPortfolioDialAddress = %q, want %q", got, want)
+	}
+}
+
+func TestValidatedPortfolioDialAddressRejectsPrivateIP(t *testing.T) {
+	t.Setenv(portfolioAllowedHostsEnv, "")
+	privateIP := net.IPv4(127, 0, 0, 1).String()
+
+	_, err := validatedPortfolioDialAddress(context.Background(), privateIP, "8080")
+	if err == nil {
+		t.Fatal("validatedPortfolioDialAddress returned nil error")
+	}
+	if !strings.Contains(err.Error(), "non-public address") {
+		t.Fatalf("validatedPortfolioDialAddress error = %q, want non-public address", err)
 	}
 }

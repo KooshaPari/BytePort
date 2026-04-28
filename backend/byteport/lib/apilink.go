@@ -166,17 +166,11 @@ func ssrfSafePortfolioClient() *http.Client {
 		if err != nil {
 			return nil, fmt.Errorf("invalid Portfolio API address: %v", err)
 		}
-		ips, err := net.DefaultResolver.LookupIP(ctx, "ip", host)
+		dialAddress, err := validatedPortfolioDialAddress(ctx, host, port)
 		if err != nil {
-			return nil, fmt.Errorf("failed to resolve Portfolio API host: %v", err)
+			return nil, err
 		}
-		privateHostAllowed := allowsPrivatePortfolioHost(strings.TrimSuffix(strings.ToLower(host), "."))
-		for _, ip := range ips {
-			if !isPublicIP(ip) && !privateHostAllowed {
-				return nil, fmt.Errorf("portfolio API host resolved to a non-public address")
-			}
-		}
-		return dialer.DialContext(ctx, network, net.JoinHostPort(host, port))
+		return dialer.DialContext(ctx, network, dialAddress)
 	}
 
 	return &http.Client{
@@ -189,6 +183,26 @@ func ssrfSafePortfolioClient() *http.Client {
 			return nil
 		},
 	}
+}
+
+func validatedPortfolioDialAddress(ctx context.Context, host, port string) (string, error) {
+	normalizedHost := strings.TrimSuffix(strings.ToLower(host), ".")
+	ips, err := net.DefaultResolver.LookupIP(ctx, "ip", normalizedHost)
+	if err != nil {
+		return "", fmt.Errorf("failed to resolve Portfolio API host: %v", err)
+	}
+	if len(ips) == 0 {
+		return "", fmt.Errorf("portfolio API host resolved to no addresses")
+	}
+
+	privateHostAllowed := allowsPrivatePortfolioHost(normalizedHost)
+	for _, ip := range ips {
+		if !isPublicIP(ip) && !privateHostAllowed {
+			return "", fmt.Errorf("portfolio API host resolved to a non-public address")
+		}
+	}
+
+	return net.JoinHostPort(ips[0].String(), port), nil
 }
 
 func isPublicIP(ip net.IP) bool {
