@@ -19,5 +19,13 @@
 		"typescript": "^6.0.3",
 		"vite": "^6.4.2"
 	},
+	"overrides": {
+		"cookie": "^0.7.0",
+		"prismjs": "^1.30.0"
+	},
+	"resolutions": {
+		"cookie": "^0.7.0",
+		"prismjs": "^1.30.0"
+	},
 	"type": "module"
 }
