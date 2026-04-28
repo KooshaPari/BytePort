@@ -17,7 +17,7 @@
 		"svelte": "^5.55.0",
 		"svelte-check": "^4.0.0",
 		"typescript": "^6.0.3",
-		"vite": "^6.4.2"
+		"vite": "^8.0.10"
 	},
 	"overrides": {
 		"cookie": "0.7.0"
