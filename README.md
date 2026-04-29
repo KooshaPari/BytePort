@@ -7,6 +7,8 @@
 
 # BytePort
 
+[![AI Slop Inside](https://sladge.net/badge.svg)](https://sladge.net)
+
 ## What is this
 
 **BytePort is a self-hosted IaC deployment + portfolio platform for developer projects.** Define one manifest (`odin.nvms`) at your repo root and BytePort provisions a MicroVM-backed deployment on your own cloud, registers the resulting endpoints with a portfolio site, and uses an LLM to generate showcase metadata for each project.
