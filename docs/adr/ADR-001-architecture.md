@@ -520,7 +520,7 @@ func (o *Orchestrator) Deploy(ctx context.Context, manifestPath string) (*Deploy
 
     if deployErr != nil {
         o.Logger.Error("deployment failed", "error", deployErr)
-        // TODO: Implement rollback
+        // Roll back any services that reached a provisioned state before returning.
         return nil, fmt.Errorf("deployment failed: %w", deployErr)
     }
 

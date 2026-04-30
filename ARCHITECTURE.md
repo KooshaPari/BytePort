@@ -1,21 +1,25 @@
 # Architecture
 
 ## Overview
-- BytePort is a multi-language workspace centered on the Tauri frontend and backend services.
-- The root Go modules and frontend assets support the desktop experience and supporting automation.
-- This document is a skeleton for filling in the authoritative architecture details.
+- BytePort is a multi-language workspace centered on the Tauri frontend shell
+  and its Go backend services.
+- The desktop app is supported by a local Go module tree, backend artifacts,
+  and bundled frontend assets.
+- This document captures the current component boundaries and the main
+  integration points.
 
 ## Components
-## frontend/web/src-tauri
+
+### `frontend/web/src-tauri`
 - Desktop application shell and Rust-side integration for the frontend.
 
-## backend/byteport
+### `backend/byteport`
 - Go backend service for BytePort domain logic and server-side coordination.
 
-## backend/nvms
-- Supporting Go module for BytePort infrastructure or platform integration.
+### `backend/nvms`
+- Supporting Go module for BytePort infrastructure and platform integration.
 
-## frontend/web
+### `frontend/web`
 - Web frontend assets and application code for the user-facing experience.
 
 ## Data flow
@@ -34,6 +38,8 @@ user actions -> frontend/web -> frontend/web/src-tauri -> backend services -> ex
 - Errors: surface actionable failures at the boundary layer and preserve context internally.
 
 ## Future considerations
-- Replace placeholders with crate-level responsibilities and ownership.
-- Document persistence, sync, and packaging boundaries once they stabilize.
-- Add diagram detail for startup, sync, and release flows.
+- Document persistence boundaries around `backend/database.db` and any sync
+  contracts that bridge the desktop shell and backend services.
+- Capture packaging and release flow details for the Tauri shell and Go
+  backend once the build pipeline stabilizes.
+- Expand the startup/sync/release diagrams after the service contract settles.
