@@ -7,6 +7,12 @@
 
 # BytePort
 
+[![Build](https://img.shields.io/github/actions/workflow/status/KooshaPari/BytePort/ci.yaml?branch=main&label=build)](https://github.com/KooshaPari/BytePort/actions/workflows/ci.yaml)
+[![Release](https://img.shields.io/github/v/release/KooshaPari/BytePort?include_prereleases&sort=semver)](https://github.com/KooshaPari/BytePort/releases)
+[![License](https://img.shields.io/github/license/KooshaPari/BytePort)](LICENSE)
+[![Phenotype](https://img.shields.io/badge/Phenotype-org-blueviolet)](https://github.com/KooshaPari)
+
+
 ## What is this
 
 **BytePort is a self-hosted IaC deployment + portfolio platform for developer projects.** Define one manifest (`odin.nvms`) at your repo root and BytePort provisions a MicroVM-backed deployment on your own cloud, registers the resulting endpoints with a portfolio site, and uses an LLM to generate showcase metadata for each project.
@@ -45,7 +51,8 @@ Demo portfolio integration (Slickport) expects credentials you set yourself. **D
 ## Quickstart
 ### Prepwork:
 - Install SpinCLI, golang etc
-- Clone Project, open 3 terminals -> backend\byteport -> spin build up, backend\nvms -> go run main.go , frontend\web -> npm i -> npm run dev
+- Clone Project, open 3 terminals -> backendyteport -> spin build up, backend
+vms -> go run main.go , frontend\web -> npm i -> npm run dev
 - Grab Demosite and startup(if you don't want to setup api routes rn either remove the demonstrator call in the deploy function OR clone and run slickport with npm run dev and provide localhost:5180, <YOUR_API_KEY> for credentials)
 - localhost:5173/signup -> signup -> first time setup -> home -> ready
 ### Deploy Prep
