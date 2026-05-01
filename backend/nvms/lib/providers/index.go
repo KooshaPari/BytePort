@@ -4,7 +4,6 @@
 //
 //	openai - OpenAI API integration
 //	anthropic - Anthropic Claude API integration
-//	gemini - Google Gemini API integration
 //	local - Local LLM integration
 //	deepseek - DeepSeek API integration
 package providers
