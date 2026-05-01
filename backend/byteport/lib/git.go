@@ -63,7 +63,7 @@ func LinkWithGithub(c *gin.Context, user models.User) {
 	// state has paseto token and user id
 	var state string = authToken + "<BYTEPORT>"+ user.UUID
 	redirectURL := fmt.Sprintf("https://github.com/login/oauth/authorize?client_id=%s&state=%s", ClientID, state)
-	fmt.Println("Redirecting user to GitHub App installation..."+ redirectURL )
+	log.Printf("Redirecting user to GitHub App installation: %s\n", redirectURL)
 	c.Redirect(http.StatusFound, redirectURL)
 	
 }
@@ -151,12 +151,12 @@ func GetUserAccessToken( pasetoToken, code string) (models.Git, error) {
 func refreshToken(user models.User, pasetoToken string) (models.Git, error) {
 	const apiURL = "https://github.com/login/oauth/access_token"
 	var secrets models.GitSecret 
-	fmt.Println("Refreshing Token - Decrypt")
+	log.Println("Refreshing Token - Decrypt")
 	decryptedToken, err := DecryptSecret(user.Git.RefreshToken)
 	if err != nil {
 		return  models.Git{}, fmt.Errorf("failed to decrypt refresh token: %v", err)
 	}
-	fmt.Println("Refreshing Token - Find: ", decryptedToken)
+	log.Printf("Refreshing Token - Find: [REDACTED]\n")
 	models.DB.First(&secrets)
 	clientID,err := DecryptSecret(secrets.ClientID)
 	if err != nil {
@@ -168,7 +168,7 @@ func refreshToken(user models.User, pasetoToken string) (models.Git, error) {
 		return  models.Git{}, fmt.Errorf("failed to decrypt client secret: %v", err)
 	
 	}
-	fmt.Println("Refreshing Token - Req")
+	log.Println("Refreshing Token - Req")
 	payload := map[string]string{
 			"client_id":     clientID,
 			"client_secret": clientSecret,
@@ -177,10 +177,10 @@ func refreshToken(user models.User, pasetoToken string) (models.Git, error) {
 		}
 		
 		fmt.Println("Payload ID: ", payload["client_id"])	
-		fmt.Println("Payload Secret: ", payload["client_secret"])
-		fmt.Println("Payload Grant: ", payload["grant_type"])
-		fmt.Println("Payload Refresh: ", payload["refresh_token"])
-      payloadBytes, err := json.Marshal(payload)
+log.Printf("Payload ID: [REDACTED]\n")
+		log.Printf("Payload Secret: [REDACTED]\n")
+		log.Printf("Payload Grant: %s\n", payload["grant_type"])
+		log.Printf("Payload Refresh: [REDACTED]\n")
     if err != nil {
        return  models.Git{}, fmt.Errorf("failed to marshal payload: %v", err)
     }
@@ -192,7 +192,7 @@ func refreshToken(user models.User, pasetoToken string) (models.Git, error) {
     req.Header.Set("Content-Type", "application/json")
 
 	client := &http.Client{}
-	fmt.Println("Refreshing Token - Send")
+	log.Println("Refreshing Token - Send")
     resp, err := client.Do(req)
     if err != nil {
 
@@ -219,8 +219,8 @@ func refreshToken(user models.User, pasetoToken string) (models.Git, error) {
 		TokenExpiry: time.Now(),
 		RefreshTokenExpiry: time.Now(),
 	}
-	fmt.Println("Refreshing Token - Parse")
-	fmt.Println("Response Token: ", tokenResponse )
+	log.Println("Refreshing Token - Parse")
+	log.Printf("Response Token: [REDACTED]\n")
 	if(tokenResponse["error"] != nil || tokenResponse["access_token"] == nil){
 		return models.Git{}, fmt.Errorf("failed to refresh token: %v", tokenResponse["error"])}
 		
@@ -228,13 +228,13 @@ func refreshToken(user models.User, pasetoToken string) (models.Git, error) {
 	response.Token = tokenResponse["access_token"].(string)}
 	if(tokenResponse["refresh_token"] != nil){
 	response.RefreshToken = tokenResponse["refresh_token"].(string)}
-	fmt.Println("Refreshing Token - Set")
+	log.Println("Refreshing Token - Set")
 	response.TokenExpiry = time.Now().Add(7*time.Hour + 45*time.Minute) // Set access token expiry
 	response.RefreshTokenExpiry = time.Now().Add(4*30*24*time.Hour + 12*time.Hour) // Set refresh token expiry (4.5 months)
-	fmt.Println("Response Token: ", response.Token)
-	fmt.Println("Response Refresh Token: ", response.RefreshToken)
-	fmt.Println("Response Expiry: ", response.TokenExpiry)
-	fmt.Println("Response Refresh Expiry: ", response.RefreshTokenExpiry)
+	log.Printf("Response Token: [REDACTED]\n")
+	log.Printf("Response Refresh Token: [REDACTED]\n")
+	log.Printf("Response Expiry: %s\n", response.TokenExpiry)
+	log.Printf("Response Refresh Expiry: %s\n", response.RefreshTokenExpiry)
 
 	return response, nil
 }
@@ -244,28 +244,28 @@ func refreshTokens(){
 
 	for _, user := range users {
 		if time.Now().After(user.Git.TokenExpiry) {
-			fmt.Println("Refreshing access token for user: ", user.UUID)
+			log.Printf("Refreshing access token for user: %s\n", user.UUID)
 			// Logic to refresh the access token
 			// Call your function to refresh the token here
 			// Update the user record with the new token and expiry
 			token, err := GenerateGitPaseto(user)
 			if err != nil {
-				fmt.Println("Err getting Paseto: ",err)
+				log.Printf("Err getting Paseto: %v\n", err)
 			}
-			fmt.Println("Got Token")
+			log.Println("Got Token")
 			newToken, err := refreshToken(user,token)
 			if err != nil {
-				fmt.Println("Err Refreshing:",err)
+				log.Printf("Err Refreshing: %v\n", err)
 				return 
 			}
-			fmt.Println("New Token Genned")
+			log.Println("New Token Genned")
 			encryptedToken, err := EncryptSecret(newToken.Token)
 			if err != nil {
-				fmt.Println(err)
+				log.Printf("Error encrypting token: %v\n", err)
 			}
 			encryptedRefreshToken, err := EncryptSecret(newToken.RefreshToken)
 			if err != nil {
-				fmt.Println(err)
+				log.Printf("Error encrypting refresh token: %v\n", err)
 			}
 			user.Git = models.Git{
 				Token: encryptedToken,
@@ -285,7 +285,7 @@ func StartTokenRefreshJob() {
 	defer ticker.Stop()
 
 	for range ticker.C {
-		fmt.Println("Checking For Git Token Refresh")
+		log.Println("Checking For Git Token Refresh")
 		refreshTokens()
 	}
 }
