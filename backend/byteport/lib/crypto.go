@@ -246,7 +246,7 @@ func SetEncryptionKeyEnvVar(key string) error {
 func InitializeEncryptionKey() error {
 	key := os.Getenv("ENCRYPTION_KEY")
 	if key != "" {
-		fmt.Println("Encryption key already exists.")
+		log.Println("Encryption key already exists.")
 		return nil
 	}
 
@@ -262,7 +262,7 @@ func InitializeEncryptionKey() error {
 	}
 	// git temp
 	
-	fmt.Println("Encryption key successfully generated and stored.")
+	log.Println("Encryption key successfully generated and stored.")
 	return nil
 }
 func PersistEncryptionKey(key string) error {

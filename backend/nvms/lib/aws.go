@@ -21,7 +21,7 @@ import (
 
 var AWSEndpointBase string = "https://%s.us-east-1.amazonaws.com" /* "http://localhost.localstack.cloud:4566"*/
 func PushToS3(zipBall []byte, AccessKey string, SecretKey string, ProjectName string) (S3DeploymentInfo,error) {
-	fmt.Println("Uploading to S3...")
+	log.Println("Uploading to S3...")
  	cfg := aws.Config{
 		AccessKeyId: AccessKey,
 		SecretAccessKey: SecretKey,
@@ -33,24 +33,24 @@ func PushToS3(zipBall []byte, AccessKey string, SecretKey string, ProjectName st
 	ctx := context.Background()
 	s3Client, err := s3.NewS3(cfg)
 	if err != nil {
-		fmt.Println(err)
+		log.Printf("S3 client creation failed: %v\n", err)
 		return S3DeploymentInfo{},err
 	}
-	fmt.Println("Created S3 client")
+	log.Println("S3 client created")
 	bucketName := strings.ToLower(ProjectName) + "-bytebucket-" + uuid.New().String()
 	err = s3Client.CreateBucket(ctx, bucketName)
 	if err != nil {
-			fmt.Println(err)
-			return S3DeploymentInfo{},err
-		}
-		
-	fmt.Println("Created bucket")
-	err = s3Client.PutObject(ctx, bucketName, "src.zip", zipBall)
-	if err != nil {
-		fmt.Println(err)
+		log.Printf("Bucket creation failed: %v\n", err)
 		return S3DeploymentInfo{},err
 	}
-	fmt.Println("Uploaded to S3")
+	
+	log.Printf("Bucket created: %s\n", bucketName)
+	err = s3Client.PutObject(ctx, bucketName, "src.zip", zipBall)
+	if err != nil {
+		log.Printf("PutObject failed: %v\n", err)
+		return S3DeploymentInfo{},err
+	}
+	log.Printf("Uploaded to S3: %s\n", bucketName)
 	// return uri/bucket name for later use
 	
 	info := S3DeploymentInfo{
@@ -77,17 +77,16 @@ func DeployEC2(AccessKey string, SecretKey string, bucket S3DeploymentInfo, serv
 		Service: "ec2",
 	})
 	if err != nil {
-		fmt.Println(err)
+		log.Printf("EC2 client creation failed: %v\n", err)
 		return []EC2InstanceInfo{},err
 	}
 	
 	buildScript,err := generateBuildScript(bucket, service,AccessKey, SecretKey, fileMap)
 	if err != nil {
-		fmt.Println("Error generating build script: ", err)
+		log.Printf("Error generating build script: %v\n", err)
 		return []EC2InstanceInfo{}, err
 	}
-	//fmt.Println("Generated build script: ", buildScript)
-	fmt.Println("Created EC2 client: ", client)
+	log.Printf("EC2 client created: %v\n", client)
 	params := map[string]string{
 		"ImageId": "ami-01816d07b1128cd2d",
 		//"ImageId": "ami-024f768332f0",
@@ -96,7 +95,7 @@ func DeployEC2(AccessKey string, SecretKey string, bucket S3DeploymentInfo, serv
 		"MinCount": "1",
 		"MaxCount": "1",
 	}
-	fmt.Println("Creating instance")
+	log.Println("Creating EC2 instance")
 	resp, err := client.RunInstances(context.Background(), params)
 	//fmt.Println(resp)
 	var instances []EC2InstanceInfo
@@ -114,10 +113,10 @@ func DeployEC2(AccessKey string, SecretKey string, bucket S3DeploymentInfo, serv
 
 
 func generateBuildScript(s3Info S3DeploymentInfo, service models.Service, accessKey, secretKey string, files []string) (string, error ){
-	fmt.Println("Getting Buildpack")
+	log.Println("Getting Buildpack")
     buildpack, err := DetectBuildPack(files, service)
     if err != nil {
-		fmt.Println("Error detecting buildpack: ", err)
+		log.Printf("Error detecting buildpack: %v\n", err)
         log.Printf("Warning: No specific buildpack detected, using default behavior")
         buildpack = &models.BuildPack{
             Name: "Generic",
@@ -244,7 +243,7 @@ systemctl start %s
 
 log "Build and deployment complete!"
 `
-	fmt.Println("Building script...")
+	log.Println("Building script...")
 	envVarsList := make([]string, 0, len(buildpack.EnvVars))
     for k, v := range buildpack.EnvVars {
         envVarsList = append(envVarsList, fmt.Sprintf("export %s=%s", k, v))
@@ -280,11 +279,9 @@ log "Build and deployment complete!"
     service.Name,             // %s for enable
     service.Name,             // %s for start
 )
-    // Debug print the parameters (remove sensitive info)
-    fmt.Printf("Service: %+v\n", service)
-    fmt.Printf("Build Pack: %s\n",  buildpack )
-    //fmt.Printf("S3 Info: Bucket=%s, Key=%s\n", s3Info.BucketName, s3Info.ObjectKey)
-	//fmt.Println("Formatted script: ", formattedScript)
+    // Debug: log service and buildpack info
+	log.Printf("Service: %+v\n", service)
+	log.Printf("Build Pack: %s\n", buildpack)
     return base64.StdEncoding.EncodeToString([]byte(formattedScript)),nil
 }
 
@@ -299,7 +296,7 @@ func ProvisionNetwork(AccessKey string, SecretKey string, projectName string ) (
 		Service: "elasticloadbalancing",
 	})
 	if err != nil {
-		fmt.Println(err)
+		log.Printf("ALB client creation failed: %v\n", err)
 		return nil,"","",  err
 	}
 	ec2Client, err := ec2.NewEC2(aws.Config{
@@ -310,23 +307,23 @@ func ProvisionNetwork(AccessKey string, SecretKey string, projectName string ) (
 		Region: "us-east-1",
 		Service: "ec2",})
 		if err != nil {
-			fmt.Println(err)
+			log.Printf("EC2 client creation failed: %v\n", err)
 			return nil,"","", err
 		}
 	 subnet1, subnet2,sgId, vpcId, err := ec2Client.GetAlbNetworkInfo(context.Background() )
 	if err != nil {
-		fmt.Println(err)
+		log.Printf("GetAlbNetworkInfo failed: %v\n", err)
 		return nil,"","", err
 	}
 	/*targetArn, err := albClient.CreateTargetGroup(context.Background(), base+"-"+projectName+"-Byteport", vpcId)
 	if err != nil {
-		fmt.Println(err)
+		log.Printf("CreateTargetGroup failed: %v\n", err)
 		return  "","",err
 	}*/
 	//fmt.Println("VPC: ", vpcId);
 	albInstance, err := albClient.CreateInternetApplicationLoadbalancer(context.Background(), projectName, sgId, subnet1, subnet2)
 	if err != nil {
-		fmt.Println(err)
+		log.Printf("CreateInternetApplicationLoadbalancer failed: %v\n", err)
 		return nil,"","", err
 	}
 	 //loadBalancerArn := albInstance.CreateLoadBalancerResult.LoadBalancers.Member.LoadBalancerArn
@@ -334,7 +331,7 @@ func ProvisionNetwork(AccessKey string, SecretKey string, projectName string ) (
 	 
 	// for each service create targetgroup service-TG -> ALB Listener Rule Path /service/* -> service-TG
 	
-	fmt.Println("Hosted zone created successfully.: ", publicDNS)
+	log.Printf("ALB created with DNS: %s\n", publicDNS)
 	
 	 
 	return albInstance, vpcId, publicDNS, nil
@@ -352,11 +349,11 @@ func CreateALBListener(AccessKey string, SecretKey string, projectName string, l
 	targetArn, err := RegisterService(AccessKey, SecretKey, loadBalancerArn, projectName, "main", vpcId, instanceId, port)
 	listenerResponse,err := albClient.CreateListener(context.Background(), projectName, loadBalancerArn, targetArn)
 	 if err != nil {
-		fmt.Println(err)
+		log.Printf("CreateListener failed: %v\n", err)
 		return "","",err
 	}
 	listenerArn := listenerResponse.CreateListenerResult.Listeners.Member.ListenerArn
-	fmt.Println("Listener created successfully:  ", listenerArn)
+	log.Printf("ALB Listener created: %s\n", listenerArn)
 	return listenerArn,targetArn,nil
 
 }
@@ -370,11 +367,11 @@ func SetListenerRules(AccessKey string, SecretKey string, ListenerArn string, Ta
 		Service: "elasticloadbalancing",
 	})
 	if err != nil {
-		fmt.Println(err)
+		log.Printf("ALB client creation failed: %v\n", err)
 		return err}
 	err = c.CreateListenerRule(context.Background(), ListenerArn, TargetArn, serviceName, priority)
 	if err != nil {
-		fmt.Println(err)
+		log.Printf("CreateListenerRule failed: %v\n", err)
 		return err
 	}
 	return nil
@@ -389,22 +386,20 @@ func RegisterService(AccessKey string, SecretKey string, loadBalancerArn string,
 		Service: "elasticloadbalancing",
 	})
 	if err != nil {
-		fmt.Println(err)
+		log.Printf("ALB client creation failed: %v\n", err)
 		return  "",err
 	}
 	targetArn, err := albClient.CreateTargetGroup(context.Background(), serviceName+"-"+projectName+"-Byteport", vpcId)
 	if err != nil {
-		fmt.Println(err)
+		log.Printf("CreateTargetGroup failed: %v\n", err)
 		return  "",err
 	}
 	err =albClient.RegisterTarget(context.Background(), targetArn, instanceId, port )
 	if err != nil {
-		fmt.Println(err)
+		log.Printf("RegisterTarget failed: %v\n", err)
 		return  "",err
 	}
-	
-
-	return targetArn, nil;
+	log.Printf("Service registered: %s\n", targetArn)
 }
 func AddNewRecord(AccessKey string, SecretKey string, domainName string, zoneID string, projectName string, value string) (string, error) {
 	c, err := r53.NewRoute53(aws.Config{
@@ -416,21 +411,21 @@ func AddNewRecord(AccessKey string, SecretKey string, domainName string, zoneID 
 		Service: "route53",
 	})
 	if err != nil {
-		fmt.Println(err)
+		log.Printf("Route53 client creation failed: %v\n", err)
 		return "",err
 	}
 
 	err = c.CreateRecordSet(context.Background(), zoneID, domainName, "A", value, 300, projectName)
 	if err != nil {
-		fmt.Println(err)
+		log.Printf("CreateRecordSet failed: %v\n", err)
 		return "",err
 	}
-	fmt.Println("Record set created successfully.")
+	log.Println("Record set created successfully")
 	return "Success",nil
 	
 }
 func AwaitInitialization(AccessKey string, SecretKey string, instanceIDs []string) (error){
-	fmt.Println("Waiting for instances to initialize...")
+	log.Println("Waiting for instances to initialize...")
 	c, err := ec2.NewEC2(aws.Config{
 		AccessKeyId: AccessKey,
 		SecretAccessKey: SecretKey,
@@ -438,17 +433,17 @@ func AwaitInitialization(AccessKey string, SecretKey string, instanceIDs []strin
 		Endpoint: getServiceEndpoint("ec2"),
 		Region: "us-east-1",
 		Service: "ec2"})
+	})
 	if err != nil {
-		fmt.Println(err)
+		log.Printf("EC2 client creation failed: %v\n", err)
 		return err }
-		fmt.Println("Created EC2 client")
+	log.Println("EC2 client created")
 	err = c.WaitForEC2Running(instanceIDs, context.Background())
 	if err != nil {
-		fmt.Println(err)
+		log.Printf("WaitForEC2Running failed: %v\n", err)
 		return err}
-	fmt.Println("Instances initialized")
+	log.Println("Instances initialized")
 	return nil
-}
 
 func TerminateS3(resource models.AWSResource, AccessKey string, SecretKey string)(error){
 	
