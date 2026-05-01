@@ -87,22 +87,29 @@ func (c *Client) PutObject(ctx context.Context, bucketName, objectName string, d
 }
 
 // GetObject fetches an object from the specified bucket.
-// TODO: Create a struct to contain meta? etag,last modified, etc
-func (c *Client) GetObject(ctx context.Context, bucketName, objectName string) (io.ReadCloser, error) {
+// GetObject fetches an object from the specified bucket along with its metadata.
+func (c *Client) GetObject(ctx context.Context, bucketName, objectName string) (io.ReadCloser, *ObjectMetadata, error) {
 	req, err := c.newRequest(ctx, http.MethodGet, bucketName, objectName, nil)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	resp, err := c.do(req)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
- 
 
-	return resp.Body, nil
+	// Extract metadata from response headers
+	metadata := &ObjectMetadata{
+		ETag:         resp.Header.Get("ETag"),
+		LastModified: resp.Header.Get("Last-Modified"),
+		Size:         resp.ContentLength,
+		ContentType:  resp.Header.Get("Content-Type"),
+		StorageClass: resp.Header.Get("x-amz-storage-class"),
+	}
+
+	return resp.Body, metadata, nil
 }
-
 // DeleteObject deletes an object from the specified bucket.
 func (c *Client) DeleteObject(ctx context.Context, bucketName, objectName string) error {
 	req, err := c.newRequest(ctx, http.MethodDelete, bucketName, objectName, nil)

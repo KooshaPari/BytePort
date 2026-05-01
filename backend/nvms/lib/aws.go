@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"log"
+	"os"
 	"path/filepath"
 
 	aws "nvms/lib/awspin"
@@ -18,121 +19,125 @@ import (
 	"github.com/google/uuid"
 )
 
+// getAWSRegion returns the AWS region from environment variable or defaults to us-east-1
+func getAWSRegion() string {
+	if region := os.Getenv("AWS_REGION"); region != "" {
+		return region
+	}
+	return "us-east-1"
+}
 
-var AWSEndpointBase string = "https://%s.us-east-1.amazonaws.com" /* "http://localhost.localstack.cloud:4566"*/
-func PushToS3(zipBall []byte, AccessKey string, SecretKey string, ProjectName string) (S3DeploymentInfo,error) {
-	fmt.Println("Uploading to S3...")
- 	cfg := aws.Config{
-		AccessKeyId: AccessKey,
+var AWSEndpointBase string = "https://%s." + getAWSRegion() + ".amazonaws.com" /* "http://localhost.localstack.cloud:4566"*/
+func PushToS3(zipBall []byte, AccessKey string, SecretKey string, ProjectName string) (S3DeploymentInfo, error) {
+	log.Println("Uploading to S3...")
+	cfg := aws.Config{
+		AccessKeyId:     AccessKey,
 		SecretAccessKey: SecretKey,
-		SessionToken: "",
-		Endpoint: getServiceEndpoint("s3"),
-		Region: "us-east-1",
-		Service: "s3",
+		SessionToken:    "",
+		Endpoint:        getServiceEndpoint("s3"),
+		Region:          getAWSRegion(),
+		Service:         "s3",
 	}
 	ctx := context.Background()
 	s3Client, err := s3.NewS3(cfg)
 	if err != nil {
-		fmt.Println(err)
-		return S3DeploymentInfo{},err
+		log.Printf("S3 client creation failed: %v\n", err)
+		return S3DeploymentInfo{}, err
 	}
-	fmt.Println("Created S3 client")
+	log.Println("S3 client created")
 	bucketName := strings.ToLower(ProjectName) + "-bytebucket-" + uuid.New().String()
 	err = s3Client.CreateBucket(ctx, bucketName)
 	if err != nil {
-			fmt.Println(err)
-			return S3DeploymentInfo{},err
-		}
-		
-	fmt.Println("Created bucket")
+		log.Printf("Bucket creation failed: %v\n", err)
+		return S3DeploymentInfo{}, err
+	}
+
+	log.Printf("Bucket created: %s\n", bucketName)
 	err = s3Client.PutObject(ctx, bucketName, "src.zip", zipBall)
 	if err != nil {
-		fmt.Println(err)
-		return S3DeploymentInfo{},err
+		log.Printf("PutObject failed: %v\n", err)
+		return S3DeploymentInfo{}, err
 	}
-	fmt.Println("Uploaded to S3")
+	log.Printf("Uploaded to S3: %s\n", bucketName)
 	// return uri/bucket name for later use
-	
+
 	info := S3DeploymentInfo{
-        BucketName:  bucketName,
-        ObjectKey:   "src.zip",
-        Region:      "us-east-1",
-        BucketARN:   fmt.Sprintf("arn:aws:s3:::%s", bucketName),
+		BucketName: bucketName,
+		ObjectKey:  "src.zip",
+		Region:     getAWSRegion(),
+		BucketARN:  fmt.Sprintf("arn:aws:s3:::%s", bucketName),
 		//ObjectURL:   fmt.Sprintf("http://localhost:4566/%s/%s", bucketName, "src.zip"),
 		ObjectURL:   fmt.Sprintf("https://%s.s3.amazonaws.com/%s", bucketName, "src.zip"),
-        ContentHash: aws.GetPayloadHash(zipBall),
-    }
-	return info,nil
-	
+		ContentHash: aws.GetPayloadHash(zipBall),
+	}
+	return info, nil
+
 }
 
-
-func DeployEC2(AccessKey string, SecretKey string, bucket S3DeploymentInfo, service models.Service, fileMap []string) ([]EC2InstanceInfo,error){
+func DeployEC2(AccessKey string, SecretKey string, bucket S3DeploymentInfo, service models.Service, fileMap []string) ([]EC2InstanceInfo, error) {
 	client, err := ec2.NewEC2(aws.Config{
-		AccessKeyId: AccessKey,
+		AccessKeyId:     AccessKey,
 		SecretAccessKey: SecretKey,
-		SessionToken: "",
-		Endpoint: getServiceEndpoint("ec2"),
-		Region: "us-east-1",
-		Service: "ec2",
+		SessionToken:    "",
+		Endpoint:        getServiceEndpoint("ec2"),
+		Region:          getAWSRegion(),
+		Service:         "ec2",
 	})
 	if err != nil {
-		fmt.Println(err)
-		return []EC2InstanceInfo{},err
-	}
-	
-	buildScript,err := generateBuildScript(bucket, service,AccessKey, SecretKey, fileMap)
-	if err != nil {
-		fmt.Println("Error generating build script: ", err)
+		log.Printf("EC2 client creation failed: %v\n", err)
 		return []EC2InstanceInfo{}, err
 	}
-	//fmt.Println("Generated build script: ", buildScript)
-	fmt.Println("Created EC2 client: ", client)
+
+	buildScript, err := generateBuildScript(bucket, service, AccessKey, SecretKey, fileMap)
+	if err != nil {
+		log.Printf("Error generating build script: %v\n", err)
+		return []EC2InstanceInfo{}, err
+	}
+	log.Printf("EC2 client created: %v\n", client)
 	params := map[string]string{
 		"ImageId": "ami-01816d07b1128cd2d",
 		//"ImageId": "ami-024f768332f0",
 		"InstanceType": "t2.micro",
-		"UserData": buildScript,
-		"MinCount": "1",
-		"MaxCount": "1",
+		"UserData":     buildScript,
+		"MinCount":     "1",
+		"MaxCount":     "1",
 	}
-	fmt.Println("Creating instance")
+	log.Println("Creating EC2 instance")
 	resp, err := client.RunInstances(context.Background(), params)
 	//fmt.Println(resp)
 	var instances []EC2InstanceInfo
-    for _, instance := range resp.Instances {
-        newInstance := EC2InstanceInfo{
-            InstanceID:     instance.InstanceId,
-            PrivateIP:      instance.PrivateIpAddress,
-            State:          instance.State.Name,
-            Region:        "us-east-1",
-        }
-        instances = append(instances, newInstance)
-    }
-	return instances,nil;
+	for _, instance := range resp.Instances {
+		newInstance := EC2InstanceInfo{
+			InstanceID: instance.InstanceId,
+			PrivateIP:  instance.PrivateIpAddress,
+			State:      instance.State.Name,
+			Region:     getAWSRegion(),
+		}
+		instances = append(instances, newInstance)
+	}
+	return instances, nil
 }
 
-
-func generateBuildScript(s3Info S3DeploymentInfo, service models.Service, accessKey, secretKey string, files []string) (string, error ){
-	fmt.Println("Getting Buildpack")
-    buildpack, err := DetectBuildPack(files, service)
-    if err != nil {
-		fmt.Println("Error detecting buildpack: ", err)
-        log.Printf("Warning: No specific buildpack detected, using default behavior")
-        buildpack = &models.BuildPack{
-            Name: "Generic",
-            Packages: []string{},
-            PreBuild: []string{},
-            Build: service.Build,
-            EnvVars:  map[string]string{},
-			Start: strings.Join(service.Build, " && "),
-			DetectFiles: []string{},
+func generateBuildScript(s3Info S3DeploymentInfo, service models.Service, accessKey, secretKey string, files []string) (string, error) {
+	log.Println("Getting Buildpack")
+	buildpack, err := DetectBuildPack(files, service)
+	if err != nil {
+		log.Printf("Error detecting buildpack: %v\n", err)
+		log.Printf("Warning: No specific buildpack detected, using default behavior")
+		buildpack = &models.BuildPack{
+			Name:            "Generic",
+			Packages:        []string{},
+			PreBuild:        []string{},
+			Build:           service.Build,
+			EnvVars:         map[string]string{},
+			Start:           strings.Join(service.Build, " && "),
+			DetectFiles:     []string{},
 			RuntimeVersions: map[string]string{},
-        }
+		}
 		return "", err
-    }
+	}
 	//fmt.Println("Got Buildpack: ", buildpack)
-    heading := `#!/bin/bash
+	heading := `#!/bin/bash
 set -e
 
 # Configure logging
@@ -144,7 +149,7 @@ chmod 644 $BUILD_LOG
 log() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') $1" | tee -a $BUILD_LOG
 }`
-    script := `
+	script := `
 
 log "Starting build process for %s application..."
 
@@ -244,228 +249,224 @@ systemctl start %s
 
 log "Build and deployment complete!"
 `
-	fmt.Println("Building script...")
+	log.Println("Building script...")
 	envVarsList := make([]string, 0, len(buildpack.EnvVars))
-    for k, v := range buildpack.EnvVars {
-        envVarsList = append(envVarsList, fmt.Sprintf("export %s=%s", k, v))
-    }
-    environmentVars := strings.Join(envVarsList, "\n")
-    // Format script with actual values
-    formattedScript := heading + fmt.Sprintf(script,
-    buildpack.Name,            // %s for application type
-    accessKey,                 // %s for AWS access key
-    secretKey,                 // %s for AWS secret key
-    s3Info.BucketName,        // %s for bucket name
-    s3Info.ObjectKey,         // %s for object key
-	filepath.Base(strings.Trim(service.Path, "/")),
-    service.Path,             // %s for service path (logging)
-    service.Path,             // %s for service path (cd)
-    strings.Join(buildpack.Packages, " "), // %s for packages
-    environmentVars,         // %s for env vars
-    strings.Join(buildpack.PreBuild, "\n"), // %s for prebuild
-    strings.Join(buildpack.Build, " && "),  // %s for build commands
-    service.Name,             // %s for service name
-    service.Name,             // %s for service name in Description
-    buildpack.Name,           // %s for buildpack name
-    service.Path,             // %s for WorkingDirectory
-    buildpack.Start,          // %s for ExecStart
-    service.Port,             // %d for PORT
-    strings.Join(func() []string {  // %s for systemd env vars
-        var envs []string
-        for k, v := range buildpack.EnvVars {
-            envs = append(envs, fmt.Sprintf("Environment=%s=%s", k, v))
-        }
-        return envs
-    }(), "\n"),
-    service.Name,             // %s for enable
-    service.Name,             // %s for start
-)
-    // Debug print the parameters (remove sensitive info)
-    fmt.Printf("Service: %+v\n", service)
-    fmt.Printf("Build Pack: %s\n",  buildpack )
-    //fmt.Printf("S3 Info: Bucket=%s, Key=%s\n", s3Info.BucketName, s3Info.ObjectKey)
-	//fmt.Println("Formatted script: ", formattedScript)
-    return base64.StdEncoding.EncodeToString([]byte(formattedScript)),nil
+	for k, v := range buildpack.EnvVars {
+		envVarsList = append(envVarsList, fmt.Sprintf("export %s=%s", k, v))
+	}
+	environmentVars := strings.Join(envVarsList, "\n")
+	// Format script with actual values
+	formattedScript := heading + fmt.Sprintf(script,
+		buildpack.Name,    // %s for application type
+		accessKey,         // %s for AWS access key
+		secretKey,         // %s for AWS secret key
+		s3Info.BucketName, // %s for bucket name
+		s3Info.ObjectKey,  // %s for object key
+		filepath.Base(strings.Trim(service.Path, "/")),
+		service.Path,                           // %s for service path (logging)
+		service.Path,                           // %s for service path (cd)
+		strings.Join(buildpack.Packages, " "),  // %s for packages
+		environmentVars,                        // %s for env vars
+		strings.Join(buildpack.PreBuild, "\n"), // %s for prebuild
+		strings.Join(buildpack.Build, " && "),  // %s for build commands
+		service.Name,                           // %s for service name
+		service.Name,                           // %s for service name in Description
+		buildpack.Name,                         // %s for buildpack name
+		service.Path,                           // %s for WorkingDirectory
+		buildpack.Start,                        // %s for ExecStart
+		service.Port,                           // %d for PORT
+		strings.Join(func() []string { // %s for systemd env vars
+			var envs []string
+			for k, v := range buildpack.EnvVars {
+				envs = append(envs, fmt.Sprintf("Environment=%s=%s", k, v))
+			}
+			return envs
+		}(), "\n"),
+		service.Name, // %s for enable
+		service.Name, // %s for start
+	)
+	// Debug: log service and buildpack info
+	log.Printf("Service: %+v\n", service)
+	log.Printf("Build Pack: %s\n", buildpack)
+	return base64.StdEncoding.EncodeToString([]byte(formattedScript)), nil
 }
 
-
-func ProvisionNetwork(AccessKey string, SecretKey string, projectName string ) ( *awsnet.CreateLoadBalancerResponse, string, string, error) {
+func ProvisionNetwork(AccessKey string, SecretKey string, projectName string) (*awsnet.CreateLoadBalancerResponse, string, string, error) {
 	albClient, err := awsnet.NewALB(aws.Config{
-		AccessKeyId: AccessKey,
+		AccessKeyId:     AccessKey,
 		SecretAccessKey: SecretKey,
-		SessionToken: "",
-		Endpoint: getServiceEndpoint("elasticloadbalancing"),
-		Region: "us-east-1",
-		Service: "elasticloadbalancing",
+		SessionToken:    "",
+		Endpoint:        getServiceEndpoint("elasticloadbalancing"),
+		Region:          "us-east-1",
+		Service:         "elasticloadbalancing",
 	})
 	if err != nil {
-		fmt.Println(err)
-		return nil,"","",  err
+		log.Printf("ALB client creation failed: %v\n", err)
+		return nil, "", "", err
 	}
 	ec2Client, err := ec2.NewEC2(aws.Config{
-		AccessKeyId: AccessKey,
+		AccessKeyId:     AccessKey,
 		SecretAccessKey: SecretKey,
-		SessionToken: "",
-		Endpoint: getServiceEndpoint("ec2"),
-		Region: "us-east-1",
-		Service: "ec2",})
-		if err != nil {
-			fmt.Println(err)
-			return nil,"","", err
-		}
-	 subnet1, subnet2,sgId, vpcId, err := ec2Client.GetAlbNetworkInfo(context.Background() )
+		SessionToken:    "",
+		Endpoint:        getServiceEndpoint("ec2"),
+		Region:          "us-east-1",
+		Service:         "ec2"})
 	if err != nil {
-		fmt.Println(err)
-		return nil,"","", err
+		log.Printf("EC2 client creation failed: %v\n", err)
+		return nil, "", "", err
+	}
+	subnet1, subnet2, sgId, vpcId, err := ec2Client.GetAlbNetworkInfo(context.Background())
+	if err != nil {
+		log.Printf("GetAlbNetworkInfo failed: %v\n", err)
+		return nil, "", "", err
 	}
 	/*targetArn, err := albClient.CreateTargetGroup(context.Background(), base+"-"+projectName+"-Byteport", vpcId)
 	if err != nil {
-		fmt.Println(err)
+		log.Printf("CreateTargetGroup failed: %v\n", err)
 		return  "","",err
 	}*/
 	//fmt.Println("VPC: ", vpcId);
 	albInstance, err := albClient.CreateInternetApplicationLoadbalancer(context.Background(), projectName, sgId, subnet1, subnet2)
 	if err != nil {
-		fmt.Println(err)
-		return nil,"","", err
+		log.Printf("CreateInternetApplicationLoadbalancer failed: %v\n", err)
+		return nil, "", "", err
 	}
-	 //loadBalancerArn := albInstance.CreateLoadBalancerResult.LoadBalancers.Member.LoadBalancerArn
-	  publicDNS := albInstance.CreateLoadBalancerResult.LoadBalancers.Member.DNSName
-	 
+	//loadBalancerArn := albInstance.CreateLoadBalancerResult.LoadBalancers.Member.LoadBalancerArn
+	publicDNS := albInstance.CreateLoadBalancerResult.LoadBalancers.Member.DNSName
+
 	// for each service create targetgroup service-TG -> ALB Listener Rule Path /service/* -> service-TG
-	
-	fmt.Println("Hosted zone created successfully.: ", publicDNS)
-	
-	 
+
+	log.Printf("ALB created with DNS: %s\n", publicDNS)
+
 	return albInstance, vpcId, publicDNS, nil
-	
-}
-func CreateALBListener(AccessKey string, SecretKey string, projectName string, loadBalancerArn string, vpcId string, instanceId string, port int  ) (string, string,error ){
-	albClient, err := awsnet.NewALB(aws.Config{
-		AccessKeyId: AccessKey,
-		SecretAccessKey: SecretKey,
-		SessionToken: "",
-		Endpoint: getServiceEndpoint("elasticloadbalancing"),
-		Region: "us-east-1",
-		Service: "elasticloadbalancing",
-	})
-	targetArn, err := RegisterService(AccessKey, SecretKey, loadBalancerArn, projectName, "main", vpcId, instanceId, port)
-	listenerResponse,err := albClient.CreateListener(context.Background(), projectName, loadBalancerArn, targetArn)
-	 if err != nil {
-		fmt.Println(err)
-		return "","",err
-	}
-	listenerArn := listenerResponse.CreateListenerResult.Listeners.Member.ListenerArn
-	fmt.Println("Listener created successfully:  ", listenerArn)
-	return listenerArn,targetArn,nil
 
 }
-func SetListenerRules(AccessKey string, SecretKey string, ListenerArn string, TargetArn string, serviceName string, priority int) (error){
-	c, err := awsnet.NewALB(aws.Config{
-		AccessKeyId: AccessKey,
+func CreateALBListener(AccessKey string, SecretKey string, projectName string, loadBalancerArn string, vpcId string, instanceId string, port int) (string, string, error) {
+	albClient, err := awsnet.NewALB(aws.Config{
+		AccessKeyId:     AccessKey,
 		SecretAccessKey: SecretKey,
-		SessionToken: "",
-		Endpoint: getServiceEndpoint("elasticloadbalancing"),
-		Region: "us-east-1",
-		Service: "elasticloadbalancing",
+		SessionToken:    "",
+		Endpoint:        getServiceEndpoint("elasticloadbalancing"),
+		Region:          "us-east-1",
+		Service:         "elasticloadbalancing",
+	})
+	targetArn, err := RegisterService(AccessKey, SecretKey, loadBalancerArn, projectName, "main", vpcId, instanceId, port)
+	listenerResponse, err := albClient.CreateListener(context.Background(), projectName, loadBalancerArn, targetArn)
+	if err != nil {
+		log.Printf("CreateListener failed: %v\n", err)
+		return "", "", err
+	}
+	listenerArn := listenerResponse.CreateListenerResult.Listeners.Member.ListenerArn
+	log.Printf("ALB Listener created: %s\n", listenerArn)
+	return listenerArn, targetArn, nil
+
+}
+func SetListenerRules(AccessKey string, SecretKey string, ListenerArn string, TargetArn string, serviceName string, priority int) error {
+	c, err := awsnet.NewALB(aws.Config{
+		AccessKeyId:     AccessKey,
+		SecretAccessKey: SecretKey,
+		SessionToken:    "",
+		Endpoint:        getServiceEndpoint("elasticloadbalancing"),
+		Region:          "us-east-1",
+		Service:         "elasticloadbalancing",
 	})
 	if err != nil {
-		fmt.Println(err)
-		return err}
+		log.Printf("ALB client creation failed: %v\n", err)
+		return err
+	}
 	err = c.CreateListenerRule(context.Background(), ListenerArn, TargetArn, serviceName, priority)
 	if err != nil {
-		fmt.Println(err)
+		log.Printf("CreateListenerRule failed: %v\n", err)
 		return err
 	}
 	return nil
 }
-func RegisterService(AccessKey string, SecretKey string, loadBalancerArn string, projectName string, serviceName string, vpcId string, instanceId string, port int) (string,error){
+func RegisterService(AccessKey string, SecretKey string, loadBalancerArn string, projectName string, serviceName string, vpcId string, instanceId string, port int) (string, error) {
 	albClient, err := awsnet.NewALB(aws.Config{
-		AccessKeyId: AccessKey,
+		AccessKeyId:     AccessKey,
 		SecretAccessKey: SecretKey,
-		SessionToken: "",
-		Endpoint: getServiceEndpoint("elasticloadbalancing"),
-		Region: "us-east-1",
-		Service: "elasticloadbalancing",
+		SessionToken:    "",
+		Endpoint:        getServiceEndpoint("elasticloadbalancing"),
+		Region:          "us-east-1",
+		Service:         "elasticloadbalancing",
 	})
 	if err != nil {
-		fmt.Println(err)
-		return  "",err
+		log.Printf("ALB client creation failed: %v\n", err)
+		return "", err
 	}
 	targetArn, err := albClient.CreateTargetGroup(context.Background(), serviceName+"-"+projectName+"-Byteport", vpcId)
 	if err != nil {
-		fmt.Println(err)
-		return  "",err
+		log.Printf("CreateTargetGroup failed: %v\n", err)
+		return "", err
 	}
-	err =albClient.RegisterTarget(context.Background(), targetArn, instanceId, port )
+	err = albClient.RegisterTarget(context.Background(), targetArn, instanceId, port)
 	if err != nil {
-		fmt.Println(err)
-		return  "",err
+		log.Printf("RegisterTarget failed: %v\n", err)
+		return "", err
 	}
-	
-
-	return targetArn, nil;
+	log.Printf("Service registered: %s\n", targetArn)
 }
 func AddNewRecord(AccessKey string, SecretKey string, domainName string, zoneID string, projectName string, value string) (string, error) {
 	c, err := r53.NewRoute53(aws.Config{
-		AccessKeyId: AccessKey,
+		AccessKeyId:     AccessKey,
 		SecretAccessKey: SecretKey,
-		SessionToken: "",
-		Endpoint: getServiceEndpoint("route53"),
-		Region: "us-east-1",
-		Service: "route53",
+		SessionToken:    "",
+		Endpoint:        getServiceEndpoint("route53"),
+		Region:          "us-east-1",
+		Service:         "route53",
 	})
 	if err != nil {
-		fmt.Println(err)
-		return "",err
+		log.Printf("Route53 client creation failed: %v\n", err)
+		return "", err
 	}
 
 	err = c.CreateRecordSet(context.Background(), zoneID, domainName, "A", value, 300, projectName)
 	if err != nil {
-		fmt.Println(err)
-		return "",err
+		log.Printf("CreateRecordSet failed: %v\n", err)
+		return "", err
 	}
-	fmt.Println("Record set created successfully.")
-	return "Success",nil
-	
+	log.Println("Record set created successfully")
+	return "Success", nil
+
 }
-func AwaitInitialization(AccessKey string, SecretKey string, instanceIDs []string) (error){
-	fmt.Println("Waiting for instances to initialize...")
+func AwaitInitialization(AccessKey string, SecretKey string, instanceIDs []string) error {
+	log.Println("Waiting for instances to initialize...")
 	c, err := ec2.NewEC2(aws.Config{
-		AccessKeyId: AccessKey,
+		AccessKeyId:     AccessKey,
 		SecretAccessKey: SecretKey,
-		SessionToken: "",
-		Endpoint: getServiceEndpoint("ec2"),
-		Region: "us-east-1",
-		Service: "ec2"})
+		SessionToken:    "",
+		Endpoint:        getServiceEndpoint("ec2"),
+		Region:          "us-east-1",
+		Service:         "ec2",
+	})
 	if err != nil {
-		fmt.Println(err)
-		return err }
-		fmt.Println("Created EC2 client")
+		log.Printf("EC2 client creation failed: %v\n", err)
+		return err
+	}
+	log.Println("EC2 client created")
 	err = c.WaitForEC2Running(instanceIDs, context.Background())
 	if err != nil {
-		fmt.Println(err)
-		return err}
-	fmt.Println("Instances initialized")
+		log.Printf("WaitForEC2Running failed: %v\n", err)
+		return err
+	}
+	log.Println("Instances initialized")
 	return nil
 }
 
-func TerminateS3(resource models.AWSResource, AccessKey string, SecretKey string)(error){
-	
-	
+func TerminateS3(resource models.AWSResource, AccessKey string, SecretKey string) error {
 	c, err := s3.NewS3(aws.Config{
-		AccessKeyId: AccessKey,
+		AccessKeyId:     AccessKey,
 		SecretAccessKey: SecretKey,
-		SessionToken: "",
-		Endpoint: getServiceEndpoint("s3"),
-		Region: "us-east-1",
-		Service: "s3",
+		SessionToken:    "",
+		Endpoint:        getServiceEndpoint("s3"),
+		Region:          "us-east-1",
+		Service:         "s3",
 	})
 	if err != nil {
 		fmt.Println(err)
-		return  err
+		return err
 	}
-	
+
 	err = c.DeleteBucket(context.Background(), resource.ID)
 	if err != nil {
 		err = c.DeleteObject(context.Background(), resource.ID, "src.zip")
@@ -475,24 +476,26 @@ func TerminateS3(resource models.AWSResource, AccessKey string, SecretKey string
 		}
 		err = c.DeleteBucket(context.Background(), resource.ID)
 		if err != nil {
-		fmt.Println(err)
-		return err}
+			fmt.Println(err)
+			return err
+		}
+		return err
 	}
 	fmt.Println("Record set created successfully.")
-	 
-	return nil}  
- func TerminateEC2(resource models.AWSResource, AccessKey string, SecretKey string)(error){
+	return nil
+}
+
+func TerminateEC2(resource models.AWSResource, AccessKey string, SecretKey string) error {
 	c, err := ec2.NewEC2(aws.Config{
-		AccessKeyId: AccessKey,
+		AccessKeyId:     AccessKey,
 		SecretAccessKey: SecretKey,
-		SessionToken: "",
-		Endpoint: getServiceEndpoint("ec2"),
-		Region: "us-east-1",
-		Service: "ec2",
+		Endpoint:        getServiceEndpoint("ec2"),
+		Region:          "us-east-1",
+		Service:         "ec2",
 	})
 	if err != nil {
 		fmt.Println(err)
-		return  err
+		return err
 	}
 
 	err = c.TerminateInstances(context.Background(), []string{resource.ID})
@@ -501,19 +504,22 @@ func TerminateS3(resource models.AWSResource, AccessKey string, SecretKey string
 		return err
 	}
 	fmt.Println("Record set created successfully.")
-	 
-	return nil}
- func TerminateALB(resource models.AWSResource, AccessKey string, SecretKey string)(error){c, err := awsnet.NewALB(aws.Config{
-		AccessKeyId: AccessKey,
+
+	return nil
+}
+
+func TerminateALB(resource models.AWSResource, AccessKey string, SecretKey string) error {
+	c, err := awsnet.NewALB(aws.Config{
+		AccessKeyId:     AccessKey,
 		SecretAccessKey: SecretKey,
-		SessionToken: "",
-		Endpoint: getServiceEndpoint("elasticloadbalancing"),
-		Region: "us-east-1",
-		Service: "elasticloadbalancing",
+		SessionToken:    "",
+		Endpoint:        getServiceEndpoint("elasticloadbalancing"),
+		Region:          "us-east-1",
+		Service:         "elasticloadbalancing",
 	})
 	if err != nil {
 		fmt.Println(err)
-		return  err
+		return err
 	}
 
 	err = c.DeleteLoadbalancer(context.Background(), resource.ID)
@@ -522,18 +528,21 @@ func TerminateS3(resource models.AWSResource, AccessKey string, SecretKey string
 		return err
 	}
 	fmt.Println("Record set created successfully.")
-	 return nil}
- func TerminateTargetGroup(resource models.AWSResource, AccessKey string, SecretKey string)(error){c, err := awsnet.NewALB(aws.Config{
-		AccessKeyId: AccessKey,
+	return nil
+}
+
+func TerminateTargetGroup(resource models.AWSResource, AccessKey string, SecretKey string) error {
+	c, err := awsnet.NewALB(aws.Config{
+		AccessKeyId:     AccessKey,
 		SecretAccessKey: SecretKey,
-		SessionToken: "",
-		Endpoint: getServiceEndpoint("elasticloadbalancing"),
-		Region: "us-east-1",
-		Service: "elasticloadbalancing",
+		SessionToken:    "",
+		Endpoint:        getServiceEndpoint("elasticloadbalancing"),
+		Region:          "us-east-1",
+		Service:         "elasticloadbalancing",
 	})
 	if err != nil {
 		fmt.Println(err)
-		return  err
+		return err
 	}
 
 	err = c.DeleteTargetGroup(context.Background(), resource.ID)
@@ -541,8 +550,7 @@ func TerminateS3(resource models.AWSResource, AccessKey string, SecretKey string
 		fmt.Println(err)
 		return err
 	}
-	
+
 	fmt.Println("Record set created successfully.")
 	return nil
-	 }
-   
+}

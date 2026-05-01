@@ -1,50 +1,62 @@
 package lib
 
 import (
+	"errors"
 	"fmt"
 	lib "nvms/lib/providers"
+	"nvms/lib/providers/anthropic"
+	"nvms/lib/providers/gemini"
 	"nvms/lib/providers/local"
 	"nvms/lib/providers/openai"
 	"nvms/models"
 )
 
- 
- 
- const (
-    ProviderOpenAI    = "openai"
-    ProviderAnthropic = "anthropic"
-    ProviderGemini    = "gemini"
-    ProviderLocal     = "local"
+// Provider-specific errors
+var (
+	ErrProviderNotImplemented = errors.New("provider not implemented")
 )
-func RequestCompletion(prompt  string,strStruct string, config models.LLM) (string, error) {
-    fmt.Println("Strcut: ",strStruct)
-    var response string; var err error
-    reqBody := lib.ChatRequest{
-        //Model:    "gpt-4o",
-        Model:    config.Providers[config.Provider].Modal,
-        Prompt: prompt,
-        ObjStruct: strStruct,
-    }
- 
-    switch config.Provider {
-        case ProviderOpenAI: 
-            fmt.Println("OpenAI")
-            response, err  = openai.RequestChatCompletion(reqBody, config.Providers[config.Provider].APIKey,config.Providers[config.Provider].Modal)
-        
-        case ProviderAnthropic: 
-            fmt.Println("Anthropic is not Implemented Yet...")
-        case ProviderGemini:
-            fmt.Println("Gemini is not Implemented Yet...")
-        case ProviderLocal:
-            fmt.Println("Local")
-            
-            response, err  = local.RequestCompletion(reqBody )
-        default :
-            fmt.Println("Provider not found")
-            return "", fmt.Errorf("Provider not found: %v", err)
-    }
-    if err != nil {
-        return "", fmt.Errorf("error sending request: %v", err)
-    }
-    return response,nil
+
+const (
+	ProviderOpenAI    = "openai"
+	ProviderAnthropic = "anthropic"
+	ProviderGemini    = "gemini" // TODO: Implement provider
+	ProviderLocal     = "local"
+)
+
+func RequestCompletion(prompt string, strStruct string, config models.LLM) (string, error) {
+	fmt.Println("Strcut: ", strStruct)
+	var response string
+	var err error
+
+	reqBody := lib.ChatRequest{
+		Model:     config.Providers[config.Provider].Modal,
+		Prompt:    prompt,
+		ObjStruct: strStruct,
+	}
+
+	switch config.Provider {
+	case ProviderOpenAI:
+		fmt.Println("OpenAI")
+		response, err = openai.RequestChatCompletion(reqBody, config.Providers[config.Provider].APIKey, config.Providers[config.Provider].Modal)
+
+	case ProviderAnthropic:
+		fmt.Println("Anthropic")
+		response, err = anthropic.RequestChatCompletion(reqBody, config.Providers[config.Provider].APIKey, config.Providers[config.Provider].Modal)
+
+	case ProviderGemini:
+		fmt.Println("Gemini")
+		response, err = gemini.RequestChatCompletion(reqBody, config.Providers[config.Provider].APIKey, config.Providers[config.Provider].Modal)
+
+	case ProviderLocal:
+		fmt.Println("Local")
+		response, err = local.RequestCompletion(reqBody)
+
+	default:
+		return "", fmt.Errorf("unknown provider: %s", config.Provider)
+	}
+
+	if err != nil {
+		return "", fmt.Errorf("error sending request: %v", err)
+	}
+	return response, nil
 }

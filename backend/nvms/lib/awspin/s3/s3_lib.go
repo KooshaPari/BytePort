@@ -60,6 +60,16 @@ type Owner struct {
 	DisplayName string
 	ID          string
 }
+
+// ObjectMetadata contains metadata about an S3 object.
+// This struct is returned along with the object content when fetching objects.
+type ObjectMetadata struct {
+	ETag         string
+	LastModified time.Time
+	Size         int64
+	ContentType  string
+	StorageClass string
+}
 type Client struct {
 	config       aws.Config
 	endpointURL string

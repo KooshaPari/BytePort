@@ -26,14 +26,14 @@ func getSymmetricKey() (string, error) {
 func ensureKeyExists(service, user string) error {
     _, err := keyring.Get(service, user)
     if err == nil {
-		fmt.Println("Key already exists: ",service)
+		log.Printf("Key already exists: %s\n", service)
         return nil // Key already exists
     }
 
     // Generate and store a new key if not present
     newKey := generateSymmetricKey()
     if service == serviceKeyService {
-		fmt.Println("Setting service key")
+		log.Println("Setting service key")
         err = os.Setenv("SERVICE_KEY", newKey)
         if err != nil {
             return err
@@ -199,7 +199,7 @@ func AuthMiddleware() gin.HandlerFunc {
         // Extract token from headers
         authToken, _ := c.Cookie("authToken")
         if authToken == "" {
-			fmt.Println("Auth Token Missing")
+			log.Println("Auth Token Missing")
             c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header missing"})
             c.Abort()
             return
