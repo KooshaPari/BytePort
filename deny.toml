@@ -8,7 +8,26 @@
 version = 2
 yanked = "deny"
 
-ignore = []
+ignore = [
+    # gtk-rs GTK3 bindings - no longer maintained (RUSTSEC-2024-0413 through RUSTSEC-2024-0420)
+    { id = "RUSTSEC-2024-0370", reason = "fxhash - no safe upgrade available" },
+    { id = "RUSTSEC-2024-0411", reason = "gtk-rs core - no longer maintained" },
+    { id = "RUSTSEC-2024-0412", reason = "gtk-rs core - no longer maintained" },
+    { id = "RUSTSEC-2024-0413", reason = "gtk-rs GTK3 - no longer maintained" },
+    { id = "RUSTSEC-2024-0414", reason = "gtk-rs GTK3 - no longer maintained" },
+    { id = "RUSTSEC-2024-0415", reason = "gtk-rs GTK3 - no longer maintained" },
+    { id = "RUSTSEC-2024-0416", reason = "gtk-rs GTK3 - no longer maintained" },
+    { id = "RUSTSEC-2024-0417", reason = "gtk-rs GTK3 - no longer maintained" },
+    { id = "RUSTSEC-2024-0418", reason = "gtk-rs GTK3 - no longer maintained" },
+    { id = "RUSTSEC-2024-0419", reason = "gtk-rs GTK3 - no longer maintained" },
+    { id = "RUSTSEC-2024-0420", reason = "gtk-rs GTK3 - no longer maintained" },
+    { id = "RUSTSEC-2025-0057", reason = "unmaintained - no safe upgrade" },
+    { id = "RUSTSEC-2025-0075", reason = "unmaintained - no safe upgrade" },
+    { id = "RUSTSEC-2025-0080", reason = "unmaintained - no safe upgrade" },
+    { id = "RUSTSEC-2025-0081", reason = "unmaintained - no safe upgrade" },
+    { id = "RUSTSEC-2025-0098", reason = "unmaintained - no safe upgrade" },
+    { id = "RUSTSEC-2025-0100", reason = "unmaintained - no safe upgrade" },
+]
 
 [licenses]
 version = 2
