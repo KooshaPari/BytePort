@@ -8,7 +8,9 @@
 version = 2
 yanked = "deny"
 
-ignore = []
+ignore = [
+    { id = "RUSTSEC-2024-0436", reason = "paste (unic-ucd transitive via tauri/urlpattern). Tauri upstream still pins paste; no safe upgrade until Tauri migrates off the unmaintained crate. paste! macro not invoked directly in BytePort." },
+]
 
 [licenses]
 version = 2
