@@ -1,5 +1,9 @@
 name: Cargo Machete
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
   pull_request:
@@ -14,7 +18,7 @@ jobs:
   detect-unused-dependencies:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: actions/checkout@v4
 
       - uses: taiki-e/install-action@7769b73c2ec98c38dfcf2e18c83cfd4880c038c1
         with:
