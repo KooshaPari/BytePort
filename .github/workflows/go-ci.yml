@@ -1,16 +1,16 @@
 name: Go CI
 
 on:
-
-timeout-minutes: 45
   push:
     branches: [main, master]
   pull_request:
     branches: [main, master]
 
+timeout-minutes: 45
 
 permissions:
   contents: read
+
 jobs:
   go-build-test:
     name: Go build + test

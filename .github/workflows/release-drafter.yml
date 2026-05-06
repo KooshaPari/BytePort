@@ -1,8 +1,6 @@
 name: Release Drafter
 
 on:
-
-timeout-minutes: 20
   push:
     branches: [main]
   pull_request:

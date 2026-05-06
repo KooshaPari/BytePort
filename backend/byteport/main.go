@@ -4,13 +4,32 @@ import (
 	"byteport/lib"
 	"byteport/models"
 	"byteport/routes"
+	"context"
 	"fmt"
 	"os"
 	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
+	"go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/sdk/trace"
 )
+
+// initTracer sets up the OTel tracer provider with a ConsoleSpanExporter.
+func initTracer() (*trace.TracerProvider, error) {
+	exporter, err := stdouttrace.New(stdouttrace.WithPrettyPrint())
+	if err != nil {
+		return nil, fmt.Errorf("failed to create stdouttrace exporter: %w", err)
+	}
+	tp := trace.NewTracerProvider(
+		trace.WithBatcher(exporter),
+	)
+	otel.SetTracerProvider(tp)
+	return tp, nil
+}
 
 func setupRouter() *gin.Engine {
 	r := gin.Default()
@@ -60,7 +79,20 @@ func setupRouter() *gin.Engine {
 }
 
 func main() {
-	err := lib.InitializeEncryptionKey()
+	ctx := context.Background()
+
+	tp, err := initTracer()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error initializing tracer: %v\n", err)
+		os.Exit(1)
+	}
+	defer func() {
+		if err := tp.Shutdown(ctx); err != nil {
+			fmt.Fprintf(os.Stderr, "Error shutting down tracer: %v\n", err)
+		}
+	}()
+
+	err = lib.InitializeEncryptionKey()
 	if err != nil {
 		fmt.Printf("Error initializing encryption key: %v\n", err)
 		os.Exit(1)

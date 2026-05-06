@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"time"
 
@@ -172,19 +173,19 @@ func refreshToken(user models.User, pasetoToken string) (models.Git, error) {
 	payload := map[string]string{
 			"client_id":     clientID,
 			"client_secret": clientSecret,
-			"grant_type": "refresh_token",
-			"refresh_token":          decryptedToken,
-		}
-		
-		fmt.Println("Payload ID: ", payload["client_id"])	
-log.Printf("Payload ID: [REDACTED]\n")
-		log.Printf("Payload Secret: [REDACTED]\n")
-		log.Printf("Payload Grant: %s\n", payload["grant_type"])
-		log.Printf("Payload Refresh: [REDACTED]\n")
-    if err != nil {
-       return  models.Git{}, fmt.Errorf("failed to marshal payload: %v", err)
-    }
-	 req, err := http.NewRequest("POST", apiURL, bytes.NewBuffer(payloadBytes))
+			"grant_type":    "refresh_token",
+			"refresh_token": decryptedToken,
+	}
+
+	log.Printf("Payload ID: [REDACTED]\n")
+	log.Printf("Payload Secret: [REDACTED]\n")
+	log.Printf("Payload Grant: %s\n", payload["grant_type"])
+	log.Printf("Payload Refresh: [REDACTED]\n")
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		return models.Git{}, fmt.Errorf("failed to marshal payload: %v", err)
+	}
+	req, err := http.NewRequest("POST", apiURL, bytes.NewBuffer(payloadBytes))
     if err != nil {
        return  models.Git{}, fmt.Errorf("failed to create request: %v", err)
     }

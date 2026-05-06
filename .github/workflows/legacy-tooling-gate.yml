@@ -1,8 +1,6 @@
 name: Legacy Tooling Gate (WARN Mode)
 
 on:
-
-timeout-minutes: 20
   push:
     branches: [main, master, develop]
   pull_request:

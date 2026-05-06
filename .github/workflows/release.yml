@@ -1,8 +1,6 @@
 name: Release
 
 on:
-
-timeout-minutes: 20
   push:
     tags:
       - "v*"
