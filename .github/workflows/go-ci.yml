@@ -1,4 +1,8 @@
 name: Go CI
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 
 on:
   push:
@@ -30,3 +34,21 @@ jobs:
         run: go test ./...
       - name: go vet
         run: go vet ./...
+
+  golangci:
+    name: golangci-lint
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: backend/byteport
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c
+        with:
+          go-version: '1.23'
+          cache-dependency-path: backend/byteport/go.sum
+      - uses: golangci/golangci-lint-action@aa6339a8b9e0e1c4b5e7c4e6f8d7c3a2b1e0d9f8
+        with:
+          version: latest
