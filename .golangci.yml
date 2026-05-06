@@ -1,0 +1,24 @@
+run:
+  timeout: 5m
+  modules-download-mode: readonly
+
+linters:
+  enable:
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+
+linters-settings:
+  errcheck:
+    exclude-functions:
+      - (*os.File).Close
+      - io.ReadAll
+  govet:
+    check-shadowing: true
+  staticcheck:
+    checks:
+      - all
+      - -SA1012
