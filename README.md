@@ -7,7 +7,7 @@
 
 # BytePort
 
-[![Build](https://img.shields.io/github/actions/workflow/status/KooshaPari/BytePort/ci.yaml?branch=main&label=build)](https://github.com/KooshaPari/BytePort/actions/workflows/ci.yaml)
+[![Build](https://img.shields.io/github/actions/workflow/status/KooshaPari/BytePort/ci.yml?branch=main&label=build)](https://github.com/KooshaPari/BytePort/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/KooshaPari/BytePort?include_prereleases&sort=semver)](https://github.com/KooshaPari/BytePort/releases)
 [![License](https://img.shields.io/github/license/KooshaPari/BytePort)](LICENSE)
 [![Phenotype](https://img.shields.io/badge/Phenotype-org-blueviolet)](https://github.com/KooshaPari)

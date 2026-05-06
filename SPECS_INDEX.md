@@ -42,7 +42,7 @@ Note: No test coverage tracking in current FR doc. Add test status column.
 
 | Workflow | Status | Notes |
 |----------|--------|-------|
-| `ci.yaml` | Active | Python: pytest tests/ |
+| `ci.yml` | Active | Python: pytest tests/ |
 | `ci.yml` | Active | Go: go vet + go build per module |
 | `cargo-audit.yml` | Active | rustsec advisory check |
 | `cargo-deny.yml` | Active | Updated to v6 |
@@ -74,7 +74,7 @@ Note: No test coverage tracking in current FR doc. Add test status column.
 - [x] `doc-links.yml` added (was missing)
 - [x] `fr-coverage.yml` added (was missing)
 - [x] `quality-gate.yml` added (was missing)
-- [ ] `ci.yaml` vs `ci.yml` naming inconsistency - consider renaming ci.yaml to ci.yml
+- [x] `ci.yaml` vs `ci.yml` naming inconsistency - resolved: ci.yaml renamed to ci.yml
 - [ ] FUNCTIONAL_REQUIREMENTS.md lacks test coverage tracking column
 
 ## Audit Metadata

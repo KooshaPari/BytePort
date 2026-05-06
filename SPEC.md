@@ -448,7 +448,7 @@ Validated by calling `GET /v1/models` with the bearer token. Fails fast on inval
 | Lint | `golangci-lint run` | 0 errors |
 | Tauri | `cargo test` (src-tauri) | all pass |
 
-CI workflows: `ci.yaml` (pytest), `ci.yml` (go vet+build), `cargo-audit.yml`, `cargo-deny.yml`, `cargo-semver-checks.yml`, `codeql.yml`, `fr-coverage.yml`, `quality-gate.yml`.
+CI workflows: `ci.yml` (pytest), `go-ci.yml` (go vet+build), `cargo-audit.yml`, `cargo-deny.yml`, `cargo-semver-checks.yml`, `codeql.yml`, `fr-coverage.yml`, `quality-gate.yml`.
 
 ---
 
