@@ -1,6 +1,8 @@
 name: cargo-semver-checks
 
 concurrency:
+
+timeout-minutes: 15
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 

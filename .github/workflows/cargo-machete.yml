@@ -1,6 +1,8 @@
 name: Cargo Machete
 
 concurrency:
+
+timeout-minutes: 10
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 

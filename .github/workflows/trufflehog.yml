@@ -1,6 +1,8 @@
 name: TruffleHog Secrets Scan
 
 on:
+
+timeout-minutes: 10
   push:
     branches: ["**"]
   pull_request:
