@@ -1,1 +1,7 @@
-wtmp begins Mon Jun 16 08:38:50 MST 2025phenotype-org-governance/SUPERSEDED.md
+# BytePort Status
+
+BytePort is a hardware ledger and inventory management system.
+
+## Current Status
+
+Active development. See README.md for project details.

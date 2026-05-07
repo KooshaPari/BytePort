@@ -7,7 +7,7 @@
 
 # BytePort
 
-[![Build](https://img.shields.io/github/actions/workflow/status/KooshaPari/BytePort/ci.yaml?branch=main&label=build)](https://github.com/KooshaPari/BytePort/actions/workflows/ci.yaml)
+[![Build](https://img.shields.io/github/actions/workflow/status/KooshaPari/BytePort/ci.yml?branch=main&label=build)](https://github.com/KooshaPari/BytePort/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/KooshaPari/BytePort?include_prereleases&sort=semver)](https://github.com/KooshaPari/BytePort/releases)
 [![License](https://img.shields.io/github/license/KooshaPari/BytePort)](LICENSE)
 [![Phenotype](https://img.shields.io/badge/Phenotype-org-blueviolet)](https://github.com/KooshaPari)
@@ -19,7 +19,7 @@
 
 ### Canonical stack
 
-This README previously disagreed with itself (Loco.rs / Rust / Tauri / SvelteKit references appeared in different sections). The actual shipping stack is:
+This README previously disagreed with itself. The actual shipping stack is:
 
 - **Backend:** Go 1.25 — `backend/byteport` (Gin + GORM + SQLite, PASETO auth, AWS SDK)
 - **Frontend:** SvelteKit 2 + Svelte 5 + Tailwind 4, packaged as a **Tauri 2** desktop/mobile shell — `frontend/web`
@@ -27,7 +27,7 @@ This README previously disagreed with itself (Loco.rs / Rust / Tauri / SvelteKit
 - **Dev orchestration:** `./start dev` (tmux) and `./start prod` — see below
 - **Persistence:** SQLite via GORM
 
-There is no Rust workspace at the repo root; previous mentions of Loco.rs were aspirational and have been removed. The Rust toolchain only appears via Tauri's bundler under `frontend/web`.
+The old Loco.rs / Rust / NanoVMS narrative is retired; the repo root is Go/SvelteKit/Tauri, not a Rust workspace.
 
 ### Running it
 

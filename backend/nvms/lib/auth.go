@@ -17,56 +17,56 @@ import (
 
 	"github.com/zalando/go-keyring"
 )
+
 const (
-    keyringUser    = "BytePortUser"
-    serviceKeyService = "NVMService"
+	keyringUser       = "BytePortUser"
+	serviceKeyService = "NVMService"
 )
+
 var (
-    
-    serviceKey paseto.V4SymmetricKey
+	serviceKey paseto.V4SymmetricKey
 )
+
 func GetSymmetricKey() (string, error) {
-    return keyring.Get(serviceKeyService, keyringUser)
+	return keyring.Get(serviceKeyService, keyringUser)
 }
 func ensureKeyExists(service, user string) error {
-   key := os.Getenv("SERVICE_KEY")
-    if key == "" {
-        return nil // Key already exists
-    }
+	key := os.Getenv("SERVICE_KEY")
+	if key == "" {
+		return nil // Key already exists
+	}
 
-    // Generate and store a new key if not present
-    newKey := GenerateSymmetricKey()
-    err:= os.Setenv("SERVICE_KEY", newKey)
+	// Generate and store a new key if not present
+	newKey := GenerateSymmetricKey()
+	err := os.Setenv("SERVICE_KEY", newKey)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-
 func InitAuthSystem() error {
-    err := ensureKeyExists(serviceKeyService, keyringUser)
-    if err != nil {
-        return fmt.Errorf("failed to initialize token key: %w", err)
-    }
+	err := ensureKeyExists(serviceKeyService, keyringUser)
+	if err != nil {
+		return fmt.Errorf("failed to initialize token key: %w", err)
+	}
 
-    // Initialize service key
-    err = ensureKeyExists(serviceKeyService, keyringUser)
-    if err != nil {
-        return fmt.Errorf("failed to initialize secrets key: %w", err)
-    }
+	// Initialize service key
+	err = ensureKeyExists(serviceKeyService, keyringUser)
+	if err != nil {
+		return fmt.Errorf("failed to initialize secrets key: %w", err)
+	}
 
-    log.Println("Auth system initialized with separate keys for tokens and secrets.")
-    return nil
-	
+	log.Println("Auth system initialized with separate keys for tokens and secrets.")
+	return nil
 
 }
 func GenerateSymmetricKey() string {
-    key := paseto.NewV4SymmetricKey()
-    return key.ExportHex()
+	key := paseto.NewV4SymmetricKey()
+	return key.ExportHex()
 }
 
-func GenerateNVMSToken(project models.Project) (string,error) {
+func GenerateNVMSToken(project models.Project) (string, error) {
 	token := paseto.NewToken()
 	token.SetAudience(serviceKeyService)
 	token.SetExpiration(time.Now().Add(time.Minute * 10))
@@ -75,21 +75,19 @@ func GenerateNVMSToken(project models.Project) (string,error) {
 	token.SetIssuedAt(time.Now())
 	token.SetNotBefore(time.Now())
 	token.SetString("user-id", project.User.UUID)
-    token.SetString("project-id", project.UUID)
-	keyHex,err := GetSymmetricKey()
-	if(err != nil){
+	token.SetString("project-id", project.UUID)
+	keyHex, err := GetSymmetricKey()
+	if err != nil {
 		log.Fatal(err)
 	}
 	key, err := paseto.V4SymmetricKeyFromHex(keyHex)
-    if err != nil {
-        return "", err
-    }
+	if err != nil {
+		return "", err
+	}
 
-	encryptedToken := token.V4Encrypt(key,nil)
-	
+	encryptedToken := token.V4Encrypt(key, nil)
 
-	
-	return encryptedToken,nil
+	return encryptedToken, nil
 }
 
 func ValidateServiceToken(encryptedToken string) (bool, *paseto.Token, error) {
@@ -103,80 +101,77 @@ func ValidateServiceToken(encryptedToken string) (bool, *paseto.Token, error) {
 	if err != nil {
 		return false, nil, err
 	}
-    
+
 	parser := paseto.NewParser()
-    parser.AddRule(paseto.ForAudience(serviceKeyService))
-    parser.AddRule(paseto.NotExpired())
-    
+	parser.AddRule(paseto.ForAudience(serviceKeyService))
+	parser.AddRule(paseto.NotExpired())
+
 	token, err := parser.ParseV4Local(key, encryptedToken, nil)
 	if err != nil {
 		return false, nil, err
 	}
-	
-
-
 
 	return true, token, nil
 }
 func AuthMiddleware(w http.ResponseWriter, r *http.Request) error {
-    // Get key from environment/config during initialization
-    keyHex := os.Getenv("SERVICE_KEY")
-    if keyHex == ""{
-        http.Error(w, "Server configuration error", http.StatusInternalServerError)
-        return fmt.Errorf("failed to get service key")
-    }
+	// Get key from environment/config during initialization
+	keyHex := os.Getenv("SERVICE_KEY")
+	if keyHex == "" {
+		http.Error(w, "Server configuration error", http.StatusInternalServerError)
+		return fmt.Errorf("failed to get service key")
+	}
 
-    key, err := paseto.V4SymmetricKeyFromHex(keyHex)
-    if err != nil {
-        http.Error(w, "Server configuration error", http.StatusInternalServerError)
-        return err// Don't panic, return error response instead
-    }
-    serviceKey = key
+	key, err := paseto.V4SymmetricKeyFromHex(keyHex)
+	if err != nil {
+		http.Error(w, "Server configuration error", http.StatusInternalServerError)
+		return err // Don't panic, return error response instead
+	}
+	serviceKey = key
 
-    // Validate PASETO token
-    authHeader, err := r.Cookie("Authorization")
-    if err != nil {
-        http.Error(w, "Unauthorized - No auth cookie found", http.StatusUnauthorized)
-        return http.ErrBodyNotAllowed
-    }
+	// Validate PASETO token
+	authHeader, err := r.Cookie("Authorization")
+	if err != nil {
+		http.Error(w, "Unauthorized - No auth cookie found", http.StatusUnauthorized)
+		return http.ErrBodyNotAllowed
+	}
 
-    authToken := authHeader.Value
-    if authToken == "" {
-        http.Error(w, "Unauthorized - Empty auth token", http.StatusUnauthorized)
-        return err
-    }
+	authToken := authHeader.Value
+	if authToken == "" {
+		http.Error(w, "Unauthorized - Empty auth token", http.StatusUnauthorized)
+		return err
+	}
 
-    tokenString := strings.TrimPrefix(authToken, "Bearer ")
-    parser := paseto.NewParser()
-   
-    token, err := parser.ParseV4Local(serviceKey, tokenString, nil)
-    if err != nil {
-        http.Error(w, "Unauthorized - Invalid token " + err.Error(), http.StatusUnauthorized)
-        return err
-    }
+	tokenString := strings.TrimPrefix(authToken, "Bearer ")
+	parser := paseto.NewParser()
 
-    // Extract claims with error checking
-    projectID, err := token.GetString("project-id")
-    if err != nil {
-        http.Error(w, "Invalid token claims", http.StatusBadRequest)
-        return err
-    }
+	token, err := parser.ParseV4Local(serviceKey, tokenString, nil)
+	if err != nil {
+		http.Error(w, "Unauthorized - Invalid token "+err.Error(), http.StatusUnauthorized)
+		return err
+	}
 
-    userID, err := token.GetString("user-id")
-    if err != nil {
-        http.Error(w, "Invalid token claims", http.StatusBadRequest)
-        return err
-    }
+	// Extract claims with error checking
+	projectID, err := token.GetString("project-id")
+	if err != nil {
+		http.Error(w, "Invalid token claims", http.StatusBadRequest)
+		return err
+	}
 
-    fmt.Printf("Successfully authenticated user %s for project %s\n", userID, projectID)
-    w.WriteHeader(http.StatusOK)
-	 return nil
+	userID, err := token.GetString("user-id")
+	if err != nil {
+		http.Error(w, "Invalid token claims", http.StatusBadRequest)
+		return err
+	}
+
+	fmt.Printf("Successfully authenticated user %s for project %s\n", userID, projectID)
+	w.WriteHeader(http.StatusOK)
+	return nil
 }
 func EncryptSecret(secret string) (string, error) {
-    key,err := GetDecodedEncryptionKey();
-    if(err !=nil){
-        log.Fatal(err)
-    }
+	key, err := GetDecodedEncryptionKey()
+	if err != nil {
+		log.Fatal(err)
+	}
 	// Validate the key length
 	if len(key) != 16 && len(key) != 24 && len(key) != 32 {
 		return "", fmt.Errorf("invalid key length: must be 16, 24, or 32 bytes")
@@ -206,10 +201,10 @@ func EncryptSecret(secret string) (string, error) {
 
 func DecryptSecret(cipherText string) (string, error) {
 	// Validate the key length
-    key,err := GetDecodedEncryptionKey();
-    if(err !=nil){
-        log.Fatal(err)
-    }
+	key, err := GetDecodedEncryptionKey()
+	if err != nil {
+		log.Fatal(err)
+	}
 	if len(key) != 16 && len(key) != 24 && len(key) != 32 {
 		return "", fmt.Errorf("invalid key length: must be 16, 24, or 32 bytes")
 	}
