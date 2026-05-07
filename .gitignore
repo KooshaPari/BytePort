@@ -22,3 +22,25 @@ target/
 backend/byteport/tmp/
 byteport
 .history/
+
+# Certificate / key files (sensitive)
+*.pem
+*.key
+*.cert
+
+# Database state files (local, not for sharing)
+backend/database.db
+
+# Stale root lockfile (no package.json in root)
+/package-lock.json
+
+# Certificate / key files (sensitive)
+*.pem
+*.key
+*.cert
+
+# Database state files (local, not for sharing)
+backend/database.db
+
+# Stale root lockfile (no package.json in root)
+/package-lock.json

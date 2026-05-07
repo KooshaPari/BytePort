@@ -20,7 +20,10 @@ BytePort is an IaC deployment + portfolio UX generation platform. Developers def
 backend/
   byteport/      # Core deployment engine
   bytebridge/    # Bridge/integration layer
-frontend/        # Management UI
+  nvms/          # NVMS Go modules (builder, demonstrator, provisioner)
+frontend/        # Management UI (web/ + src-tauri desktop shell)
+landing/         # Landing page site (Astro)
+src/             # Rust source (Astro integration)
 start            # Local dev startup script
 odin.nvms        # Example NVMS manifest
 ```
