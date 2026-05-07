@@ -2,8 +2,10 @@ name: Quality Gate
 on: [push, pull_request]
 permissions:
   contents: read
+  actions: read
 jobs:
   gate:
+    timeout-minutes: 10
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:

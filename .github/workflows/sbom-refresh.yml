@@ -7,8 +7,10 @@ on:
 
 permissions:
   contents: read
+  actions: read
 jobs:
   call-sbom-refresh:
+    timeout-minutes: 20
     uses: KooshaPari/phenotype-tooling/.github/workflows/sbom-monthly.yml@79dff2b798fb8a3bc64237e4b2d054a08d3a4601
     with:
       repo_path: '.'

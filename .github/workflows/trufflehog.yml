@@ -6,8 +6,12 @@ on:
   pull_request:
     branches: ["**"]
 
+permissions:
+  contents: read
+  actions: read
 jobs:
   trufflehog:
+    timeout-minutes: 20
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code

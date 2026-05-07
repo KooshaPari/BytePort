@@ -10,8 +10,10 @@ on:
 
 permissions:
   contents: read
+  actions: read
 jobs:
   legacy-tooling-scan:
+    timeout-minutes: 10
     name: Legacy Tooling Anti-Pattern Scan
     runs-on: ubuntu-latest
     permissions:
