@@ -20,6 +20,6 @@ func ConnectDatabase() {
 	if err != nil {
 		panic(err)
 	}
-	
+
 	DB = database
 }

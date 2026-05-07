@@ -34,7 +34,7 @@ func initTracer() (*trace.TracerProvider, error) {
 func setupRouter() *gin.Engine {
 	r := gin.Default()
 	r.Use(cors.New(cors.Config{
-        AllowOrigins: []string{
+		AllowOrigins: []string{
 			"http://localhost:5173",
 			"http://0.0.0.0:5173",
 			"http://tauri.localhost",
@@ -45,35 +45,34 @@ func setupRouter() *gin.Engine {
 			"http://10.0.2.2:8081",
 			// Add other needed origins
 		},
-        AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-        AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
-        ExposeHeaders:    []string{"Content-Length"},
-        AllowCredentials: true,
-        AllowWildcard:    true,  // Enable wildcard matching
-        MaxAge:           12 * time.Hour,
-    }))
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		AllowWildcard:    true, // Enable wildcard matching
+		MaxAge:           12 * time.Hour,
+	}))
 	protected := r.Group("/")
 	protected.Use(lib.AuthMiddleware())
 	{
 
-	protected.GET("/link", routes.LinkHandler)
-	protected.POST("/link", routes.ValidateLink)
-	protected.GET("/authenticate", routes.Authenticate)
-	protected.GET("/instances", routes.GetInstances)
-	protected.GET("/projects", routes.GetProjects)
-	protected.GET("/api/github/repositories", routes.RetrieveRepositories)
-	protected.POST("/deploy", routes.DeployProject)
-	protected.POST("/terminate",routes.TerminateInstance)
-	protected.GET("/user/:id/creds",routes.UpdateLink)
-	protected.PUT("/user/:id/creds",routes.UpdateUser)
-	//protected.GET("/github/status", routes.GitHubStatusHandler)
+		protected.GET("/link", routes.LinkHandler)
+		protected.POST("/link", routes.ValidateLink)
+		protected.GET("/authenticate", routes.Authenticate)
+		protected.GET("/instances", routes.GetInstances)
+		protected.GET("/projects", routes.GetProjects)
+		protected.GET("/api/github/repositories", routes.RetrieveRepositories)
+		protected.POST("/deploy", routes.DeployProject)
+		protected.POST("/terminate", routes.TerminateInstance)
+		protected.GET("/user/:id/creds", routes.UpdateLink)
+		protected.PUT("/user/:id/creds", routes.UpdateUser)
+		//protected.GET("/github/status", routes.GitHubStatusHandler)
 	}
 	r.POST("/login", routes.Login)
 	r.POST("/signup", routes.Signup)
 	r.GET("/api/github/callback", routes.HandleCallback)
- 
+
 	// gh webhook at /api/github/auth/webhook
-	
 
 	return r
 }
@@ -97,7 +96,7 @@ func main() {
 		fmt.Printf("Error initializing encryption key: %v\n", err)
 		os.Exit(1)
 	}
-	
+
 	models.ConnectDatabase()
 	err = lib.InitAuthSystem()
 	if err != nil {
@@ -120,7 +119,7 @@ func main() {
 
 	go lib.StartTokenRefreshJob()
 	if err := r.Run("0.0.0.0:8081"); err != nil {
-        fmt.Printf("Error starting server: %v\n", err)
-        os.Exit(1)
-    }
+		fmt.Printf("Error starting server: %v\n", err)
+		os.Exit(1)
+	}
 }
