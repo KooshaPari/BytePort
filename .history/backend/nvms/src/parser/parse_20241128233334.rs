@@ -1,3 +1,0 @@
-/**
- * Parse YAML Into OBJ
- */
