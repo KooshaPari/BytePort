@@ -22,17 +22,17 @@ func NewRoute53(config aws.Config) (*Client, error) {
 	}
 	usePathStyle := strings.Contains(u.Host, "localhost") || strings.Contains(u.Host, "127.0.0.1")
 
-		client := &Client{
-			config:       config,
-			endpointURL: u.String(),
-			usePathStyle: usePathStyle,
-		}
+	client := &Client{
+		config:       config,
+		endpointURL:  u.String(),
+		usePathStyle: usePathStyle,
+	}
 
 	return client, nil
 }
 
 // CreateHostedZone creates a new private hosted zone.
-func (c *Client)CreateHostedZone(ctx context.Context, domainName, region, vpcId string) (string,error) {
+func (c *Client) CreateHostedZone(ctx context.Context, domainName, region, vpcId string) (string, error) {
 	payload := fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
 <CreateHostedZoneRequest xmlns="https://route53.amazonaws.com/doc/2013-04-01/">
   <Name>%s</Name>
@@ -48,30 +48,29 @@ func (c *Client)CreateHostedZone(ctx context.Context, domainName, region, vpcId 
 	resp, err := c.newRequest(ctx, http.MethodPost, "", []byte(payload))
 	if err != nil {
 		fmt.Printf("Failed to create hosteds zone: %v\n", err)
-		return "",fmt.Errorf("failed to create hosted zone: %w", err)
+		return "", fmt.Errorf("failed to create hosted zone: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		fmt.Println("Failed to create hosted zone, status: ", resp.Status)
-		return "",fmt.Errorf("failed to create hosted zone, status: %s", resp.Status)
+		return "", fmt.Errorf("failed to create hosted zone, status: %s", resp.Status)
 	}
-
 
 	type CreateHostedZoneResponse struct {
 		HostedZone struct {
-			ID string `xml:"Id"`
+			ID   string `xml:"Id"`
 			Name string `xml:"Name"`
 		} `xml:"HostedZone"`
 	}
 	var result CreateHostedZoneResponse
 	if err := xml.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return "",fmt.Errorf("failed to parse response: %w", err)
+		return "", fmt.Errorf("failed to parse response: %w", err)
 	}
 	fmt.Println("Hosted zone created successfully: ", result.HostedZone.Name)
 	// /hostedzone/id -> id
 	zoneID := strings.Split(result.HostedZone.ID, "/")[2]
-	return zoneID,nil
+	return zoneID, nil
 }
 
 // CreateRecordSet creates a new record set in the hosted zone.
@@ -115,7 +114,6 @@ func (c *Client) CreateRecordSet(ctx context.Context, hostedZoneID, name, record
 	return nil
 }
 
-
 // buildEndpoint builds the request URL.
 func (c *Client) buildEndpoint(path string) (string, error) {
 	u, err := url.Parse(c.endpointURL)
@@ -136,7 +134,6 @@ func (c *Client) newRequest(ctx context.Context, method, path string, body []byt
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
-	
 
 	payloadHash := aws.GetPayloadHash(body)
 	awsDate := aws.AwsDate{Time: time.Now()}

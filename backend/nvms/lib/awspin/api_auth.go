@@ -93,43 +93,45 @@ func GetPayloadHash(payload []byte) string {
 	hash.Write(payload)
 	return hex.EncodeToString(hash.Sum(nil))
 }
+
 // GetCanonicalQueryString sorts and encodes query parameters according to AWS standards
 func GetCanonicalQueryString(params map[string]string) string {
-    // Create list of parameter names
-    paramNames := make([]string, 0, len(params))
-    for name := range params {
-        paramNames = append(paramNames, name)
-    }
-    sort.Strings(paramNames)
+	// Create list of parameter names
+	paramNames := make([]string, 0, len(params))
+	for name := range params {
+		paramNames = append(paramNames, name)
+	}
+	sort.Strings(paramNames)
 
-    // Build canonical query string
-    var result strings.Builder
-    for i, name := range paramNames {
-        if i > 0 {
-            result.WriteString("&")
-        }
-        result.WriteString(url.QueryEscape(name))
-        result.WriteString("=")
-        result.WriteString(url.QueryEscape(params[name]))
-    }
-    return result.String()
+	// Build canonical query string
+	var result strings.Builder
+	for i, name := range paramNames {
+		if i > 0 {
+			result.WriteString("&")
+		}
+		result.WriteString(url.QueryEscape(name))
+		result.WriteString("=")
+		result.WriteString(url.QueryEscape(params[name]))
+	}
+	return result.String()
 }
 
 // Helper function to calculate SHA256 hash
 func GetSHA256Hash(data []byte) string {
-    hash := sha256.Sum256(data)
-    return hex.EncodeToString(hash[:])
+	hash := sha256.Sum256(data)
+	return hex.EncodeToString(hash[:])
 }
 
 // Helper function for HMAC-SHA256
 func HmacSHA256(key, data []byte) []byte {
-    hash := hmac.New(sha256.New, key)
-    hash.Write(data)
-    return hash.Sum(nil)
+	hash := hmac.New(sha256.New, key)
+	hash.Write(data)
+	return hash.Sum(nil)
 }
+
 // GetQueryStringHash calculates the hash of the canonical query string
 func GetQueryStringHash(params map[string]string) string {
-    canonicalQuery := GetCanonicalQueryString(params)
+	canonicalQuery := GetCanonicalQueryString(params)
 	hash := sha256.New()
 	hash.Write([]byte(canonicalQuery))
 	return hex.EncodeToString(hash.Sum(nil))
@@ -137,43 +139,43 @@ func GetQueryStringHash(params map[string]string) string {
 
 // GetCanonicalRequestForQueryAPI builds the canonical request string for Query APIs like EC2
 func GetCanonicalRequestForQueryAPI(method, uri string, params map[string]string, headers http.Header, signedHeadersList []string) string {
-    canonicalQuery := GetCanonicalQueryString(params)
-    
-    // Build canonical headers string
-    var canonicalHeaders strings.Builder
-    for _, header := range signedHeadersList {
-        canonicalHeaders.WriteString(strings.ToLower(header))
-        canonicalHeaders.WriteString(":")
-        canonicalHeaders.WriteString(strings.Join(headers[http.CanonicalHeaderKey(header)], ","))
-        canonicalHeaders.WriteString("\n")
-    }
+	canonicalQuery := GetCanonicalQueryString(params)
 
-    // Build canonical request
-    canonicalRequest := strings.Join([]string{
-        method,
-        uri,
-        canonicalQuery,
-        canonicalHeaders.String(),
-        strings.Join(signedHeadersList, ";"),
-        GetQueryStringHash(params),
-    }, "\n")
+	// Build canonical headers string
+	var canonicalHeaders strings.Builder
+	for _, header := range signedHeadersList {
+		canonicalHeaders.WriteString(strings.ToLower(header))
+		canonicalHeaders.WriteString(":")
+		canonicalHeaders.WriteString(strings.Join(headers[http.CanonicalHeaderKey(header)], ","))
+		canonicalHeaders.WriteString("\n")
+	}
 
-    return canonicalRequest
+	// Build canonical request
+	canonicalRequest := strings.Join([]string{
+		method,
+		uri,
+		canonicalQuery,
+		canonicalHeaders.String(),
+		strings.Join(signedHeadersList, ";"),
+		GetQueryStringHash(params),
+	}, "\n")
+
+	return canonicalRequest
 }
 
 // GetCanonicalHeaders builds the canonical headers string for the signature
 func GetCanonicalHeaders(headers http.Header, signedHeaders []string) string {
-    var canonicalHeaders strings.Builder
-    
-    for _, header := range signedHeaders {
-        canonicalHeaders.WriteString(header)
-        canonicalHeaders.WriteString(":")
-        // Get header values, trim spaces, and collapse multiple spaces
-        value := strings.TrimSpace(headers.Get(header))
-        value = strings.Join(strings.Fields(value), " ")
-        canonicalHeaders.WriteString(value)
-        canonicalHeaders.WriteString("\n")
-    }
-    
-    return canonicalHeaders.String()
+	var canonicalHeaders strings.Builder
+
+	for _, header := range signedHeaders {
+		canonicalHeaders.WriteString(header)
+		canonicalHeaders.WriteString(":")
+		// Get header values, trim spaces, and collapse multiple spaces
+		value := strings.TrimSpace(headers.Get(header))
+		value = strings.Join(strings.Fields(value), " ")
+		canonicalHeaders.WriteString(value)
+		canonicalHeaders.WriteString("\n")
+	}
+
+	return canonicalHeaders.String()
 }
