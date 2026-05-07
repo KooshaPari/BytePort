@@ -22,8 +22,7 @@ backend/
   bytebridge/    # Bridge/integration layer
   nvms/          # NVMS Go modules (builder, demonstrator, provisioner)
 frontend/        # Management UI (web/ + src-tauri desktop shell)
-landing/         # Landing page site (Astro)
-src/             # Rust source (Astro integration)
+src/             # Astro content (data, pages)
 start            # Local dev startup script
 odin.nvms        # Example NVMS manifest
 ```

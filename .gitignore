@@ -34,13 +34,13 @@ backend/database.db
 # Stale root lockfile (no package.json in root)
 /package-lock.json
 
-# Certificate / key files (sensitive)
-*.pem
-*.key
-*.cert
+# macOS metadata
+.DS_Store
 
-# Database state files (local, not for sharing)
-backend/database.db
-
-# Stale root lockfile (no package.json in root)
-/package-lock.json
+# Generated text/binary artifacts
+backend/out.tt
+backend/nvms/tmp/
+backend/byteport/log.txt
+backend/nvms/log.txt
+backend/byteport/byteport
+backend/nvms/spin
