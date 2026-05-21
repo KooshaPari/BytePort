@@ -22,3 +22,20 @@ target/
 backend/byteport/tmp/
 byteport
 .history/
+
+# ===== Standard auto-generated hygiene ignores (do not edit manually) =====
+.DS_Store
+.env
+.env.*
+!.env.example
+node_modules/
+dist/
+build/
+coverage/
+.pytest_cache/
+__pycache__/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+# ===== End standard hygiene ignores =====
