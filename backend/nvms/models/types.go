@@ -34,13 +34,14 @@ type NVMS struct  {
 	//AWS      AWSConfig
 }
 type Service struct {
-    Name      string            `yaml:"NAME"`
-    Path      string            `yaml:"PATH"`
-    Port      int              `yaml:"PORT"`
-    Build     []string         `yaml:"BUILD,omitempty"`      // Keep for custom build overrides
-    Env       map[string]string         `yaml:"ENV,omitempty"`        // Additional environment variables
-    BuildPack *BuildPack       `yaml:"BUILDPACK,omitempty"`  // Optional, will use auto-detection if not specified
-    Runtime   string           `yaml:"RUNTIME,omitempty"`    // Optional version override
+    Name        string            `yaml:"NAME"`
+    Path        string            `yaml:"PATH"`
+    Port        int              `yaml:"PORT"`
+    Build       []string         `yaml:"BUILD,omitempty"`      // Keep for custom build overrides
+    Env         map[string]string         `yaml:"ENV,omitempty"`        // Additional environment variables
+    BuildPack   *BuildPack       `yaml:"BUILDPACK,omitempty"`  // Optional, will use auto-detection if not specified
+    Runtime     string           `yaml:"RUNTIME,omitempty"`    // Optional version override
+    ProjectName string           `yaml:"-"`                    // Runtime field, not serialized to YAML
 }
 type AWSConfig struct {
 	Region   string

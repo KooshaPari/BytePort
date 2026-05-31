@@ -1,0 +1,59 @@
+# Docker Compose deployment for realtime-chat-app with reverse proxy
+version: '3.8'
+
+networks:
+  byteport-chat-network:
+    driver: bridge
+
+services:
+  # Backend service (Node.js + Express + Socket.IO)
+  chat-backend:
+    build:
+      context: ./chat-app/server
+      dockerfile_inline: |
+        FROM node:18-alpine
+        WORKDIR /app
+        COPY package*.json ./
+        RUN npm install
+        COPY . .
+        EXPOSE 5000
+        CMD ["npm", "start"]
+    container_name: byteport-chat-backend
+    networks:
+      - byteport-chat-network
+    restart: unless-stopped
+
+  # Frontend service (React + Vite) - Build only
+  chat-frontend:
+    build:
+      context: ./chat-app/client
+      dockerfile_inline: |
+        FROM node:18-alpine AS builder
+        WORKDIR /app
+        COPY package*.json ./
+        RUN npm install
+        COPY . .
+        RUN npm run build
+        
+        FROM nginx:alpine
+        COPY --from=builder /app/dist /usr/share/nginx/html
+        EXPOSE 80
+    container_name: byteport-chat-frontend
+    networks:
+      - byteport-chat-network
+    restart: unless-stopped
+
+  # Reverse Proxy (Nginx)
+  chat-proxy:
+    image: nginx:alpine
+    container_name: byteport-chat-main
+    ports:
+      - "5173:80"
+    networks:
+      - byteport-chat-network
+    volumes:
+      - ./nginx-chat.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - chat-backend
+      - chat-frontend
+    restart: unless-stopped

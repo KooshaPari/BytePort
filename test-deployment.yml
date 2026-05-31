@@ -1,0 +1,54 @@
+# Docker Compose test for fixit-go deployment
+version: "3.8"
+
+networks:
+  byteport-network:
+    driver: bridge
+
+services:
+  # Backend service (Go API)
+  fixit-backend:
+    build:
+      context: ./backend/nvms/fixit-go/backend
+      dockerfile_inline: |
+        FROM golang:1.22-alpine AS builder
+        WORKDIR /app
+        COPY go.mod go.sum ./
+        RUN go mod download
+        COPY . .
+        RUN go build -o main .
+
+        FROM alpine:latest
+        RUN apk --no-cache add ca-certificates
+        WORKDIR /root/
+        COPY --from=builder /app/main .
+        EXPOSE 8081
+        CMD ["./main"]
+    container_name: byteport-fixitgo-backend
+    ports:
+      - "8081:8081"
+    networks:
+      - byteport-network
+    restart: unless-stopped
+
+  # Frontend service (Svelte)
+  fixit-frontend:
+    build:
+      context: ./backend/nvms/fixit-go/frontend
+      dockerfile_inline: |
+        FROM node:18-alpine
+        WORKDIR /app
+        COPY package*.json ./
+        RUN npm install
+        COPY . .
+        RUN npm run build
+        EXPOSE 8080
+        CMD ["npm", "start"]
+    container_name: byteport-fixitgo-main
+    ports:
+      - "8080:8080"
+    networks:
+      - byteport-network
+    restart: unless-stopped
+    depends_on:
+      - fixit-backend

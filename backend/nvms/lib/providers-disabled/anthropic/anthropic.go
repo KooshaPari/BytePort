@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	lib "nvms/lib/providers"
-
-	spinhttp "github.com/fermyon/spin-go-sdk/http"
 )
 const anthroEndpoint = "https://api.anthropic.com/v1/chat/completions"
 
@@ -67,7 +65,8 @@ func RequestChatCompletion(reqBody lib.ChatRequest, key string, modal string) (s
     req.Header.Set("Content-Type", "application/json")
     req.Header.Set("Authorization", "Bearer "+key)
 
-    resp, err := spinhttp.Send(req)
+    client := &http.Client{}
+    resp, err := client.Do(req)
     if err != nil {
         return "", fmt.Errorf("error sending request: %v", err)
     }

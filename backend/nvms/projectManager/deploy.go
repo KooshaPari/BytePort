@@ -8,9 +8,9 @@ import (
 	"nvms/lib"
 	"nvms/models"
 	"strings"
+	"time"
 
-	spinhttp "github.com/fermyon/spin-go-sdk/http"
-	"github.com/google/uuid"
+github.com/google/uuid
 )
 
 
@@ -39,7 +39,7 @@ func DeployProject(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error parsing request", http.StatusBadRequest)
 		return
 	}
-	nvmsString, readMeString, codebase, files, err := ProvisionFiles(w, r, project)
+	nvmsString, readMeString, codebase, _, err := ProvisionFiles(w, r, project)
 	if err != nil {
 		http.Error(w, "Error provisioning files", http.StatusInternalServerError)	
 	}
@@ -76,188 +76,129 @@ func DeployProject(w http.ResponseWriter, r *http.Request) {
 	}
 	project.NvmsConfig = *nvmsConfig
 	project.Readme = readMeString
-	// sec 3
-	 accesskey,secretkey, err := lib.GetAWSCredentials(user) 
+
+	// Store project files locally (replaces S3)
+	storageManager, err := lib.GetStorageManager()
 	if err != nil {
-		http.Error(w, "Error getting AWS credentials", http.StatusInternalServerError)
+		http.Error(w, "Error initializing storage", http.StatusInternalServerError)
 		return
 	}
 
-	bucket, err := lib.PushToS3(codebase, accesskey, secretkey, project.Name)
-	 
+	localStorage, err := storageManager.PushToLocalStorage(codebase, project.Name)
 	if err != nil {
-		fmt.Println("Error pushing to S3: ", err)
-		http.Error(w, "Error pushing to S3: "+err.Error(), http.StatusInternalServerError)
+		fmt.Println("Error storing project locally: ", err)
+		http.Error(w, "Error storing project locally: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-  		instance := project.GetDeploy(deployID)
-        instance.Resources = append(instance.Resources, models.AWSResource{
-            Name:    "S3-CodeBase Store",
-            ARN:     bucket.BucketARN,
-            Status:  "deployed",
-            Region:  bucket.Region,
-            ID:      bucket.BucketName,
-			Type:   "S3",
-            Service: "general",
-        })
-        project.AppendDeploy(deployID, instance)
+
+	instance := project.GetDeploy(deployID)
+	instance.Resources = append(instance.Resources, models.AWSResource{
+		Name:    "Local-Storage",
+		ARN:     localStorage.BucketARN,
+		Status:  "deployed",
+		Region:  localStorage.Region,
+		ID:      localStorage.BucketName,
+		Type:    "LocalStorage",
+		Service: "general",
+	})
+	project.AppendDeploy(deployID, instance)
      
 
-	ServiceInstances := make(map[string][]lib.EC2InstanceInfo)
-    serviceMap := make(map[string]models.Service)
+	// Deploy services using Docker (replaces EC2)
+	dockerManager, err := lib.GetDockerManager()
+	if err != nil {
+		http.Error(w, "Error initializing Docker manager", http.StatusInternalServerError)
+		return
+	}
+
+	serviceInstances := make(map[string][]lib.DockerInstanceInfo)
+	serviceMap := make(map[string]models.Service)
+
 	for _, service := range nvmsConfig.Services {
-		/* So here we need to deploy 2x services into a vm, for now just a basic ec2, that will then be run with X command and have the following ports opened publicly for it. */
-		fmt.Println("Serve")
-		instances, err := DeployNVMSService(accesskey, secretkey, bucket, service,files)
+		fmt.Println("Deploying service:", service.Name)
+
+		// Set project name for service
+		service.ProjectName = project.Name
+
+		// Deploy service in Docker container
+		containerInfo, err := dockerManager.CreateAndStartContainer(service, localStorage.Path)
 		if err != nil {
-			fmt.Println("Error deploying service: ", err)
+			fmt.Println("Error deploying service:", err)
 			http.Error(w, "Error deploying service: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
-		res  := project.GetDeploy(deployID)
-		var instanceIDs []string
-		for _, inst := range instances {
-			instanceIDs = append(instanceIDs, inst.InstanceID)
-		}
-		res.Resources = append(project.GetDeploy(deployID).Resources, models.AWSResource{
-			Name: service.Name+"-Deployment",
-			ARN: instances[0].InstanceID,
-			Status: "deployed", 
-			Region: instances[0].Region,
-			ID: strings.Join(instanceIDs, ","),
-			Type: "EC2",
+
+		serviceInstances[service.Name] = []lib.DockerInstanceInfo{*containerInfo}
+		serviceMap[service.Name] = service
+
+		// Update deployment resources
+		res := project.GetDeploy(deployID)
+		res.Resources = append(res.Resources, models.AWSResource{
+			Name:    service.Name + "-Container",
+			ARN:     containerInfo.ContainerID,
+			Status:  "deployed",
+			Region:  "local",
+			ID:      containerInfo.ContainerID,
+			Type:    "Docker",
 			Service: service.Name,
 		})
-	project.AppendDeploy(deployID, res)
-		serviceMap[service.Name] = service
-		ServiceInstances[service.Name] = instances
+		project.AppendDeploy(deployID, res)
 	}
-	fmt.Println("Handling Net...")
-	
-	
-	fmt.Println("Service Instances: ", ServiceInstances)
-	// wind down services since this is for debug.
-	// await deployment then setup network
-	// write service Instances to bodyservBody, err = json.Marshal(ServiceInstances)
-	// run a for loop on service instances, for each await deploy then register services, prov network and finally listener rules.
-	var instIDs []string
-	fmt.Println("Waiting for Initialization")
-	// add short wait
-	fmt.Println("Initializing")
-	for name, instances := range ServiceInstances {
-		fmt.Println("Initializing ids: ", name)
-		instIDs = []string{}
-		for _, instance := range instances {
-			instIDs = append(instIDs, instance.InstanceID)
-		}
-		fmt.Println("Initializing: ", name)
-	err := lib.AwaitInitialization(accesskey, secretkey, instIDs)
+	fmt.Println("Handling Network...")
+	fmt.Println("Service Instances: ", serviceInstances)
 
+	// Wait for containers to be ready
+	fmt.Println("Waiting for containers to initialize...")
+	err = waitForContainersReady(serviceInstances)
 	if err != nil {
-		http.Error(w, "Error Checking init", http.StatusBadRequest)
+		http.Error(w, "Error waiting for containers: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	fmt.Println("All containers initialized")
+	
+	// Create Cloudflare tunnel (replaces ALB/Load Balancer)
+	fmt.Println("Setting up tunnel...")
+	tunnelManager, err := lib.GetTunnelManager()
+	if err != nil {
+		http.Error(w, "Error initializing tunnel manager", http.StatusInternalServerError)
 		return
 	}
 
-	fmt.Println("Intialized: ", name)
+	// Convert services for tunnel configuration
+	var tunnelServices []models.Service
+	for _, service := range nvmsConfig.Services {
+		tunnelServices = append(tunnelServices, service)
 	}
-	
-	alb, vpcId,accessURL, err := lib.ProvisionNetwork(accesskey, secretkey, project.Name )
-	lbArn := alb.CreateLoadBalancerResult.LoadBalancers.Member.LoadBalancerArn
-	res  := project.GetDeploy(deployID)
-		res.Resources = append(project.GetDeploy(deployID).Resources, models.AWSResource{
-		Name: "ALB",
-		ARN: lbArn,
-		Status: "deployed",
-		Region: "us-east-1", 
-		ID: lbArn, 
-		Type: "ALB",
-		Service: "general",
-	 
-	} )
-	project.AppendDeploy(deployID, res) 
 
-	project.AccessURL = accessURL
+	_, err = tunnelManager.CreateProjectTunnel(project.Name, tunnelServices)
 	if err != nil {
-		fmt.Println("Error provisioning network", err)
-		http.Error(w, "Error provisioning network: "+err.Error(), http.StatusInternalServerError)
+		fmt.Println("Error creating tunnel:", err)
+		http.Error(w, "Error creating tunnel: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
-	var listenArn, targetGArn string
-	// Create listener only for the first main instance
-	if len(ServiceInstances["main"]) > 0 {
-		instance := ServiceInstances["main"][0]
-		fmt.Println("building main listener(s)")
-		listenArn,targetGArn, err  = lib.CreateALBListener(accesskey, secretkey, project.Name, lbArn, vpcId, instance.InstanceID,  serviceMap["main"].Port)
- 
-		if err != nil {
-		fmt.Println("Error Creating Listener  ", err)
-		http.Error(w, "Error Creating Listener  : "+err.Error(), http.StatusInternalServerError)
-		}
-		fmt.Println("SSSListener ARN: ", listenArn)
 
-		res  := project.GetDeploy(deployID)
-		res.Resources = append(project.GetDeploy(deployID).Resources, models.AWSResource{
-		Name: "ALBListener",
-		ARN: listenArn,
-		Status: "deployed",
-		Region: "us-east-1", 
-		ID: listenArn, 
-		Type:"Listener", 
+	// Start the tunnel
+	actualURL, err := tunnelManager.StartProjectTunnel(project.Name)
+	if err != nil {
+		fmt.Println("Error starting tunnel:", err)
+		http.Error(w, "Error starting tunnel: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	project.AccessURL = actualURL
+
+	// Update deployment with tunnel info
+	res := project.GetDeploy(deployID)
+	res.Resources = append(res.Resources, models.AWSResource{
+		Name:    "Cloudflare-Tunnel",
+		ARN:     actualURL,
+		Status:  "deployed",
+		Region:  "global",
+		ID:      project.Name,
+		Type:    "Tunnel",
 		Service: "general",
-		
 	})
-	fmt.Println("POST APPEND LISTENER", listenArn)
-	res.Resources = append(project.GetDeploy(deployID).Resources, models.AWSResource{
-		Name: "TargetGroup",
-		ARN: targetGArn,
-		Status: "deployed",
-		Region: "us-east-1", 
-		ID: targetGArn, 
-		Type:"TargetGroup",
-		Service: "main",
-		
-	})
-	project.AppendDeploy(deployID, res) 
-		fmt.Println("Built main listener(s) for instance: ", instance.InstanceID)
-	}
-
-	priority := 1
-	for name, instances := range ServiceInstances {
-		service := serviceMap[name]
-		if(name != "main"){
-		for _, instance := range instances {
-			
-		tgArn, err := lib.RegisterService(accesskey, secretkey, lbArn, project.Name, name, vpcId, instance.InstanceID,   service.Port )
-		if err != nil {
-			fmt.Println("Error registering service: ", err)
-			http.Error(w, "Error registering service: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-		res  := project.GetDeploy(deployID)
-		res.Resources = append(project.GetDeploy(deployID).Resources, models.AWSResource{
-		Name: service.Name+"-TargetGroup",
-		ARN: tgArn,
-		Status: "deployed",
-		Region: "us-east-1", 
-		Type: "TargetGroup",
-		ID: tgArn, 
-		Service: name,
- 
-	 
-	} )
-	project.AppendDeploy(deployID, res) 
-		fmt.Println("registered service")
-		fmt.Println("Listener ARN: ", listenArn)
-		err = lib.SetListenerRules(accesskey, secretkey, listenArn, tgArn, name, priority)
-		if err != nil {
-			fmt.Println("Error creating listener rule: ", err)
-			http.Error(w, "Error creating listener rule: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-		priority++
-		fmt.Println("Created Listener Rule")
-	}}
-
-	}
+	project.AppendDeploy(deployID, res)
 	 
 		if !strings.HasPrefix(project.AccessURL, "http") {
 			project.AccessURL = "http://" + project.AccessURL	
@@ -295,16 +236,36 @@ func addToDemo(project models.Project)(error){
 	}
 	return nil
 }
-func DeployNVMSService(AccessKey string, SecretKey string, Bucket lib.S3DeploymentInfo, service models.Service, fileMap []string) ([]lib.EC2InstanceInfo, error) {
-	instances, err := lib.DeployEC2(AccessKey, SecretKey, Bucket, service, fileMap )
+// waitForContainersReady waits for all containers to be in running state
+func waitForContainersReady(serviceInstances map[string][]lib.DockerInstanceInfo) error {
+	dockerManager, err := lib.GetDockerManager()
 	if err != nil {
-		fmt.Println("Error deploying EC2: ", err)
-		return nil, err
+		return fmt.Errorf("failed to get Docker manager: %w", err)
 	}
-	//fmt.Println("Deployed EC2 Instances: ", instances)
-	fmt.Println("Building Services: ", service)
 
-	return instances, nil
+	for serviceName, instances := range serviceInstances {
+		for _, instance := range instances {
+			for i := 0; i < 30; i++ { // Wait up to 30 seconds
+				status, err := dockerManager.GetContainerStatus(instance.ContainerID)
+				if err != nil {
+					return fmt.Errorf("failed to get container status for %s: %w", serviceName, err)
+				}
+
+				if status == "running" {
+					break
+				}
+
+				if i == 29 {
+					return fmt.Errorf("container %s failed to start within timeout", serviceName)
+				}
+
+				// Wait 1 second before checking again
+				time.Sleep(time.Second)
+			}
+		}
+	}
+
+	return nil
 }
  
 

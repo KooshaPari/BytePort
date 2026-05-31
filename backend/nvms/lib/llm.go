@@ -2,11 +2,13 @@ package lib
 
 import (
 	"fmt"
-	lib "nvms/lib/providers"
-	"nvms/lib/providers/local"
-	"nvms/lib/providers/openai"
+	"nvms/lib/providers-disabled/local"
+	"nvms/lib/providers-disabled/openai"
 	"nvms/models"
 )
+
+// LLM providers are disabled for Windows deployment
+// These are stub functions to maintain compatibility
 
  
  

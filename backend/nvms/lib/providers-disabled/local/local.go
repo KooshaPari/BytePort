@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	lib "nvms/lib/providers"
-
-	spinhttp "github.com/fermyon/spin-go-sdk/http"
 )
 const localEndpoint = "http://localhost:11434/api/generate"
 
@@ -53,7 +51,8 @@ func RequestCompletion(reqBody lib.ChatRequest ) (string, error) {
     req.Header.Set("Content-Type", "application/json")
     
 
-    resp, err := spinhttp.Send(req)
+    client := &http.Client{}
+    resp, err := client.Do(req)
     if err != nil {
         fmt.Printf("error sending request: %v\n", err)
         return "", fmt.Errorf("error sending request: %v", err)
