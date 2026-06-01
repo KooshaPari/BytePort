@@ -6,9 +6,13 @@ on:
   pull_request:
     branches: ["**"]
 
+permissions:
+  contents: read
+  actions: read
 jobs:
   trufflehog:
-    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683

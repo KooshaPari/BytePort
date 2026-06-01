@@ -5,9 +5,13 @@ on:
     tags:
       - "v*"
 
+permissions:
+  contents: read
+  actions: read
 jobs:
   release:
-    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:

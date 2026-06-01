@@ -16,10 +16,12 @@ on:
 permissions:
   contents: read
   security-events: write
+  actions: read
 jobs:
   analyze:
+    timeout-minutes: 30
     name: Analyze (${{ matrix.language }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       security-events: write
       contents: read
@@ -29,7 +31,7 @@ jobs:
       matrix:
         language: ["actions", "go", "javascript"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5                                            # v4
       - uses: github/codeql-action/init@b25d0ebf40e5b63ee81e1bd6e5d2a12b7c2aeb61
         with:
           languages: ${{ matrix.language }}
