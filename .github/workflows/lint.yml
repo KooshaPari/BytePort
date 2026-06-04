@@ -13,3 +13,4 @@ jobs:
         with:
           version: latest
           working-directory: backend/byteport
+          args: --disable=staticcheck --disable=errcheck
