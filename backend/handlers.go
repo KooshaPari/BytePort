@@ -387,6 +387,46 @@ func handleValidateConfig(c *gin.Context) {
 	c.JSON(http.StatusOK, validation)
 }
 
+func handleWorkOSCallback(c *gin.Context) {
+	var req struct {
+		Code  string `json:"code"`
+		State string `json:"state"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if req.Code == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "authorization code is required"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"access_token": req.Code,
+		"token_type":   "Bearer",
+		"state":        req.State,
+	})
+}
+
+func handleGetUser(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		id = "current"
+	}
+
+	user := gin.H{"id": id}
+	if userID, ok := c.Get("user_id"); ok {
+		user["id"] = userID
+	}
+	if email, ok := c.Get("user_email"); ok {
+		user["email"] = email
+	}
+
+	c.JSON(http.StatusOK, gin.H{"user": user})
+}
+
 // Helper functions
 
 func selectOptimalProvider(appType string) string {
