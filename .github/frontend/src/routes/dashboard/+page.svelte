@@ -125,9 +125,9 @@
                   voluptatibus quos doloribus quae voluptate quas.
                 </p>
                 <div class="actionContainer">
-                  <image class="projAction" src="./star.svg" alt="favorite" />
-                  <image class="projAction" src="./watch.svg" alt="watch" />
-                  <image class="projAction" src="./share.svg" alt="share" />
+                  <img class="projAction" src="./star.svg" alt="favorite" />
+                  <img class="projAction" src="./watch.svg" alt="watch" />
+                  <img class="projAction" src="./share.svg" alt="share" />
                 </div>
               </div>
             </div>
@@ -142,9 +142,9 @@
                   voluptatibus quos doloribus quae voluptate quas.
                 </p>
                 <div class="actionContainer">
-                  <image class="projAction" src="./star.svg" alt="favorite" />
-                  <image class="projAction" src="./watch.svg" alt="watch" />
-                  <image class="projAction" src="./share.svg" alt="share" />
+                  <img class="projAction" src="./star.svg" alt="favorite" />
+                  <img class="projAction" src="./watch.svg" alt="watch" />
+                  <img class="projAction" src="./share.svg" alt="share" />
                 </div>
               </div>
             </div>
@@ -158,9 +158,9 @@
                   voluptatibus quos doloribus quae voluptate quas.
                 </p>
                 <div class="actionContainer">
-                  <image class="projAction" src="./star.svg" alt="favorite" />
-                  <image class="projAction" src="./watch.svg" alt="watch" />
-                  <image class="projAction" src="./share.svg" alt="share" />
+                  <img class="projAction" src="./star.svg" alt="favorite" />
+                  <img class="projAction" src="./watch.svg" alt="watch" />
+                  <img class="projAction" src="./share.svg" alt="share" />
                 </div>
               </div>
             </div>
@@ -174,9 +174,9 @@
                   voluptatibus quos doloribus quae voluptate quas.
                 </p>
                 <div class="actionContainer">
-                  <image class="projAction" src="./star.svg" alt="favorite" />
-                  <image class="projAction" src="./watch.svg" alt="watch" />
-                  <image class="projAction" src="./share.svg" alt="share" />
+                  <img class="projAction" src="./star.svg" alt="favorite" />
+                  <img class="projAction" src="./watch.svg" alt="watch" />
+                  <img class="projAction" src="./share.svg" alt="share" />
                 </div>
               </div>
             </div>
@@ -190,9 +190,9 @@
                   voluptatibus quos doloribus quae voluptate quas.
                 </p>
                 <div class="actionContainer">
-                  <image class="projAction" src="./star.svg" alt="favorite" />
-                  <image class="projAction" src="./watch.svg" alt="watch" />
-                  <image class="projAction" src="./share.svg" alt="share" />
+                  <img class="projAction" src="./star.svg" alt="favorite" />
+                  <img class="projAction" src="./watch.svg" alt="watch" />
+                  <img class="projAction" src="./share.svg" alt="share" />
                 </div>
               </div>
             </div>
@@ -206,9 +206,9 @@
                   voluptatibus quos doloribus quae voluptate quas.
                 </p>
                 <div class="actionContainer">
-                  <image class="projAction" src="./star.svg" alt="favorite" />
-                  <image class="projAction" src="./watch.svg" alt="watch" />
-                  <image class="projAction" src="./share.svg" alt="share" />
+                  <img class="projAction" src="./star.svg" alt="favorite" />
+                  <img class="projAction" src="./watch.svg" alt="watch" />
+                  <img class="projAction" src="./share.svg" alt="share" />
                 </div>
               </div>
             </div>
