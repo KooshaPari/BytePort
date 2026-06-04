@@ -19,6 +19,8 @@ jobs:
         with:
           go-version: 'stable'
       - name: Install and run TruffleHog
-        run: go install github.com/trufflehog/trufflehog/v3@latest && trufflehog github --only-verified
+        run: |
+          go install github.com/trufflesecurity/trufflehog/v3@v3.95.5
+          trufflehog git "file://$PWD" --only-verified --fail
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
