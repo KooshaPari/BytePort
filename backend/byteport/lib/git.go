@@ -13,11 +13,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const (
-	refreshInterval       = 7*time.Hour + 45*time.Minute
-	refreshChangeInterval = 3300 * time.Hour
-)
-
 func ListRepositories(accessToken string) (string, error) {
 	const apiURL = "https://api.github.com"
 

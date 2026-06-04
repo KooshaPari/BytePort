@@ -221,8 +221,6 @@ func isLocalhostName(host string) bool {
 
 // ValidateGit validates the GitHub app connection and fetches repositories for a user.
 func ValidateGit(user models.User) error {
-	const apiURL = "https://api.github.com"
-
 	// Fetch Git secrets from the database linked to the user
 	var gitSecrets models.GitSecret
 	result := models.DB.First(&gitSecrets)
