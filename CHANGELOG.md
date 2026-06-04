@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial CHANGELOG scaffold.
 
 ### Changed
+- update nvms and byteport library sources
+- remove backend/.history/ from git index
+- remove 17K+ .history/ IDE auto-saves from git index
+- rename ci.yaml to ci.yml and add stub inventory
 
 ### Deprecated
 
