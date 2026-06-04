@@ -34,7 +34,7 @@
 		"@storybook/test": "^8.6.15",
 		"@sveltejs/adapter-auto": "^7.0.1",
 		"@sveltejs/adapter-static": "^3.0.10",
-		"@sveltejs/kit": "^2.60.1",
+		"@sveltejs/kit": "^2.63.0",
 		"@sveltejs/vite-plugin-svelte": "^7.0.0",
 		"@tauri-apps/api": "^2.1.1",
 		"@tauri-apps/cli": "^2.10.1",
