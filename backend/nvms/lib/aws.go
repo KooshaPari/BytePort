@@ -93,7 +93,7 @@ func DeployEC2(AccessKey string, SecretKey string, bucket S3DeploymentInfo, serv
 		log.Printf("Error generating build script: %v\n", err)
 		return []EC2InstanceInfo{}, err
 	}
-	log.Printf("EC2 client created: %v\n", client)
+	log.Println("EC2 client created")
 	params := map[string]string{
 		"ImageId": "ami-01816d07b1128cd2d",
 		//"ImageId": "ami-024f768332f0",
