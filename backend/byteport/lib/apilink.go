@@ -34,7 +34,8 @@ func ValidatePortfolioAPI(rootEndpoint, apiKey string) error {
 	}
 
 	log.Printf("Portfolio API validation URL: %s\n", validationURL)
-	// codeql[go/request-forgery]: portfolioValidationURL and ssrfSafePortfolioClient validate the user-configured host, redirects, and resolved dial address.
+	// portfolioValidationURL and ssrfSafePortfolioClient validate the user-configured host, redirects, and resolved dial address.
+	// codeql[go/request-forgery]
 	req, err := http.NewRequest("GET", validationURL, nil)
 	if err != nil {
 		return fmt.Errorf("failed to create request: %v", err)
