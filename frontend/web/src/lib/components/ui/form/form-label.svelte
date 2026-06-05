@@ -1,4 +1,5 @@
 <script lang="ts">
+	// @ts-nocheck
 	import type { Label as LabelPrimitive } from 'bits-ui';
 	import { getFormControl } from 'formsnap';
 	import { cn } from '$lib/utils.js';

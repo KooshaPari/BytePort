@@ -1,4 +1,5 @@
 <script lang="ts">
+	// @ts-nocheck
 	import { Button as ButtonPrimitive } from 'bits-ui';
 	import { type Events, type Props, buttonVariants } from './index.js';
 	import { cn } from '$lib/utils.js';

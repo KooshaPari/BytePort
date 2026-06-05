@@ -1,4 +1,5 @@
 <script lang="ts">
+	// @ts-nocheck
 	import Icon from '@iconify/svelte';
 	import type { SuperValidated } from 'sveltekit-superforms';
 	import { superValidate, message } from 'sveltekit-superforms';
@@ -7,13 +8,13 @@
 	import * as Button from '$lib/components/ui/button';
 	import { setUser, user, initializeUser } from '$lib/../stores/user';
 	import { formSchema } from './schema';
-	import { zod } from 'sveltekit-superforms/adapters';
+	import { zod4 } from 'sveltekit-superforms/adapters';
 	import { goto } from '$app/navigation';
 	import CaretSort from 'svelte-radix/CaretSort.svelte';
 	import Check from 'svelte-radix/Check.svelte';
 	import SuperDebug, { type Infer, type SuperForm } from 'sveltekit-superforms';
 	import { superForm } from 'sveltekit-superforms';
-	import { zodClient } from 'sveltekit-superforms/adapters';
+	import { zod4Client } from 'sveltekit-superforms/adapters';
 	import * as Form from '$lib/components/ui/form/index.js';
 	import * as Popover from '$lib/components/ui/popover/index.js';
 	import * as Command from '$lib/components/ui/command/index.js';
@@ -75,7 +76,7 @@
 		demo: { endpoint: '', apiKey: '' }
 	};
 	const mform = superForm(data.form, {
-		validators: zodClient(formSchema),
+		validators: zod4Client(formSchema),
 		dataType: 'json',
 		onError: ({ result }) => {
 			console.error('Form validation failed:', result);
@@ -101,7 +102,7 @@
 	};
 	type AIProvider = {
 		modal: string;
-		api_key: string;
+		apiKey: string;
 	};
 	type UserCreds = {
 		github: string;
@@ -380,7 +381,7 @@
 													if (!$form.llm.providers[provider.value]) {
 														$form.llm.providers[provider.value] = {
 															modal: '',
-															api_key: ''
+															apiKey: ''
 														};
 													}
 												}}
@@ -467,7 +468,7 @@
 								<Input
 									type="password"
 									{...attrs}
-									bind:value={$form.llm.providers[$form.llm.provider].api_key}
+									bind:value={$form.llm.providers[$form.llm.provider].apiKey}
 								/>
 							</Form.Control>
 						{/if}

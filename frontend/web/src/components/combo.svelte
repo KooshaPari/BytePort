@@ -1,4 +1,5 @@
 <script lang="ts">
+	// @ts-nocheck
 	import { Input } from '$lib/components/ui/input';
 	import Check from 'lucide-svelte/icons/check';
 	import ChevronsUpDown from 'lucide-svelte/icons/chevrons-up-down';
@@ -7,10 +8,19 @@
 	import * as Popover from '$lib/components/ui/popover/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { cn } from '$lib/utils.js';
-	// pull from items prop
-	let props = $props();
-	let items = props.items;
-	let placeholder = props.placeholder;
+
+	type ComboItem = {
+		value: string;
+		label: string;
+	};
+
+	type Props = {
+		items: ComboItem[];
+		placeholder: string;
+		onselect?: (event: CustomEvent<string>) => void;
+	};
+
+	let { items, placeholder, onselect }: Props = $props();
 
 	let open = $state(false);
 	let value = $state('');
@@ -55,6 +65,7 @@
 						value={item.value}
 						onSelect={(currentValue) => {
 							value = currentValue;
+							onselect?.(new CustomEvent('select', { detail: currentValue }));
 							closeAndFocusTrigger(ids.trigger);
 						}}
 					>

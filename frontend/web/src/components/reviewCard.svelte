@@ -72,11 +72,11 @@
 							<div class="flex-colitems-center space-y-2">
 								<div class="flex flex-row items-center space-x-3.5">
 									<Label for="name">Project Name</Label>
-									<span>{project.Name}</span>
+									<span>{project.name}</span>
 								</div>
 								<div class="flex flex-row items-center space-x-3.5">
 									<Label for="name">Description</Label>
-									<span>{project.Description}</span>
+									<span>{project.description}</span>
 								</div>
 								<div class="flex flex-row items-center space-x-3.5">
 									<Label for="name">Type</Label>
@@ -88,7 +88,7 @@
 								</div>
 								<div class="flex flex-row items-center space-x-3.5">
 									<Label for="name">NVMS Path</Label>
-									<span>{project.NVMSPath}</span>
+									<span>{project.NVMS?.Name ?? ''}</span>
 								</div>
 							</div>
 						</Card.Content></Card.Root

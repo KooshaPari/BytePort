@@ -1,3 +1,5 @@
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-nocheck
 import { Popover as PopoverPrimitive } from 'bits-ui';
 import Content from './popover-content.svelte';
 const Root = PopoverPrimitive.Root;

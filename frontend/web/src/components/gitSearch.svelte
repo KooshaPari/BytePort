@@ -5,8 +5,11 @@
 	import { user } from '../stores/user.js';
 	import { onMount, onDestroy } from 'svelte';
 	import type { Repository } from '../lib/git.js';
-	//import { setStage } from './addProjectDialog.svelte';
-	let { select } = $props();
+	type Props = {
+		select: (repo: Repository) => void;
+	};
+
+	let { select }: Props = $props();
 
 	import * as Avatar from '$lib/components/ui/avatar';
 	type EventDetail = {

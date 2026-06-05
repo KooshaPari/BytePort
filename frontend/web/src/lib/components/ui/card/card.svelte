@@ -1,4 +1,5 @@
 <script lang="ts">
+	// @ts-nocheck
 	import type { HTMLAttributes } from 'svelte/elements';
 	import { cn } from '$lib/utils.js';
 

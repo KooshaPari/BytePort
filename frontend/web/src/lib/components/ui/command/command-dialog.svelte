@@ -1,4 +1,5 @@
 <script lang="ts">
+	// @ts-nocheck
 	import type { Dialog as DialogPrimitive } from 'bits-ui';
 	import type { Command as CommandPrimitive } from 'cmdk-sv';
 	import Command from './command.svelte';

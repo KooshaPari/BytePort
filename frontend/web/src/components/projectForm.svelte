@@ -33,8 +33,12 @@
 	<Input type="hidden" name="platform" bind:value={platformValue} />
 	<Combo
 		items={platformArray}
-		onselect={(e) => (platformValue = e.detail)}
+		onselect={(e: CustomEvent<string>) => (platformValue = e.detail)}
 		placeholder="Platform"
 	/>
-	<Combo items={typeArray} onselect={(e) => (typeValue = e.detail)} placeholder="Type" />
+	<Combo
+		items={typeArray}
+		onselect={(e: CustomEvent<string>) => (typeValue = e.detail)}
+		placeholder="Type"
+	/>
 </form>

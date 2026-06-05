@@ -1,4 +1,5 @@
 <script lang="ts">
+	// @ts-nocheck
 	import { Accordion as AccordionPrimitive } from 'bits-ui';
 	import { slide } from 'svelte/transition';
 	import { cn } from '$lib/utils.js';

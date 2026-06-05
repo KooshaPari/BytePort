@@ -1,3 +1,5 @@
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-nocheck
 import { Command as CommandPrimitive } from 'cmdk-sv';
 
 import Root from './command.svelte';

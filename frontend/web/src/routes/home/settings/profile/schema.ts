@@ -1,20 +1,12 @@
 import { z } from 'zod';
 
 export const formSchema = z.object({
-	name: z.string({
-		required_error: 'Required.'
-	}),
-	email: z.string({
-		required_error: 'Required.'
-	}),
+	name: z.string({ error: 'Required.' }),
+	email: z.string({ error: 'Required.' }),
 	password: z
 		.object({
-			password: z.string({
-				required_error: 'Required.'
-			}),
-			confirmPassword: z.string({
-				required_error: 'Required.'
-			})
+			password: z.string({ error: 'Required.' }),
+			confirmPassword: z.string({ error: 'Required.' })
 		})
 		.superRefine(({ confirmPassword, password }, ctx) => {
 			if (confirmPassword !== password) {

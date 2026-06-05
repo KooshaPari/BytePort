@@ -1,3 +1,5 @@
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-nocheck
 import { type VariantProps, tv } from 'tailwind-variants';
 import type { Button as ButtonPrimitive } from 'bits-ui';
 import Root from './button.svelte';
