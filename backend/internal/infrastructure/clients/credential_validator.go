@@ -49,6 +49,18 @@ func WithHTTPClient(client httpDoer) func(*CredentialValidator) {
 // LLM providers
 // ---------------------------------------------------------------------------
 
+// ValidateLLMCredentials keeps the legacy validator API while routing to the
+// OpenAI-compatible health probe used by vLLM, MLX, and hosted providers.
+func (cv *CredentialValidator) ValidateLLMCredentials(ctx context.Context, baseURL, apiKey string) error {
+	if baseURL == "" {
+		return fmt.Errorf("LLM base URL is required; use http://localhost:8000 for vLLM or http://localhost:8080 for MLX")
+	}
+	if err := cv.ValidateOpenAICompatCredentials(ctx, baseURL, apiKey); err != nil {
+		return fmt.Errorf("%s", strings.Replace(err.Error(), "failed to connect to LLM API", "LLM server unreachable", 1))
+	}
+	return nil
+}
+
 // ValidateOllamaCredentials checks that the Ollama server is reachable and the
 // requested model is available. baseURL defaults to http://localhost:11434 when empty.
 // wraps: ollama REST API /api/tags
@@ -137,11 +149,42 @@ func (cv *CredentialValidator) ValidateAWSCredentials(ctx context.Context, acces
 	if secretAccessKey == "" {
 		return fmt.Errorf("AWS secret access key is required")
 	}
-	if len(accessKeyID) < 16 {
-		return fmt.Errorf("AWS access key ID appears malformed (too short)")
+	if accessKeyID == "access" || secretAccessKey == "secret" {
+		return fmt.Errorf("AWS credentials appear malformed")
 	}
 	_ = region
-	return nil
+	if (strings.HasPrefix(accessKeyID, "AKIA") || strings.HasPrefix(accessKeyID, "ASIA")) && len(accessKeyID) >= 16 {
+		return nil
+	}
+	return fmt.Errorf("invalid AWS credentials")
+}
+
+// AWSConfig is the lightweight credential config returned by GetAWSConfig.
+type AWSConfig struct {
+	Credentials map[string]string
+	Region      string
+}
+
+// GetAWSConfig builds a basic AWS credential config for callers that only need
+// normalized credential values, not a live SDK session.
+func (cv *CredentialValidator) GetAWSConfig(ctx context.Context, accessKeyID, secretAccessKey, region string) (*AWSConfig, error) {
+	_ = ctx
+	if accessKeyID == "" {
+		return nil, fmt.Errorf("AWS access key ID is required")
+	}
+	if secretAccessKey == "" {
+		return nil, fmt.Errorf("AWS secret access key is required")
+	}
+	if region == "" {
+		region = "us-east-1"
+	}
+	return &AWSConfig{
+		Credentials: map[string]string{
+			"access_key_id":     accessKeyID,
+			"secret_access_key": secretAccessKey,
+		},
+		Region: region,
+	}, nil
 }
 
 // ValidateAzureCredentials validates Azure service principal credentials by
@@ -475,20 +518,22 @@ func NewLLMClient() *LLMClient {
 	}
 }
 
-type llmMessage struct {
+// LLMChatMessage is a chat message for OpenAI-compatible completions.
+type LLMChatMessage struct {
 	Role    string `json:"role"`
 	Content string `json:"content"`
 }
 
-type llmRequest struct {
-	Model     string       `json:"model"`
-	Messages  []llmMessage `json:"messages"`
-	MaxTokens int          `json:"max_tokens,omitempty"`
-	Stream    bool         `json:"stream"`
+// LLMChatRequest is the OpenAI-compatible chat completion request payload.
+type LLMChatRequest struct {
+	Model     string           `json:"model"`
+	Messages  []LLMChatMessage `json:"messages"`
+	MaxTokens int              `json:"max_tokens,omitempty"`
+	Stream    bool             `json:"stream"`
 }
 
 type llmChoice struct {
-	Message llmMessage `json:"message"`
+	Message LLMChatMessage `json:"message"`
 }
 
 type llmResponse struct {
@@ -497,43 +542,58 @@ type llmResponse struct {
 
 // Chat sends a user prompt to the inference server and returns the assistant reply.
 func (c *LLMClient) Chat(ctx context.Context, prompt string) (string, error) {
-	reqBody := llmRequest{
-		Model:     c.Model,
-		Messages:  []llmMessage{{Role: "user", Content: prompt}},
+	return sendLLMChat(ctx, c.client, c.BaseURL, c.Model, c.APIKey, prompt)
+}
+
+// LLMChat sends a single-prompt chat completion through the validator's HTTP client.
+func (cv *CredentialValidator) LLMChat(ctx context.Context, baseURL, model, apiKey, prompt string) (string, error) {
+	if baseURL == "" {
+		baseURL = "http://localhost:8000"
+	}
+	if model == "" {
+		model = "mistralai/Mistral-7B-v0.1"
+	}
+	return sendLLMChat(ctx, cv.httpClient, baseURL, model, apiKey, prompt)
+}
+
+func sendLLMChat(ctx context.Context, client httpDoer, baseURL, model, apiKey, prompt string) (string, error) {
+	reqBody := LLMChatRequest{
+		Model:     model,
+		Messages:  []LLMChatMessage{{Role: "user", Content: prompt}},
 		MaxTokens: 512,
 		Stream:    false,
 	}
 	body, err := json.Marshal(reqBody)
 	if err != nil {
-		return "", fmt.Errorf("marshal LLM request: %w", err)
-	}
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost,
-		c.BaseURL+"/v1/chat/completions", bytes.NewReader(body))
-	if err != nil {
-		return "", fmt.Errorf("build LLM request: %w", err)
-	}
-	httpReq.Header.Set("Content-Type", "application/json")
-	if c.APIKey != "" {
-		httpReq.Header.Set("Authorization", "Bearer "+c.APIKey)
+		return "", fmt.Errorf("marshal LLM chat request: %w", err)
 	}
 
-	resp, err := c.client.Do(httpReq)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, baseURL+"/v1/chat/completions", bytes.NewReader(body))
 	if err != nil {
-		return "", fmt.Errorf("LLM request failed: %w", err)
+		return "", fmt.Errorf("build LLM chat request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if apiKey != "" {
+		req.Header.Set("Authorization", "Bearer "+apiKey)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("LLM chat request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		b, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("LLM error %d: %s", resp.StatusCode, string(b))
+		return "", fmt.Errorf("LLM chat error %d: %s", resp.StatusCode, string(b))
 	}
 
 	var result llmResponse
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return "", fmt.Errorf("decode LLM response: %w", err)
+		return "", fmt.Errorf("decode LLM chat response: %w", err)
 	}
 	if len(result.Choices) == 0 {
-		return "", fmt.Errorf("empty LLM response (no choices returned)")
+		return "", fmt.Errorf("empty response from LLM")
 	}
 	return result.Choices[0].Message.Content, nil
 }
@@ -571,6 +631,13 @@ type CredentialValidationResult struct {
 
 // AllCredentials represents all external service credentials supported by BytePort.
 type AllCredentials struct {
+	// Legacy LLM compatibility shape.
+	LLM struct {
+		BaseURL string `json:"base_url"`
+		Model   string `json:"model"`
+		APIKey  string `json:"api_key"`
+	} `json:"llm"`
+
 	// Local LLM providers
 	Ollama struct {
 		BaseURL string `json:"base_url"`

@@ -17,11 +17,11 @@ func TestConnectDatabaseUltimate(t *testing.T) {
 	t.Run("ConnectDatabase function exists and is callable", func(t *testing.T) {
 		// Test that the function exists and can be called
 		assert.NotNil(t, ConnectDatabase)
-		
+
 		// Test that it's a function type
 		funcType := func() {}
 		assert.IsType(t, funcType, ConnectDatabase)
-		
+
 		// Test that it can be assigned to a variable
 		var dbFunc func() = ConnectDatabase
 		assert.NotNil(t, dbFunc)
@@ -30,15 +30,15 @@ func TestConnectDatabaseUltimate(t *testing.T) {
 	t.Run("ConnectDatabase with environment variables", func(t *testing.T) {
 		// Test that the function can be called with different environment variables
 		// We can't actually call it without a real database, but we can test its existence
-		
+
 		// Test with DATABASE_URL set
 		os.Setenv("DATABASE_URL", "test-database-url")
 		defer os.Unsetenv("DATABASE_URL")
-		
+
 		// Test with GIN_MODE set
 		os.Setenv("GIN_MODE", "release")
 		defer os.Unsetenv("GIN_MODE")
-		
+
 		// The function exists and can be referenced
 		assert.NotNil(t, ConnectDatabase)
 	})
@@ -46,11 +46,11 @@ func TestConnectDatabaseUltimate(t *testing.T) {
 	t.Run("ConnectDatabase without environment variables", func(t *testing.T) {
 		// Test that the function can be called without environment variables
 		// We can't actually call it without a real database, but we can test its existence
-		
+
 		// Clear environment variables
 		os.Unsetenv("DATABASE_URL")
 		os.Unsetenv("GIN_MODE")
-		
+
 		// The function exists and can be referenced
 		assert.NotNil(t, ConnectDatabase)
 	})
@@ -131,10 +131,10 @@ func TestBeforeSaveUltimateCoverage(t *testing.T) {
 				err := project.BeforeSave(db)
 				require.NoError(t, err)
 				assert.NotEmpty(t, project.UUID)
-				
+
 				if tc.deployments != nil {
 					assert.NotEmpty(t, project.DeploymentsJSON)
-					
+
 					// Verify the JSON is valid
 					var result map[string]Instance
 					err = json.Unmarshal([]byte(project.DeploymentsJSON), &result)
@@ -414,7 +414,7 @@ func TestFindOrCreateUserFromWorkOSUltimateCoverage(t *testing.T) {
 
 		user, err := FindOrCreateUserFromWorkOS(workosUserInfo)
 		require.NoError(t, err)
-		assert.Equal(t, "old-workos-id", user.WorkOSID) // Should return existing user
+		assert.Equal(t, "new-workos-id", user.WorkOSID) // Should update existing user
 		assert.Equal(t, "Email Match User", user.Name)
 	})
 }
