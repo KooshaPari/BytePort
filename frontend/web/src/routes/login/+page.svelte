@@ -48,9 +48,15 @@
 	async function login() {
 		const baseUrl = await getBaseUrl();
 		console.log('Base URL:', baseUrl);
+		const regUserForm = document.forms.namedItem('regUser');
+		if (!regUserForm) {
+			Error = 'Login form was not found.';
+			return;
+		}
+		const formData = new FormData(regUserForm);
 		let newUser = {
-			Email: (document.forms['regUser'] as HTMLFormElement)['email'].value,
-			Password: (document.forms['regUser'] as HTMLFormElement)['password'].value
+			Email: String(formData.get('email') ?? ''),
+			Password: String(formData.get('password') ?? '')
 		};
 		const { Email, Password } = newUser;
 		try {

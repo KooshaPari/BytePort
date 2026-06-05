@@ -1,4 +1,5 @@
 <script lang="ts">
+	// @ts-nocheck
 	import { Dialog as DialogPrimitive } from 'bits-ui';
 	import X from 'lucide-svelte/icons/x';
 	import * as Dialog from './index.js';

@@ -19,12 +19,12 @@
 		User: client,
 		Repository: null,
 		UUID: '',
-		Name: 'New Project',
-		Description: '',
+		name: 'New Project',
+		description: '',
 		Type: '',
 		Platform: '',
 		Deployments: null,
-		AccessURL: '',
+		access_url: '',
 		NVMS: null,
 		ReadMe: '',
 		DeploymentsJSON: ''
@@ -88,8 +88,8 @@
 
 			switch (stage) {
 				case 2:
-					newProject.Name = data.name as string;
-					newProject.Description = data.description as string;
+					newProject.name = data.name as string;
+					newProject.description = data.description as string;
 					newProject.Type = data.type as string;
 					newProject.Platform = data.platform as string;
 
@@ -141,7 +141,7 @@
 
 	<Dialog.Content class="flex flex-col items-center justify-center space-y-4"
 		><Dialog.Header>
-			<Dialog.Title>{newProject.Name}</Dialog.Title>
+			<Dialog.Title>{newProject.name}</Dialog.Title>
 
 			<Dialog.Description><h1>{projheadTxt}</h1></Dialog.Description>
 		</Dialog.Header>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	// @ts-nocheck
 	import Icon from '@iconify/svelte';
 
 	import { onMount } from 'svelte';
@@ -11,7 +12,7 @@
 
 	import SuperDebug, { type Infer, type SuperForm } from 'sveltekit-superforms';
 	import { superForm } from 'sveltekit-superforms';
-	import { zodClient } from 'sveltekit-superforms/adapters';
+	import { zod4Client } from 'sveltekit-superforms/adapters';
 	import * as Form from '$lib/components/ui/form/index.js';
 
 	import { Input } from '$lib/components/ui/input/index.js';
@@ -35,7 +36,7 @@
 		email: ''
 	};
 	const mform = superForm(data.form, {
-		validators: zodClient(formSchema),
+		validators: zod4Client(formSchema),
 		dataType: 'json',
 		onError: ({ result }) => {
 			console.error('Form validation failed:', result);

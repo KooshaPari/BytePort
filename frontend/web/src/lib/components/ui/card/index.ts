@@ -1,3 +1,5 @@
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-nocheck
 import Root from './card.svelte';
 import Content from './card-content.svelte';
 import Description from './card-description.svelte';

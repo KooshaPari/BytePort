@@ -5,7 +5,7 @@ import { get } from 'svelte/store';
 import { fail } from '@sveltejs/kit';
 import { formSchema } from './schema';
 import type { PageServerLoad } from './$types.js';
-import { zod } from 'sveltekit-superforms/adapters';
+import { zod4 as zod4Adapter } from 'sveltekit-superforms/adapters';
 import type { User } from '$lib/../stores/user';
 import { superValidate, message } from 'sveltekit-superforms';
 
@@ -35,9 +35,9 @@ export const load: PageServerLoad = async () => {
 			{
 				name: client?.name || '',
 				email: client?.email || '',
-				password: { value: '', confirm: '' }
+				password: { password: '', confirmPassword: '' }
 			},
-			zod(formSchema)
+			zod4Adapter(formSchema)
 		)
 	};
 };
@@ -65,7 +65,7 @@ unsubscribe();
 
 export const actions = {
 	default: async ({ request }) => {
-		const form = await superValidate(request, zod(formSchema));
+		const form = await superValidate(request, zod4Adapter(formSchema));
 
 		console.log('POST', form);
 

@@ -119,17 +119,17 @@
 						id="resources"
 						class="max-h-[65vh] min-h-[45vh] max-w-[60vw] min-w-[50vw] overflow-y-scroll"
 					>
-						<Accordion.Root>
+						<Accordion.Root type="single">
 							<Accordion.Item value="item-1">
 								<Accordion.Trigger>Resources</Accordion.Trigger>
 								<Accordion.Content>
 									{#if project.Deployments}
 										{#each deployments as instance}
 											<div class="instance">
-												<Accordion.Root>
+												<Accordion.Root type="single">
 													<Accordion.Item value="item-1">
 														<Accordion.Trigger
-															>{instance.Name}</Accordion.Trigger
+															>{instance.name}</Accordion.Trigger
 														>
 														<Accordion.Content>
 															<div

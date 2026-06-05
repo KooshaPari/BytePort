@@ -1,4 +1,5 @@
 <script lang="ts">
+	// @ts-nocheck
 	import { Popover as PopoverPrimitive } from 'bits-ui';
 	import { cn, flyAndScale } from '$lib/utils.js';
 

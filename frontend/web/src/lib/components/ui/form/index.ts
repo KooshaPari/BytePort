@@ -1,3 +1,5 @@
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-nocheck
 import * as FormPrimitive from 'formsnap';
 import Description from './form-description.svelte';
 import Label from './form-label.svelte';

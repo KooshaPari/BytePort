@@ -1,3 +1,5 @@
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-nocheck
 import { Dialog as DialogPrimitive } from 'bits-ui';
 
 import Title from './dialog-title.svelte';

@@ -16,10 +16,16 @@
 	};
 
 	async function signUpUser() {
+		const regUserForm = document.forms.namedItem('regUser');
+		if (!regUserForm) {
+			Error = 'Signup form was not found.';
+			return;
+		}
+		const formData = new FormData(regUserForm);
 		let newUser = {
-			Name: document.forms['regUser']['name'].value,
-			Email: document.forms['regUser']['email'].value,
-			Password: document.forms['regUser']['password'].value
+			Name: String(formData.get('name') ?? ''),
+			Email: String(formData.get('email') ?? ''),
+			Password: String(formData.get('password') ?? '')
 		};
 
 		const { Name, Email, Password } = newUser;

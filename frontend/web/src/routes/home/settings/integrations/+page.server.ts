@@ -5,7 +5,7 @@ import { get } from 'svelte/store';
 import { fail } from '@sveltejs/kit';
 import { formSchema } from './schema';
 import type { PageServerLoad } from './$types.js';
-import { zod } from 'sveltekit-superforms/adapters';
+import { zod4 } from 'sveltekit-superforms/adapters';
 import type { User } from '$lib/../stores/user';
 import { superValidate, message } from 'sveltekit-superforms';
 
@@ -43,7 +43,7 @@ async function getCurrent(user: User | null, baseUrl: string): Promise<UserCreds
 		};
 	} else {
 		// request baseurl/:id/creds GET with auth credentials only
-		const response = await fetch(`${baseUrl}/user/${user.UUID}/creds`, {
+		const response = await fetch(`${baseUrl}/user/${user.uuid}/creds`, {
 			method: 'GET',
 			credentials: 'include'
 		});
@@ -90,7 +90,7 @@ export const load: PageServerLoad = async () => {
 		console.error('Error in onMount:', error);
 	}
 
-	return { form: await superValidate(userCreds, zod(formSchema)) };
+	return { form: await superValidate(userCreds, zod4(formSchema)) };
 };
 
 const unsubscribe = user.subscribe((value) => {
@@ -116,7 +116,7 @@ unsubscribe();
 
 export const actions = {
 	default: async ({ request }) => {
-		const form = await superValidate(request, zod(formSchema));
+		const form = await superValidate(request, zod4(formSchema));
 
 		console.log('POST', form);
 

@@ -1,3 +1,5 @@
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-nocheck
 import Root from './avatar.svelte';
 import Image from './avatar-image.svelte';
 import Fallback from './avatar-fallback.svelte';

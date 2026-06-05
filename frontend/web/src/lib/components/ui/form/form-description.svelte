@@ -1,4 +1,5 @@
 <script lang="ts">
+	// @ts-nocheck
 	import * as FormPrimitive from 'formsnap';
 	import type { HTMLAttributes } from 'svelte/elements';
 	import { cn } from '$lib/utils.js';

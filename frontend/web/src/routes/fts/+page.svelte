@@ -40,9 +40,9 @@
 			accessKeyId: '',
 			secretAccessKey: ''
 		},
-		llm: {
+		llmConfig: {
 			provider: 'openAI',
-			Providers: {
+			providers: {
 				openAI: {
 					modal: '',
 					apiKey: ''
@@ -83,9 +83,9 @@
 			//console.log('C: ', client);
 			userData = {
 				...userData,
-				UUID: client.UUID,
-				Name: client.Name,
-				Email: client.Email
+				UUID: client.uuid,
+				Name: client.name,
+				Email: client.email
 			};
 		}
 		//stage = 4;
@@ -124,7 +124,7 @@
 					};
 					break;
 				case 2:
-					userData.llm.Providers['openAI'] = {
+					userData.llmConfig.providers['openAI'] = {
 						modal: 'gpt-4o',
 						apiKey: data.apiKey as string
 					};
@@ -275,7 +275,9 @@
 							class="mb-2 rounded border p-2"
 							required
 							title="OpenAI API Key must start with 'sk-' and contain 32-64 alphanumeric characters."
-							bind:value={userData.llm.Providers[userData.llm.provider].apiKey}
+							bind:value={
+								userData.llmConfig.providers[userData.llmConfig.provider].apiKey
+							}
 						/>
 					</form>
 				{:else if stage === 3}

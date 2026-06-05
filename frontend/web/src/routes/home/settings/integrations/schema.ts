@@ -12,31 +12,19 @@ const aiProviderSchema = z.object({
 });
 
 export const formSchema = z.object({
-	github: z.string({
-		required_error: 'Required.'
-	}),
+	github: z.string({ error: 'Required.' }),
 	aws: z.object({
-		accessKey: z.string({
-			required_error: 'Required.'
-		}),
-		secretKey: z.string({
-			required_error: 'Required.'
-		})
+		accessKey: z.string({ error: 'Required.' }),
+		secretKey: z.string({ error: 'Required.' })
 	}),
 	llm: z.object({
-		provider: z.string({
-			required_error: 'Required.'
-		}),
+		provider: z.string({ error: 'Required.' }),
 		providers: z.record(z.string(), aiProviderSchema)
 	}),
 	// Hack: https://github.com/colinhacks/zod/issues/2280
 	demo: z.object({
-		endpoint: z.string({
-			required_error: 'Required.'
-		}),
-		apiKey: z.string({
-			required_error: 'Required.'
-		})
+		endpoint: z.string({ error: 'Required.' }),
+		apiKey: z.string({ error: 'Required.' })
 	})
 
 	/*modal: z.enum(modals.map((modal) => modal.value) as [Modal, ...Modal[]], {
