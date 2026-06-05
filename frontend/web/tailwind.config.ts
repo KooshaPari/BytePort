@@ -2,7 +2,6 @@ import aspectRatio from '@tailwindcss/aspect-ratio';
 import containerQueries from '@tailwindcss/container-queries';
 import forms from '@tailwindcss/forms';
 import tailwindScrollbar from 'tailwind-scrollbar';
-import typography from '@tailwindcss/typography';
 import { fontFamily } from 'tailwindcss/defaultTheme';
 import type { Config } from 'tailwindcss';
 
@@ -100,7 +99,7 @@ const config: Config = {
 			}
 		}
 	},
-	plugins: [typography, forms, containerQueries, aspectRatio, tailwindScrollbar]
+	plugins: [forms, containerQueries, aspectRatio, tailwindScrollbar]
 };
 
 export default config;

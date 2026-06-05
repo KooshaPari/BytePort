@@ -1094,13 +1094,6 @@
     postcss "^8.5.10"
     tailwindcss "4.3.0"
 
-"@tailwindcss/typography@^0.5.19":
-  version "0.5.19"
-  resolved "https://registry.npmjs.org/@tailwindcss/typography/-/typography-0.5.19.tgz"
-  integrity sha512-w31dd8HOx3k9vPtcQh5QHP9GwKcgbMp87j58qi6xgiBnFFtKEAgCWnDw4qUT8aHwkCp8bKvb/KGKWWHedP0AAg==
-  dependencies:
-    postcss-selector-parser "6.0.10"
-
 "@tauri-apps/api@^2.1.1", "@tauri-apps/api@^2.11.0", "@tauri-apps/api@^2.8.0":
   version "2.11.0"
   resolved "https://registry.npmjs.org/@tauri-apps/api/-/api-2.11.0.tgz"
@@ -2786,14 +2779,6 @@ postcss-scss@^4.0.9:
   version "4.0.9"
   resolved "https://registry.npmjs.org/postcss-scss/-/postcss-scss-4.0.9.tgz"
   integrity sha512-AjKOeiwAitL/MXxQW2DliT28EKukvvbEWx3LBmJIRN8KfBGZbRTxNYW0kSqi1COiTZ57nZ9NW06S6ux//N1c9A==
-
-postcss-selector-parser@6.0.10:
-  version "6.0.10"
-  resolved "https://registry.npmjs.org/postcss-selector-parser/-/postcss-selector-parser-6.0.10.tgz"
-  integrity sha512-IQ7TZdoaqbT+LCpShg46jnZVlhWD2w6iQYAcYXfHARZ7X1t/UGhhceQDs5X0cGqKvYlHNOuv7Oa1xmb0oQuA3w==
-  dependencies:
-    cssesc "^3.0.0"
-    util-deprecate "^1.0.2"
 
 postcss-selector-parser@^7.0.0:
   version "7.1.1"
