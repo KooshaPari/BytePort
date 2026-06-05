@@ -5,14 +5,14 @@ import "time"
 // WorkOSUser represents the new user model for WorkOS AuthKit integration
 // This will eventually replace the existing User model
 type WorkOSUser struct {
-	UUID        string    `json:"uuid" gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
-	WorkOSID    string    `json:"workos_id" gorm:"type:varchar(255);uniqueIndex;not null"` // WorkOS user ID
-	Name        string    `json:"name" gorm:"type:varchar(255);not null"`
-	Email       string    `json:"email" gorm:"type:varchar(255);uniqueIndex;not null"`
-	Projects    []Project `json:"projects" gorm:"foreignKey:Owner;references:UUID"`
-	Instances   []Instance `json:"instances" gorm:"foreignKey:Owner;references:UUID"`
-	CreatedAt   time.Time `json:"created_at" gorm:"autoCreateTime"`
-	UpdatedAt   time.Time `json:"updated_at" gorm:"autoUpdateTime"`
+	UUID      string     `json:"uuid" gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
+	WorkOSID  string     `json:"workos_id" gorm:"column:work_os_id;type:varchar(255);uniqueIndex;not null"` // WorkOS user ID
+	Name      string     `json:"name" gorm:"type:varchar(255);not null"`
+	Email     string     `json:"email" gorm:"type:varchar(255);uniqueIndex;not null"`
+	Projects  []Project  `json:"projects" gorm:"foreignKey:Owner;references:UUID"`
+	Instances []Instance `json:"instances" gorm:"foreignKey:Owner;references:UUID"`
+	CreatedAt time.Time  `json:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt time.Time  `json:"updated_at" gorm:"autoUpdateTime"`
 }
 
 // TableName specifies the table name for WorkOSUser
@@ -36,6 +36,11 @@ type WorkOSUserInfo struct {
 
 // MigrateToWorkOSUser converts an existing User to a WorkOSUser
 func (u *User) MigrateToWorkOSUser(workosID string) *WorkOSUser {
+	updatedAt := time.Now()
+	if !updatedAt.After(u.CreatedAt) {
+		updatedAt = u.CreatedAt.Add(time.Nanosecond)
+	}
+
 	return &WorkOSUser{
 		UUID:      u.UUID,
 		WorkOSID:  workosID,
@@ -44,7 +49,7 @@ func (u *User) MigrateToWorkOSUser(workosID string) *WorkOSUser {
 		Projects:  u.Projects,
 		Instances: u.Instances,
 		CreatedAt: u.CreatedAt,
-		UpdatedAt: time.Now(),
+		UpdatedAt: updatedAt,
 	}
 }
 
@@ -53,7 +58,7 @@ func (u *User) MigrateToWorkOSUser(workosID string) *WorkOSUser {
 // GetUserByWorkOSID finds a user by their WorkOS ID
 func GetUserByWorkOSID(workosID string) (*WorkOSUser, error) {
 	var user WorkOSUser
-	err := DB.Where("workos_id = ?", workosID).First(&user).Error
+	err := DB.Where("work_os_id = ?", workosID).First(&user).Error
 	return &user, err
 }
 
@@ -82,7 +87,6 @@ func FindOrCreateUserFromWorkOS(workosUserInfo *WorkOSUserInfo) (*WorkOSUser, er
 	var existingUser WorkOSUser
 	err = DB.Where("email = ?", workosUserInfo.Email).First(&existingUser).Error
 	if err == nil {
-		// Update with WorkOS ID
 		existingUser.WorkOSID = workosUserInfo.ID
 		err = DB.Save(&existingUser).Error
 		return &existingUser, err

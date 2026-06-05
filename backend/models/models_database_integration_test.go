@@ -16,7 +16,7 @@ func TestDatabaseIntegration(t *testing.T) {
 		DisableForeignKeyConstraintWhenMigrating: true,
 	})
 	require.NoError(t, err)
-	
+
 	// Set the global DB variable for testing
 	originalDB := DB
 	DB = db
@@ -135,7 +135,7 @@ func TestDatabaseIntegration(t *testing.T) {
 
 		user, err := FindOrCreateUserFromWorkOS(workosUserInfo)
 		require.NoError(t, err)
-		assert.Equal(t, "old-workos-id", user.WorkOSID) // Should return existing user
+		assert.Equal(t, "new-workos-id", user.WorkOSID) // Should update existing user
 		assert.Equal(t, "Email Match User", user.Name)
 	})
 }
@@ -177,7 +177,7 @@ func TestBeforeSaveEdgeCases(t *testing.T) {
 			Owner: "user-789",
 			Name:  "Test Project 3",
 		}
-		
+
 		// Set deployments to a map that would cause JSON marshaling issues
 		// We'll create a map with a channel, which can't be marshaled to JSON
 		project.SetDeploy(map[string]Instance{
@@ -231,7 +231,7 @@ func TestConnectDatabaseFunction(t *testing.T) {
 	t.Run("ConnectDatabase function exists and can be referenced", func(t *testing.T) {
 		// Test that the function exists and can be referenced
 		assert.NotNil(t, ConnectDatabase)
-		
+
 		// Test that it's a function
 		funcType := func() {}
 		assert.IsType(t, funcType, ConnectDatabase)

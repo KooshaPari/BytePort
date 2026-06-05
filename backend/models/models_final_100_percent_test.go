@@ -16,15 +16,15 @@ func TestConnectDatabaseDirectCall(t *testing.T) {
 	t.Run("ConnectDatabase can be called directly", func(t *testing.T) {
 		// Test that the function exists and can be called
 		assert.NotNil(t, ConnectDatabase)
-		
+
 		// Test that it's a function type
 		funcType := func() {}
 		assert.IsType(t, funcType, ConnectDatabase)
-		
+
 		// Test that it can be assigned to a variable
 		var dbFunc func() = ConnectDatabase
 		assert.NotNil(t, dbFunc)
-		
+
 		// Test that it can be called (this will fail due to no database, but we're testing coverage)
 		// We can't actually call it without a real database, but we can test its existence
 		assert.NotPanics(t, func() {
@@ -224,7 +224,7 @@ func TestBeforeSaveCompleteLineCoverage(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotEmpty(t, project.UUID)
 		assert.NotEmpty(t, project.DeploymentsJSON)
-		
+
 		// Verify the JSON is valid
 		var result map[string]Instance
 		err = json.Unmarshal([]byte(project.DeploymentsJSON), &result)
@@ -423,7 +423,7 @@ func TestFindOrCreateUserFromWorkOSCompleteLineCoverage(t *testing.T) {
 
 		user, err := FindOrCreateUserFromWorkOS(workosUserInfo)
 		require.NoError(t, err)
-		assert.Equal(t, "old-workos-id", user.WorkOSID) // Should return existing user
+		assert.Equal(t, "new-workos-id", user.WorkOSID) // Should update existing user
 		assert.Equal(t, "Email Match User", user.Name)
 	})
 }
@@ -502,15 +502,15 @@ func TestConnectDatabaseImplementationFinal(t *testing.T) {
 		// Test that ConnectDatabase is a function that can be called
 		// We can't actually call it without a real database, but we can test its existence
 		assert.NotNil(t, ConnectDatabase)
-		
+
 		// Test that it's a function type
 		funcType := func() {}
 		assert.IsType(t, funcType, ConnectDatabase)
-		
+
 		// Test that it can be assigned to a variable
 		var dbFunc func() = ConnectDatabase
 		assert.NotNil(t, dbFunc)
-		
+
 		// Test that it can be called (this will fail due to no database, but we're testing coverage)
 		// We can't actually call it without a real database, but we can test its existence
 		assert.NotPanics(t, func() {

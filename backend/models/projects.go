@@ -2,7 +2,7 @@ package models
 
 import (
 	"encoding/json"
-	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -55,18 +55,14 @@ func (p *Project) SetDeploy(deploy map[string]Instance) {
 	p.deployments = deploy
 }
 func (p *Project) BeforeSave(tx *gorm.DB) error {
-	fmt.Println("BeforeSave")
 	if p.deployments != nil {
-		fmt.Println("Saving deployments: ", p.deployments)
 		data, err := json.Marshal(p.deployments)
 		if err != nil {
 			return err
 		}
 		p.DeploymentsJSON = string(data)
-		fmt.Println("Saving deployments: ", p.DeploymentsJSON)
 	}
-	if p.UUID == "" {
-		fmt.Println("Generating UUID")
+	if strings.TrimSpace(p.UUID) == "" {
 		p.UUID = uuid.New().String()
 	}
 	return nil
