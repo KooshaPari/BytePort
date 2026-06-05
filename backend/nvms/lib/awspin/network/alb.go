@@ -106,8 +106,6 @@ func (c *Client) newRequest(ctx context.Context, method string, params map[strin
 	}
 	u.RawQuery = query.Encode()
 
-	fmt.Printf("Request URL: %s\n", u.String())
-
 	// Create request with minimal headers
 	req, err := http.NewRequestWithContext(ctx, method, u.String(), nil)
 	if err != nil {
@@ -117,7 +115,7 @@ func (c *Client) newRequest(ctx context.Context, method string, params map[strin
 	req.Header.Set("host", u.Host)
 	req.Header.Set("user-agent", "byteport")
 
-	fmt.Printf("Request headers: %+v\n", req.Header)
+	fmt.Printf("ALB request prepared: method=%s host=%s action=%s\n", method, u.Host, params["Action"])
 
 	return req, nil
 }
