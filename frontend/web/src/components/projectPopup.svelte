@@ -129,7 +129,8 @@
 												<Accordion.Root type="single">
 													<Accordion.Item value="item-1">
 														<Accordion.Trigger
-															>{instance.name}</Accordion.Trigger
+															>{instance.Name ??
+																instance.name}</Accordion.Trigger
 														>
 														<Accordion.Content>
 															<div

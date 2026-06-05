@@ -76,6 +76,7 @@ export interface Project {
 
 export interface Instance {
 	UUID: string;
+	Name?: string;
 	name: string;
 	status: string;
 	User: User | null;
