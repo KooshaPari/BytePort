@@ -9,29 +9,7 @@
 	const getBaseUrl = async () => {
 		if ((window as any).__TAURI_INTERNALS__) {
 			const currentPlatform: string = platform();
-			console.log(currentPlatformlet userData: UserLink = {
-		UUID: '',
-		Name: '',
-		Email: '',
-		awsCreds: {
-			accessKeyId: '',
-			secretAccessKey: ''
-		},
-		llm: {
-			provider: 'openAI',
-			Providers: {
-				openAI: {
-					modal: '',
-					apiKey: ''
-				}
-			}
-		},
-		portfolio: {
-			rootEndpoint: '',
-			apiKey: ''
-		}
-	};
-);
+			console.log(currentPlatform);
 			switch (currentPlatform) {
 				case 'android':
 					return 'http://10.0.2.2:8081';
@@ -217,12 +195,12 @@
 
 			const popup = window.open(`${baseUrl}/link`, '_blank', 'width=600,height=600');
 
-			return true;
-
 			if (!popup) {
 				console.error('Failed to open popup window');
 				return false;
 			}
+
+			return true;
 		} catch (error) {
 			console.error('Error during link process:', error);
 			return false;

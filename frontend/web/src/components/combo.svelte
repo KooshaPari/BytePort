@@ -58,7 +58,9 @@
 							closeAndFocusTrigger(ids.trigger);
 						}}
 					>
-						<Check class={cn('mr-2 h-4 w-4', value !== item.value && 'text-transparent')} />
+						<Check
+							class={cn('mr-2 h-4 w-4', value !== item.value && 'text-transparent')}
+						/>
 						{item.label}
 					</Command.Item>
 				{/each}

@@ -71,7 +71,7 @@
 
 <div class="bg-dark-surface flex h-screen w-screen overflow-x-hidden" id="mainDashPar">
 	<div
-		class="h-5/5 flex-ro bg-dark-surfaceContainer w-1/5 items-center justify-center"
+		class="flex-ro bg-dark-surfaceContainer h-5/5 w-1/5 items-center justify-center"
 		id="sideBar"
 	>
 		<button on:click={() => goto('/home')}>
@@ -98,7 +98,7 @@
 	<div id="body" class="w-4/5">
 		<div
 			id="header"
-			class=" w-5/5 bg-dark-surfaceContainerLow h-1/5 flex-col justify-between ps-2.5"
+			class=" bg-dark-surfaceContainerLow h-1/5 w-5/5 flex-col justify-between ps-2.5"
 		>
 			<div id="headerNav" class="h-3/5 pt-2.5">
 				<div class="flex justify-end pe-2.5" id="navRight">
@@ -116,7 +116,7 @@
 			<div id="headerContent" class="h-2/5 text-4xl text-white">Hello.</div>
 		</div>
 		<div id="mainBody">
-			<div id="instanceSec" class="w-5/5 h-2/5 overflow-x-scroll">
+			<div id="instanceSec" class="h-2/5 w-5/5 overflow-x-scroll">
 				<h1 class="text-dark-secondary p-2">Instances</h1>
 				<div id="instances" class="flex w-max overflow-y-visible p-2">
 					<div
@@ -145,7 +145,7 @@
 					{/each}-->
 				</div>
 			</div>
-			<div id="projectsSec" class="w-5/5 h-2/5 overflow-x-scroll">
+			<div id="projectsSec" class="h-2/5 w-5/5 overflow-x-scroll">
 				<h1 class="text-dark-secondary p-2">Projects</h1>
 				<div id="projects" class="flex w-max overflow-y-visible p-2">
 					<div
@@ -158,7 +158,7 @@
 							class="hover:bg-dark-surfaceContainerHighest active:bg-dark-surfaceContainer bg-dark-surfaceContainerHigh text-dark-onSurface align-center m-0.5 mx-1.5 flex h-64 w-48 flex-col items-center justify-center rounded-lg transition-all"
 						>
 							<div
-								class=" active:text-dark-surfaceVariant hover:bg-dark-onSecondaryContainer active:bg-dark-onPrimary bg-dark-primaryContainer text-dark-onPrimary w-5/5 m-5 h-max rounded-lg p-5 text-4xl transition-all hover:-translate-y-2 hover:scale-105 active:translate-y-1 active:scale-100"
+								class=" active:text-dark-surfaceVariant hover:bg-dark-onSecondaryContainer active:bg-dark-onPrimary bg-dark-primaryContainer text-dark-onPrimary m-5 h-max w-5/5 rounded-lg p-5 text-4xl transition-all hover:-translate-y-2 hover:scale-105 active:translate-y-1 active:scale-100"
 							>
 								<a href={project.access_url} target="_blank">
 									<div class="accessBlocImg h-3/5">
@@ -167,7 +167,7 @@
 								</a>
 							</div>
 							<div
-								class="bg-dark-surfaceContainerHigh hpmax w-4/5 grid-flow-col grid-cols-2 px-2 pb-3 pt-1 text-sm"
+								class="bg-dark-surfaceContainerHigh hpmax w-4/5 grid-flow-col grid-cols-2 px-2 pt-1 pb-3 text-sm"
 							>
 								<ProjectCard {project}></ProjectCard>
 							</div>

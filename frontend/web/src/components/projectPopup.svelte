@@ -111,11 +111,13 @@
 						>Clone</Button.Root
 					>-->
 
-					<Button.Root on:click={() => terminateInstance(project)}>Terminate(X)</Button.Root>
+					<Button.Root on:click={() => terminateInstance(project)}
+						>Terminate(X)</Button.Root
+					>
 
 					<div
 						id="resources"
-						class="max-h-[65vh] min-h-[45vh] min-w-[50vw] max-w-[60vw] overflow-y-scroll"
+						class="max-h-[65vh] min-h-[45vh] max-w-[60vw] min-w-[50vw] overflow-y-scroll"
 					>
 						<Accordion.Root>
 							<Accordion.Item value="item-1">
@@ -126,7 +128,9 @@
 											<div class="instance">
 												<Accordion.Root>
 													<Accordion.Item value="item-1">
-														<Accordion.Trigger>{instance.Name}</Accordion.Trigger>
+														<Accordion.Trigger
+															>{instance.Name}</Accordion.Trigger
+														>
 														<Accordion.Content>
 															<div
 																style="display:grid"
@@ -136,17 +140,25 @@
 																	<div
 																		class="bg-dark-surfaceContainerHigh mb-2 flex flex-col rounded-lg p-4"
 																	>
-																		<h1>Name: {resource.name}</h1>
-																		// trim arn remove first 8 chars, and trim to 25 chars
+																		<h1>
+																			Name: {resource.name}
+																		</h1>
+																		// trim arn remove first 8 chars,
+																		and trim to 25 chars
 																		<h1>ARN: {resource.arn}</h1>
-																		<h1>Service: {resource.service}</h1>
+																		<h1>
+																			Service: {resource.service}
+																		</h1>
 
-																		<h1>Type: {resource.type}</h1>
+																		<h1>
+																			Type: {resource.type}
+																		</h1>
 																		<h3
 																			class="text-md
 												{resource.status === 'Running' || resource.status === 'deployed'
 																				? 'text-green-500'
-																				: resource.status === 'Stopped'
+																				: resource.status ===
+																					  'Stopped'
 																					? 'text-red-500'
 																					: 'text-yellow-500'}"
 																		>
@@ -161,7 +173,9 @@
 											</div>
 										{/each}
 									{:else}
-										<p class="text-dark-onSurfaceVariant">No deployments found</p>
+										<p class="text-dark-onSurfaceVariant">
+											No deployments found
+										</p>
 									{/if}
 								</Accordion.Content>
 							</Accordion.Item>

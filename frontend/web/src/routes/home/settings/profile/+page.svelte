@@ -115,7 +115,7 @@
 
 <div class="bg-dark-surface flex h-screen w-screen overflow-x-hidden" id="mainDashPar">
 	<div
-		class="h-5/5 flex-ro bg-dark-surfaceContainer w-1/5 items-center justify-center"
+		class="flex-ro bg-dark-surfaceContainer h-5/5 w-1/5 items-center justify-center"
 		id="sideBar"
 	>
 		<button on:click={() => goto('/home')}>
@@ -148,7 +148,7 @@
 	<div id="body" class="w-4/5">
 		<div
 			id="header"
-			class=" w-5/5 bg-dark-surfaceContainerLow h-1/5 flex-col justify-between ps-2.5"
+			class=" bg-dark-surfaceContainerLow h-1/5 w-5/5 flex-col justify-between ps-2.5"
 		>
 			<div id="headerNav" class="h-3/5 pt-2.5">
 				<div class="flex justify-end pe-2.5" id="navRight">
@@ -185,7 +185,11 @@
 					<Form.Field class=" " name="password" form={mform}>
 						<Form.Control let:attrs>
 							<Form.Label>Password</Form.Label>
-							<Input {...attrs} type="password" bind:value={$form.password.password as string} />
+							<Input
+								{...attrs}
+								type="password"
+								bind:value={$form.password.password as string}
+							/>
 							<Form.Label>Confirm Password</Form.Label>
 							<Input
 								{...attrs}

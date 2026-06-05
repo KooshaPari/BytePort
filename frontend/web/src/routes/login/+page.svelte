@@ -5,48 +5,45 @@
 	import { Button } from '$lib/components/ui/button';
 	import type { User } from '../../stores/user';
 	import { platform } from '@tauri-apps/plugin-os';
-	
+
 	let newUser: User;
 	let Error: string = '';
 	const getBaseUrl = async () => {
 		if (window.__TAURI_INTERNALS__) {
-		 const currentPlatform: string  =  platform()
+			const currentPlatform: string = platform();
 			console.log(currentPlatform);
-			switch(currentPlatform) {
+			switch (currentPlatform) {
 				case 'android':
 					return 'http://10.0.2.2:8081';
 				case 'windows':
 					return 'http://localhost:8081';
 				default:
 					return 'http://localhost:8081';
-			}}
-			else{
-				return 'http://localhost:8081';
+			}
+		} else {
+			return 'http://localhost:8081';
+		}
+	};
+
+	const getClientUrl = () => {
+		if (window.__TAURI_INTERNALS__) {
+			const currentPlatform: string | null = platform();
+			if (currentPlatform == null) {
+				return 'http://localhost:5173';
 			}
 
-    };
-	
-	const getClientUrl =  () => {
-		if (window.__TAURI_INTERNALS__) {
-		 const currentPlatform: string | null =  platform();
-		 if(currentPlatform == null) {
-			return 'http://localhost:5173';
-		 }
-    
-			switch(currentPlatform) {
+			switch (currentPlatform) {
 				case 'android':
 					return 'http:///10.0.2.2:5173';
 				case 'windows':
 					return 'http://localhost:5173';
 				default:
 					return 'http://localhost:5173';
-			}}
-			else{
-				return 'http://localhost:5173';
 			}
-
-    };
-
+		} else {
+			return 'http://localhost:5173';
+		}
+	};
 
 	async function login() {
 		const baseUrl = await getBaseUrl();
@@ -69,19 +66,19 @@
 
 			console.log('Response Status:', response.status);
 			console.log('Response OK:', response.ok);
-			console.log("Resp Credentials: ", response.headers.get('Authorization'));
-			console.log("Resp Cookies: ", response.headers.get('authToken'));
+			console.log('Resp Credentials: ', response.headers.get('Authorization'));
+			console.log('Resp Cookies: ', response.headers.get('authToken'));
 			console.log('All Response Headers:');
 			for (const [key, value] of response.headers.entries()) {
 				console.log(`${key}: ${value}`);
 			}
-			console.log("Response: ", response);
+			console.log('Response: ', response);
 
 			const data = await response.json();
 
 			if (response.ok) {
 				console.log('Login successful:', data);
-				console.log("Initializing User: ",baseUrl);
+				console.log('Initializing User: ', baseUrl);
 				await initializeUser(baseUrl);
 				if (window.__TAURI_INTERNALS__) {
 					//const { getCookies } =   await import('@tauri-apps/plugin-http');
@@ -102,7 +99,10 @@
 </script>
 
 <div class="bg-dark-surface h-screen w-screen overflow-x-hidden">
-	<div id="header" class=" w-5/5 bg-dark-surfaceContainerLow h-1/5 flex-col justify-between ps-2.5">
+	<div
+		id="header"
+		class=" bg-dark-surfaceContainerLow h-1/5 w-5/5 flex-col justify-between ps-2.5"
+	>
 		<div id="headerNav" class="h-3/5 pt-2.5"></div>
 		<div id="headerContent" class="h-2/5 text-4xl text-white">Hello.</div>
 	</div>
@@ -131,7 +131,7 @@
 						class="bg-dark-surfaceContainerHigh text-dark-onSurface hover:bg-dark-surfaceContainerHighest active:bg-dark-surfaceContainer rounded-full p-2"
 					/>
 					<button
-						on:click={() => goto(`${getClientUrl()}/signup` )}
+						on:click={() => goto(`${getClientUrl()}/signup`)}
 						class="bg-dark-surfaceContainerHigh text-dark-onSurface hover:bg-dark-surfaceContainerHighest active:bg-dark-surfaceContainer my-3 rounded-full p-2"
 					>
 						Sign up
@@ -143,6 +143,8 @@
 </div>
 
 <style>
+	@reference '../../app.css';
+
 	#logCont form > div > input {
 		@apply bg-dark-surfaceContainerHigh text-dark-onSurface placeholder-dark-onSurfaceVariant selection:bg-dark-surfaceContainer hover:bg-dark-surfaceContainerHighest my-2 rounded-full;
 		border: none;

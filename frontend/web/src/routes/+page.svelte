@@ -1,15 +1,12 @@
 <script lang="ts">
 	import Icon from '@iconify/svelte';
-	import type { Project, Instance } from '$lib/utils.ts';
- 
+
 	import { onMount } from 'svelte';
 	import type { User } from '../stores/user';
-	import { setUser, user, initializeUser } from '../stores/user';
+	import { user, initializeUser } from '../stores/user';
 	import { goto } from '$app/navigation';
 	import { platform } from '@tauri-apps/plugin-os';
-	import Dialog from '../components/addProjectDialog.svelte';
-	import ProjectCard from '../components/projectPopup.svelte';
-	import { populateLists } from '$lib/utils';
+
 	const getBaseUrl = async () => {
 		if ((window as any).__TAURI_INTERNALS__) {
 			const currentPlatform: string = platform();
@@ -31,11 +28,10 @@
 	// convert to map name, '/name'
 	const menuItemsMap = new Map<string, string>([
 		['Projects', '/home/projects'],
- 
+
 		['Monitor', '/home/monitor'],
 		['Settings', '/home/settings/profile']
 	]);
- 
 
 	const unsubscribe = user.subscribe((value) => {
 		// Handle pending state
@@ -52,7 +48,6 @@
 			console.log('Authenticated user:', value.data);
 			// Perform actions for authenticated user
 			client = value.data; // Assign the authenticated user to `client`
-			 
 		}
 	});
 
@@ -64,18 +59,16 @@
 		});
 		return unsubscribe;
 	});
-
- 
 </script>
 
 <div class="bg-dark-surface flex h-screen w-screen overflow-x-hidden" id="mainDashPar">
 	<div
-		class="h-5/5 flex-ro bg-dark-surfaceContainer w-1/5 items-center justify-center"
+		class="flex-ro bg-dark-surfaceContainer h-5/5 w-1/5 items-center justify-center"
 		id="sideBar"
 	>
 		<button on:click={() => goto('/home')}>
 			<img class="py-10" alt="BytePort" src="/src/assets/img/byte.png" />
-		</button>``
+		</button>
 		<div id="sideBarProfileCont"></div>
 		<ul class="" id="menuList">
 			{#each [...menuItemsMap] as [key, value]}
@@ -97,7 +90,7 @@
 	<div id="body" class="w-4/5">
 		<div
 			id="header"
-			class=" w-5/5 bg-dark-surfaceContainerLow h-1/5 flex-col justify-between ps-2.5"
+			class=" bg-dark-surfaceContainerLow h-1/5 w-5/5 flex-col justify-between ps-2.5"
 		>
 			<div id="headerNav" class="h-3/5 pt-2.5">
 				<div class="flex justify-end pe-2.5" id="navRight">
@@ -113,10 +106,7 @@
 			</div>
 			<div id="headerContent" class="h-2/5 text-4xl text-white">Hello.</div>
 		</div>
-		<div id="mainBody">
-	 
-			 
-		</div>
+		<div id="mainBody"></div>
 		<div id="footer"></div>
 	</div>
 </div>

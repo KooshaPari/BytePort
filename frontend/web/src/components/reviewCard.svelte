@@ -44,15 +44,20 @@
 					<Card.Root
 						><Card.Content>
 							<div class="flex items-center">
-								<Avatar.Root class="me-4 ms-2" delayMs={1000}>
-									<Avatar.Image src={repo.owner.avatar_url} alt={repo.full_name} />
-									<Avatar.Fallback><Icon class="me-4 ms-2" icon="fa:user" /></Avatar.Fallback>
+								<Avatar.Root class="ms-2 me-4" delayMs={1000}>
+									<Avatar.Image
+										src={repo.owner.avatar_url}
+										alt={repo.full_name}
+									/>
+									<Avatar.Fallback
+										><Icon class="ms-2 me-4" icon="fa:user" /></Avatar.Fallback
+									>
 								</Avatar.Root>
 								<span>{repo.name}</span>
 								{#if repo.private}
-									<Icon class="me-4 ms-2" icon="fa:lock" />
+									<Icon class="ms-2 me-4" icon="fa:lock" />
 								{:else}
-									<Icon class="me-4 ms-2" icon="fa:globe" />
+									<Icon class="ms-2 me-4" icon="fa:globe" />
 								{/if}
 							</div>
 						</Card.Content></Card.Root

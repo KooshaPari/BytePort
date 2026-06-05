@@ -68,7 +68,7 @@
 
 <div class="bg-dark-surface flex h-screen w-screen overflow-x-hidden" id="mainDashPar">
 	<div
-		class="h-5/5 flex-ro bg-dark-surfaceContainer w-1/5 items-center justify-center"
+		class="flex-ro bg-dark-surfaceContainer h-5/5 w-1/5 items-center justify-center"
 		id="sideBar"
 	>
 		<img
@@ -98,7 +98,7 @@
 	<div id="body" class="w-4/5">
 		<div
 			id="header"
-			class=" w-5/5 bg-dark-surfaceContainerLow h-1/5 flex-col justify-between ps-2.5"
+			class=" bg-dark-surfaceContainerLow h-1/5 w-5/5 flex-col justify-between ps-2.5"
 		>
 			<div id="headerNav" class="h-3/5 pt-2.5">
 				<div class="flex justify-end pe-2.5" id="navRight">
@@ -115,7 +115,7 @@
 			<div id="headerContent" class="h-2/5 text-4xl text-white">Hello.</div>
 		</div>
 		<div id="mainBody">
-			<div id="projectsSec" class="w-5/5 h-2/5 overflow-x-scroll">
+			<div id="projectsSec" class="h-2/5 w-5/5 overflow-x-scroll">
 				<h1 class="text-dark-secondary p-2">Projects</h1>
 				<div id="projects" class="flex w-max overflow-y-visible p-2">
 					{#each projects as project}
@@ -125,9 +125,11 @@
 							<img
 								src="/src/assets/img/byteport copy.png"
 								alt="BytePort"
-								class="h-5/5 bg-dark-surfaceContainerHighest p-2"
+								class="bg-dark-surfaceContainerHighest h-5/5 p-2"
 							/>
-							<div class="h-5/5 bg-dark-surfaceContainerHigh flex-col px-2 pb-3 pt-3 text-sm"></div>
+							<div
+								class="bg-dark-surfaceContainerHigh h-5/5 flex-col px-2 pt-3 pb-3 text-sm"
+							></div>
 						</div>
 					{/each}
 				</div>
