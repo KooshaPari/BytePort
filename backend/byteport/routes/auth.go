@@ -11,6 +11,11 @@ import (
 	"github.com/google/uuid"
 )
 
+func setAuthCookie(c *gin.Context, token string) {
+	c.SetSameSite(http.SameSiteLaxMode)
+	c.SetCookie("authToken", token, 3600, "/", c.GetHeader("Host"), true, true)
+}
+
 func Authenticate(c *gin.Context) {
 	// extract token from cookie
 
@@ -63,7 +68,7 @@ func Login(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate authentication token."})
 			return
 		}
-		c.SetCookie("authToken", token, 3600, "/", c.GetHeader("Host"), false, true)
+		setAuthCookie(c, token)
 		user.Password = ""
 		c.JSON(http.StatusOK, gin.H{
 			"message": "Success",
@@ -118,7 +123,7 @@ func Signup(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate authentication token."})
 		return
 	}
-	c.SetCookie("authToken", token, 3600, "/", c.GetHeader("Host"), false, true)
+	setAuthCookie(c, token)
 
 	c.JSON(http.StatusCreated, newUser)
 }
