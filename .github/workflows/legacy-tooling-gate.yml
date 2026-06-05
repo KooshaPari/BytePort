@@ -12,6 +12,8 @@ jobs:
   legacy-tooling-scan:
     name: Legacy Tooling Anti-Pattern Scan
     runs-on: ubuntu-latest
+    env:
+      PHENOTYPE_TOOLING_TOKEN: ${{ secrets.PHENOTYPE_TOOLING_TOKEN }}
     permissions:
       contents: read
       security-events: write
@@ -21,11 +23,14 @@ jobs:
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
 
       - name: Checkout phenotype/repos for shared tools
+        id: checkout-legacy-tools
+        if: ${{ env.PHENOTYPE_TOOLING_TOKEN != '' }}
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
         with:
           repository: kooshapari/phenotype
           path: phenotype-repos
           sparse-checkout: tooling/legacy-enforcement
+          token: ${{ env.PHENOTYPE_TOOLING_TOKEN }}
 
       - name: Set up Python
         uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
@@ -36,6 +41,7 @@ jobs:
         run: pip install pyyaml
 
       - name: Run Legacy Tooling Scanner (WARN Mode)
+        if: ${{ steps.checkout-legacy-tools.outcome == 'success' }}
         run: |
           python3 phenotype-repos/tooling/legacy-enforcement/scanner/legacy_tooling_scanner.py \
             --repo-root . \
@@ -44,6 +50,18 @@ jobs:
             --output-md legacy_tooling_report.md \
             --report-only
         continue-on-error: true
+
+      - name: Write skipped scan report
+        if: ${{ steps.checkout-legacy-tools.outcome != 'success' }}
+        run: |
+          cat > legacy_tooling_report.json <<'JSON'
+          {"totals":{},"findings":[],"skipped":"PHENOTYPE_TOOLING_TOKEN is not configured; shared legacy tooling checkout was skipped."}
+          JSON
+          cat > legacy_tooling_report.md <<'MD'
+          **Legacy Tooling Scan Report**
+
+          Skipped: `PHENOTYPE_TOOLING_TOKEN` is not configured, so the shared legacy tooling repository could not be checked out.
+          MD
 
       - name: Upload scan report (JSON)
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
