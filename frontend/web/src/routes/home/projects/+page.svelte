@@ -6,6 +6,7 @@
 	import type { User } from '../../../stores/user';
 	import { setUser, user } from '../../../stores/user';
 	import { goto } from '$app/navigation';
+	import { apiHelpers } from '../../../lib/config';
 	let client: User | null = null;
 	// convert to map name, '/name'
 	const menuItemsMap = new Map<string, string>([
@@ -31,37 +32,32 @@
 	});
 
 	async function populateLists() {
-		let response = await fetch('http://localhost:8080/projects', {
-			method: 'GET',
-			headers: {
-				'Content-Type': 'application/json'
-			},
-			credentials: 'include'
-		});
+		try {
+			let response = await apiHelpers.makeRequest(apiHelpers.getApiUrl('/projects'), {
+				method: 'GET'
+			});
 
-		if (response.ok) {
-			const data = await response.json();
-			projects = data;
-			console.log('Projects:', projects);
-		} else {
-			const errorData = await response.json();
-			console.error('Error:', errorData);
+			if (response.ok) {
+				const data = await response.json();
+				projects = data;
+				console.log('Projects:', projects);
+			}
+		} catch (error) {
+			console.error('Error fetching projects:', error);
 		}
-		response = await fetch('http://localhost:8080/instances', {
-			method: 'GET',
-			headers: {
-				'Content-Type': 'application/json'
-			},
 
-			credentials: 'include'
-		});
-		if (response.ok) {
-			const data = await response.json();
-			instances = data;
-			console.log('Instances:', instances);
-		} else {
-			const errorData = await response.json();
-			console.error('Error:', errorData);
+		try {
+			let response = await apiHelpers.makeRequest(apiHelpers.getApiUrl('/instances'), {
+				method: 'GET'
+			});
+
+			if (response.ok) {
+				const data = await response.json();
+				instances = data;
+				console.log('Instances:', instances);
+			}
+		} catch (error) {
+			console.error('Error fetching instances:', error);
 		}
 	}
 </script>
