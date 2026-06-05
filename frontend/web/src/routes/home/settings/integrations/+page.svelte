@@ -117,12 +117,12 @@
 
 			const popup = window.open(`${baseUrl}/link`, '_blank', 'width=600,height=600');
 
-			return true;
-
 			if (!popup) {
 				console.error('Failed to open popup window');
 				return false;
 			}
+
+			return true;
 		} catch (error) {
 			console.error('Error during link process:', error);
 			return false;
@@ -249,7 +249,7 @@
 
 <div class="bg-dark-surface flex h-screen w-screen overflow-x-hidden" id="mainDashPar">
 	<div
-		class="h-5/5 flex-ro bg-dark-surfaceContainer w-1/5 items-center justify-center"
+		class="flex-ro bg-dark-surfaceContainer h-5/5 w-1/5 items-center justify-center"
 		id="sideBar"
 	>
 		<button on:click={() => goto('/home')}>
@@ -282,7 +282,7 @@
 	<div id="body" class="w-4/5">
 		<div
 			id="header"
-			class=" w-5/5 bg-dark-surfaceContainerLow h-1/5 flex-col justify-between ps-2.5"
+			class=" bg-dark-surfaceContainerLow h-1/5 w-5/5 flex-col justify-between ps-2.5"
 		>
 			<div id="headerNav" class="h-3/5 pt-2.5">
 				<div class="flex justify-end pe-2.5" id="navRight">
@@ -304,7 +304,9 @@
 				<div class="openAICard align-center flex flex-row gap-3">
 					<Form.Field class=" " name="github" form={mform}>
 						<Form.Control let:attrs>
-							<Form.Label class="flex gap-1"><Icon icon="mdi:github"></Icon>Github</Form.Label>
+							<Form.Label class="flex gap-1"
+								><Icon icon="mdi:github"></Icon>Github</Form.Label
+							>
 							<div class="  flex flex-row gap-2">
 								{#if $form.github === 'Not Linked'}
 									<Button.Root
@@ -315,7 +317,8 @@
 										}}><Icon icon="mdi:github"></Icon>Link</Button.Root
 									>
 								{:else}
-									<Button.Root class="w-[100px]  "><Icon icon="mdi:check"></Icon>Linked</Button.Root
+									<Button.Root class="w-[100px]  "
+										><Icon icon="mdi:check"></Icon>Linked</Button.Root
 									>
 									<Button.Root
 										class="bg-dark-secondaryContainer  w-[50px] "
@@ -323,7 +326,10 @@
 											$form.github = 'Not Linked';
 											//validate('github');
 										}}
-										><Icon icon="mdi:close-circle" class="text-destructive-foreground"></Icon>
+										><Icon
+											icon="mdi:close-circle"
+											class="text-destructive-foreground"
+										></Icon>
 									</Button.Root>
 								{/if}
 							</div>
@@ -335,7 +341,11 @@
 							<Form.Label>AWS Access Key</Form.Label>
 							<Input {...attrs} bind:value={$form.aws.accessKey as string} />
 							<Form.Label>AWS Secret Key</Form.Label>
-							<Input {...attrs} type="password" bind:value={$form.aws.secretKey as string} />
+							<Input
+								{...attrs}
+								type="password"
+								bind:value={$form.aws.secretKey as string}
+							/>
 						</Form.Control>
 						<Form.FieldErrors />
 					</Form.Field>
@@ -352,8 +362,9 @@
 									)}
 									{...attrs}
 								>
-									{providers.find((provider) => provider.value === $form.llm.provider)?.label ||
-										'Select a provider'}
+									{providers.find(
+										(provider) => provider.value === $form.llm.provider
+									)?.label || 'Select a provider'}
 									<CaretSort class="ml-2 size-4 shrink-0 opacity-50" />
 								</Popover.Trigger>
 							</Form.Control>
@@ -377,7 +388,9 @@
 												<Check
 													class={cn(
 														'mr-2 size-4',
-														provider.value === $form.llm.provider ? 'opacity-100' : 'opacity-0'
+														provider.value === $form.llm.provider
+															? 'opacity-100'
+															: 'opacity-0'
 													)}
 												/>
 												{provider.label}
@@ -394,13 +407,18 @@
 									<Form.Label>Model</Form.Label>
 									<Popover.Trigger
 										role="combobox"
-										class={cn(buttonVariants({ variant: 'outline' }), 'w-[200px] justify-between')}
+										class={cn(
+											buttonVariants({ variant: 'outline' }),
+											'w-[200px] justify-between'
+										)}
 										{...attrs}
 									>
 										{#if $form.llm.provider && $form.llm.providers[$form.llm.provider]}
 											{modals.find(
 												(modal) =>
-													modal.value === $form.llm.providers[$form.llm.provider].modal &&
+													modal.value ===
+														$form.llm.providers[$form.llm.provider]
+															.modal &&
 													modal.provider === $form.llm.provider
 											)?.label || 'Select a Model'}
 										{:else}
@@ -416,15 +434,20 @@
 												<Command.Item
 													value={modal.label}
 													onSelect={() => {
-														if ($form.llm.providers[$form.llm.provider]) {
-															$form.llm.providers[$form.llm.provider].modal = modal.value;
+														if (
+															$form.llm.providers[$form.llm.provider]
+														) {
+															$form.llm.providers[
+																$form.llm.provider
+															].modal = modal.value;
 														}
 													}}
 												>
 													<Check
 														class={cn(
 															'mr-2 size-4',
-															$form.llm.providers[$form.llm.provider]?.modal === modal.value
+															$form.llm.providers[$form.llm.provider]
+																?.modal === modal.value
 																? 'opacity-100'
 																: 'opacity-0'
 														)}
@@ -455,7 +478,11 @@
 							<Form.Label>Portfolio URL</Form.Label>
 							<Input {...attrs} bind:value={$form.demo.endpoint as string} />
 							<Form.Label>Portfolio Key</Form.Label>
-							<Input {...attrs} type="password" bind:value={$form.demo.apiKey as string} />
+							<Input
+								{...attrs}
+								type="password"
+								bind:value={$form.demo.apiKey as string}
+							/>
 						</Form.Control>
 						<Form.FieldErrors />
 					</Form.Field>

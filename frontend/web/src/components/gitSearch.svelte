@@ -100,27 +100,29 @@
 							select(repo);
 						}}
 					>
-						<Avatar.Root class="me-4 ms-2" delayMs={1000}>
+						<Avatar.Root class="ms-2 me-4" delayMs={1000}>
 							<Avatar.Image src={repo.owner.avatar_url} alt={repo.full_name} />
-							<Avatar.Fallback><Icon class="me-4 ms-2" icon="fa:user" /></Avatar.Fallback>
+							<Avatar.Fallback
+								><Icon class="ms-2 me-4" icon="fa:user" /></Avatar.Fallback
+							>
 						</Avatar.Root>
-						<Icon class="me-4 ms-2" icon="fa:github" />
+						<Icon class="ms-2 me-4" icon="fa:github" />
 						<span>{repo.name}</span>
 						{#if repo.private}
-							<Icon class="me-4 ms-2" icon="fa:lock" />
+							<Icon class="ms-2 me-4" icon="fa:lock" />
 						{:else}
-							<Icon class="me-4 ms-2" icon="fa:globe" />
+							<Icon class="ms-2 me-4" icon="fa:globe" />
 						{/if}
 
-						<Icon class="me-4 ms-2" icon="fa:star" />
+						<Icon class="ms-2 me-4" icon="fa:star" />
 						{repo.stargazers_count}
 						<Icon
-							class="me-4 ms-2"
+							class="ms-2 me-4"
 							icon="
 iconoir:git-fork"
 						/>
 						{repo.forks_count}
-						<Icon class="me-4 ms-2" icon="fa:code" />
+						<Icon class="ms-2 me-4" icon="fa:code" />
 						{repo.language}
 					</Command.Item>
 				{/each}

@@ -129,7 +129,7 @@ export const getBaseUrl = async () => {
 };
 export async function populateLists() {
 	let projects: Project[] = [];
-	 
+
 	const baseUrl = await getBaseUrl();
 	const response = await fetch(`${baseUrl}/projects`, {
 		method: 'GET',
@@ -147,6 +147,6 @@ export async function populateLists() {
 		const errorData = await response.json();
 		console.error('Error:', errorData);
 	}
-	
+
 	return projects;
 }
