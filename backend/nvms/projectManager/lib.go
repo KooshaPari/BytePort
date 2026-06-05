@@ -6,8 +6,6 @@ import (
 	"io"
 	"net/http"
 	"nvms/models"
-
-	spinhttp "github.com/fermyon/spin-go-sdk/http"
 )
 
 type ProvisionerResponse struct {
@@ -56,7 +54,8 @@ func ProvisionFiles(w http.ResponseWriter, r *http.Request, project models.Proje
 		http.Error(w, "Error creating request", http.StatusInternalServerError)
 		return nvmsString, readMeString, codebase, files, err
 	}
-	resp, err := spinhttp.Send(req)
+	client := &http.Client{}
+	resp, err := client.Do(req)
 	if err != nil || http.StatusOK != resp.StatusCode {
 		http.Error(w, "Error sending request", http.StatusInternalServerError)
 		return nvmsString, readMeString, codebase, files, err
