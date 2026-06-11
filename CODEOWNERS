@@ -1,3 +1,8 @@
-/crates/ @kooshapari
-/bindings/ @kooshapari
-/* @kooshapari
+# Default owners — @KooshaPari reviews all changes
+*       @KooshaPari
+
+# Per-language drill-down (add more owners as team grows)
+*.rs    @KooshaPari
+*.go    @KooshaPari
+*.ts    @KooshaPari
+*.svelte @KooshaPari
