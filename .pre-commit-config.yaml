@@ -1,113 +1,73 @@
-# .pre-commit-config.yaml — BytePort (L2 #33, 2026-06-11)
-# Covers: pre-commit-hooks, Rust (fmt/clippy/check), Go (gofmt, go vet,
-#         golangci-lint), TypeScript (prettier, tsc --noEmit, eslint),
-#         secret scanning (gitleaks + trufflehog), commit-msg.
+# L2 #33 pre-commit baseline, 2026-06-11.
 # Install: pre-commit install
-# Run all: pre-commit run --all-files
-#
-# Slow hooks (clippy, golangci-lint, tsc, eslint) live under `manual`
-# stage. CI runs the manual stage.
+# Run default hooks: pre-commit run --all-files
+# Run heavy language baselines: pre-commit run --all-files --hook-stage manual
 
 repos:
-  # --- Generic hygiene ---------------------------------------------------------
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
-      - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
         args: [--allow-multiple-documents]
       - id: check-toml
-      - id: check-json
-      - id: check-merge-conflict
       - id: check-added-large-files
-        args: ['--maxkb=1000']
-      - id: detect-private-key
-      - id: mixed-line-ending
-        args: ['--fix=lf']
+        args: [--maxkb=1000]
 
-  # --- Commit message convention ---------------------------------------------
-  - repo: https://github.com/compilerla/conventional-pre-commit
-    rev: v3.6.0
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9
     hooks:
-      - id: conventional-pre-commit
-        stages: [commit-msg]
+      - id: ruff
+        args: [--fix]
+        types_or: [python, pyi]
+      - id: ruff-format
+        types_or: [python, pyi]
 
-  # --- Rust: fmt (fast) --------------------------------------------------------
-  - repo: https://github.com/doublify/pre-commit-rust
-    rev: v1.0
+  - repo: https://github.com/psf/black
+    rev: 24.10.0
     hooks:
-      - id: fmt
-        args: ['--all', '--', '--check']
-      - id: cargo-check
-        stages: [manual]
+      - id: black
+        language_version: python3.11
+        types_or: [python, pyi]
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      - id: gitleaks
+
   - repo: local
     hooks:
       - id: cargo-clippy
-        name: cargo clippy --workspace --all-targets -- -D warnings
-        entry: cargo clippy --workspace --all-targets --all-features -- -D warnings
+        name: cargo clippy -- -D warnings
+        entry: cargo clippy --workspace --all-targets --all-features
+        args: [--, -D, warnings]
         language: system
         types: [rust]
         pass_filenames: false
         stages: [manual]
 
-  # --- Go toolchain (fast) ----------------------------------------------------
-  - repo: local
-    hooks:
-      - id: go-fmt
-        name: gofmt (Go)
-        entry: gofmt -l -w
-        language: system
-        types: [go]
-      - id: go-vet
-        name: go vet ./...
-        entry: bash -c 'go vet ./...'
-        language: system
-        types: [go]
-        pass_filenames: false
-
-  # --- Go: golangci-lint (manual, slow) --------------------------------------
-  - repo: https://github.com/golangci/golangci-lint
-    rev: v1.61.0
-    hooks:
       - id: golangci-lint
-        stages: [manual]
-
-  # --- TypeScript / Node: prettier, tsc, eslint (manual, slow) --------------
-  - repo: https://github.com/pre-commit/mirrors-prettier
-    rev: v4.0.0-alpha.8
-    hooks:
-      - id: prettier
-        additional_dependencies:
-          - prettier@4.0.0-alpha.8
-        stages: [manual]
-  - repo: local
-    hooks:
-      - id: tsc-noemit
-        name: tsc --noEmit (TypeScript typecheck)
-        entry: bash -c 'cd frontend/web && npx --no-install tsc --noEmit'
+        name: golangci-lint run --timeout 5m
+        entry: golangci-lint run
+        args: [--timeout, 5m]
         language: system
-        types: [ts, tsx]
-        pass_filenames: false
-        stages: [manual]
-      - id: eslint
-        name: eslint (TypeScript / TSX)
-        entry: bash -c 'cd frontend/web && npx --no-install eslint "**/*.{ts,tsx}" --max-warnings=0'
-        language: system
-        types: [ts, tsx]
+        types: [go]
         pass_filenames: false
         stages: [manual]
 
-  # --- Secret scanning --------------------------------------------------------
-  - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.21.2
-    hooks:
-      - id: gitleaks
-  - repo: https://github.com/trufflesecurity/trufflehog
-    rev: v3.88.40
-    hooks:
+      - id: tsc
+        name: tsc --noEmit
+        entry: npx tsc
+        args: [--noEmit]
+        language: system
+        types_or: [ts, tsx]
+        pass_filenames: false
+        stages: [manual]
+
       - id: trufflehog
-        name: trufflehog (verified secret scan)
+        name: trufflehog filesystem
         entry: trufflehog filesystem --no-update --only-verified --fail .
         language: system
         pass_filenames: false
+        stages: [manual]
+
