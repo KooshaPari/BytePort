@@ -1,23 +1,10 @@
 # Contributing to BytePort
 
-## Quick start
-1. Fork + clone.
-2. Create a branch from main: `chore/<topic>`, `feat/<topic>`, or `fix/<topic>`.
-3. Run local quality gates before push (see below).
-4. Open a PR to main with a clear description.
+Thanks for helping improve BytePort. This repository follows the shared Phenotype monorepo contribution standards; start with the monorepo guide in ../CONTRIBUTING.md before opening changes here.
 
-## Local quality gates
-- Go: `cd backend/byteport && go build ./... && go test ./...`
-- Rust (Tauri): `cd frontend/web/src-tauri && cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test`
-- Node (SvelteKit): `cd frontend/web && (bun install && bun run build) || (pnpm install && pnpm run build)`
+## Make your first PR
 
-## Commit style
-Conventional commits: `type(scope): summary`.
-Types: feat, fix, chore, docs, refactor, test, ci, perf.
-
-## Governance
-See CLAUDE.md for agent rules + AGENTS.md for hub context.
-Never commit secrets; pre-commit hook runs trufflehog.
-
-## Scripting policy
-Rust default; Zig/Mojo/Go with one-line justification; Python/TS embedded only; Bash as ≤5-line glue with inline justification.
+1. Fork or branch from the current default branch.
+2. Keep the change focused and include tests or verification notes when behavior changes.
+3. Run the relevant local checks for the files you touched.
+4. Open a pull request with a short summary, validation notes, and any follow-up risks.

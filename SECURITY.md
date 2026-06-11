@@ -1,19 +1,14 @@
 # Security Policy
 
-## Reporting
-Do not open public issues for security findings. Instead:
-- Email: security@phenotype.dev (or kooshapari@gmail.com until org mailbox exists)
-- GitHub private vulnerability reporting: https://github.com/KooshaPari/BytePort/security/advisories/new
+## Supported Versions
 
-## Scope
-- Vulnerabilities in this repo's code, dependencies, or CI
-- Credential leaks
-- Supply-chain concerns (typosquatting, compromised deps)
+| Version | Supported |
+| --- | --- |
+| main | Yes |
+| older branches | No |
 
-## Response
-- Acknowledgment within 48h
-- Triage + severity call within 7d
-- Fix timeline per severity (CRITICAL: 7d, HIGH: 30d, MEDIUM/LOW: next release cycle)
+## Reporting a Vulnerability
 
-## Disclosure
-Coordinated. We'll publish an advisory once a fix is available or after 90d if unfixed.
+Please report suspected vulnerabilities privately by emailing security@phenotype.dev.
+
+If you need encrypted mail, request the current PGP public key from the same address before sending sensitive details. Include affected versions, reproduction steps, impact, and any mitigations you have already identified.
