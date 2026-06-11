@@ -9,9 +9,14 @@ permissions:
   contents: write
   pull-requests: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   update_release_draft:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: release-drafter/release-drafter@693d20e7c1ce1a81d3a41962f85914253b518449
         env:
