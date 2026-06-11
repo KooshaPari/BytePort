@@ -8,10 +8,16 @@ on:
 
 permissions:
   contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   legacy-tooling-scan:
     name: Legacy Tooling Anti-Pattern Scan
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     env:
       PHENOTYPE_TOOLING_TOKEN: ${{ secrets.PHENOTYPE_TOOLING_TOKEN }}
     permissions:

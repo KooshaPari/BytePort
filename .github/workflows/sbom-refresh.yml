@@ -7,6 +7,11 @@ on:
 
 permissions:
   contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   call-sbom-refresh:
     uses: KooshaPari/phenotype-tooling/.github/workflows/sbom-monthly.yml@79dff2b798fb8a3bc64237e4b2d054a08d3a4601
