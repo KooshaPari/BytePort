@@ -238,3 +238,7 @@ clean:
 # Show this help text
 help:
     @just --list
+
+# Measure code coverage (SSOT: see grade.sh for the canonical command)
+coverage:
+    cargo llvm-cov --workspace --fail-under-lines 85
