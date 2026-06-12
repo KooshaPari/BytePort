@@ -1,8 +1,6 @@
 [workspace]
 resolver = "2"
 members = [
+    "crates/byteport-transport",
     "frontend/web/src-tauri",
 ]
-
-[patch.crates-io]
-aws-runtime = { path = "frontend/web/src-tauri/vendor/aws-runtime" }
