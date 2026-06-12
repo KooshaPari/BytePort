@@ -1,0 +1,17 @@
+{
+  "task": "V3 DAG L3 #29",
+  "date": "2026-06-11",
+  "repo": "BytePort",
+  "branch": "chore/L3-029-mockall-tauri-2026-06-11",
+  "files": [
+    "Cargo.lock",
+    "frontend/web/src-tauri/Cargo.toml",
+    "frontend/web/src-tauri/src/lib.rs",
+    "frontend/web/src-tauri/src/network.rs",
+    "frontend/web/src-tauri/tests/network_mock.rs"
+  ],
+  "reviewer": "kooshapari",
+  "summary": "Added a mockable network client abstraction for the Tauri backend crate and covered success/error command helper paths with mockall-based tests.",
+  "validation": "cargo test --manifest-path frontend/web/src-tauri/Cargo.toml --test network_mock",
+  "status": "implemented"
+}
