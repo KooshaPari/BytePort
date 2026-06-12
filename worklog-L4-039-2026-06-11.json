@@ -1,0 +1,33 @@
+{
+  "task": "Add UploadTransport port trait and S3UploadTransport adapter to the Tauri backend crate with non-network signing tests.",
+  "branch": "chore/L4-039-upload-transport-port-2026-06-11",
+  "files_changed": [
+    "Cargo.toml",
+    "Cargo.lock",
+    "frontend/web/src-tauri/Cargo.toml",
+    "frontend/web/src-tauri/src/lib.rs",
+    "frontend/web/src-tauri/src/ports/mod.rs",
+    "frontend/web/src-tauri/src/adapters/mod.rs",
+    "frontend/web/src-tauri/src/adapters/s3.rs",
+    "frontend/web/src-tauri/vendor/aws-runtime/src/auth/sigv4.rs"
+  ],
+  "test_results": [
+    {
+      "command": "cargo test -p app --no-run -q",
+      "result": "passed"
+    },
+    {
+      "command": "cargo test -p app presign_upload -- --nocapture",
+      "result": "passed (2 tests)"
+    },
+    {
+      "command": "cargo test -p app -q",
+      "result": "passed"
+    }
+  ],
+  "notes": [
+    "The workspace backend crate is frontend/web/src-tauri with package name app.",
+    "S3UploadTransport uses aws-sdk-s3 to presign PUT upload requests and uses delete_object for abort.",
+    "A local [patch.crates-io] override vendors aws-runtime to apply a one-line Rust 1.95 compatibility fix for its event-stream deferred signer send call."
+  ]
+}
