@@ -34,6 +34,29 @@ go build ./backend/...   # Build all Go packages
 go test ./backend/...    # Run Go tests
 ```
 
+### Key Commands
+
+| Command | Description |
+|---------|-------------|
+| `go build ./backend/...` | Build all Go backend packages |
+| `go test ./backend/...` | Run all Go backend tests |
+| `golangci-lint run` | Lint Go backend code |
+| `go vet ./backend/...` | Static analysis on Go backend |
+| `just lint` | Run linting tasks (Go + Rust) |
+| `just check` | Full validation: build + test + lint |
+| `cargo test -p byteport-tauri` | Run Tauri desktop shell tests |
+| `just start` | Start dev orchestration (SvelteKit + Go backend) |
+
+### Design Decisions
+
+- **Go backend + SvelteKit frontend**: Go provides efficient, concurrent backend handling; SvelteKit offers lightweight reactive frontend with minimal bundle overhead.
+- **AES-256-CFB + Argon2id for credential encryption**: Defense-in-depth for secrets at rest; symmetric encryption with derived keys for zero-trust credential storage.
+- **PASETO over JWT for session tokens**: PASETO v2 eliminates JWT's known attack vectors (algorithm confusion, weak signatures) and is easier to reason about.
+
+### Integration Points
+
+- No external `pheno-*` crates are currently wired into BytePort; the stack is self-contained (Go + SvelteKit + Tauri).
+
 ---
 
 ## 2. Architecture
