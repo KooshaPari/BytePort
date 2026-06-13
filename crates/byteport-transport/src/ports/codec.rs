@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::io;
 
 /// Encoding / decoding abstraction.
@@ -11,21 +12,30 @@ pub trait Codec {
 }
 
 /// Mock codec that records calls and returns configurable results.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct MockCodecAdapter {
-    pub encode_calls: usize,
-    pub decode_calls: usize,
+    pub encode_calls: RefCell<usize>,
+    pub decode_calls: RefCell<usize>,
     pub encode_result: Vec<u8>,
     pub decode_result: Vec<u8>,
     pub name: &'static str,
 }
 
+impl Default for MockCodecAdapter {
+    fn default() -> Self {
+        Self {
+            encode_calls: RefCell::new(0),
+            decode_calls: RefCell::new(0),
+            encode_result: Vec::new(),
+            decode_result: Vec::new(),
+            name: "mock",
+        }
+    }
+}
+
 impl MockCodecAdapter {
     pub fn new() -> Self {
-        Self {
-            name: "mock",
-            ..Default::default()
-        }
+        Self::default()
     }
 
     pub fn with_encode_result(mut self, data: Vec<u8>) -> Self {
@@ -41,14 +51,12 @@ impl MockCodecAdapter {
 
 impl Codec for MockCodecAdapter {
     fn encode(&self, _input: &[u8]) -> io::Result<Vec<u8>> {
-        let mut me = self.clone();
-        me.encode_calls += 1;
+        *self.encode_calls.borrow_mut() += 1;
         Ok(self.encode_result.clone())
     }
 
     fn decode(&self, _input: &[u8]) -> io::Result<Vec<u8>> {
-        let mut me = self.clone();
-        me.decode_calls += 1;
+        *self.decode_calls.borrow_mut() += 1;
         Ok(self.decode_result.clone())
     }
 
