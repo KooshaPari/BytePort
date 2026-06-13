@@ -20,6 +20,10 @@ Phenotype repository
 
 See CLAUDE.md for language stack, build commands, and testing requirements.
 
+## Active DAG
+- **V3 DAG:** `FLEET_DAG_v3.db` (Phenotype org task graph)
+- **Current focus:** L5 #88 — Focus-repo README + AGENTS.md standardization
+
 ---
 
 ## Active DAG
