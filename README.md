@@ -12,6 +12,7 @@
 [![License](https://img.shields.io/github/license/KooshaPari/BytePort)](LICENSE)
 [![Phenotype](https://img.shields.io/badge/Phenotype-org-blueviolet)](https://github.com/KooshaPari)
 
+> **Architecture:** See [ARCHITECTURE.md](ARCHITECTURE.md) for component architecture.
 
 ## What is this
 
