@@ -3,6 +3,8 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+pub mod ports;
+
 pub type TransportResult<T> = Result<T, UploadTransportError>;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
