@@ -1,0 +1,24 @@
+{
+  "status": "completed",
+  "task_id": "SD4",
+  "agent_id": "forge",
+  "files_changed": [
+    "AGENTS.md",
+    "README.md"
+  ],
+  "commit_sha": "a26d35cd",
+  "branch": "chore/SD4-2026-06-12",
+  "worktree": "BytePort-wt-SD4-2026-06-12",
+  "started_at": "2026-06-12T12:00:00Z",
+  "completed_at": "2026-06-12T12:30:00Z",
+  "summary": "SD4 SOTA pattern landed for BytePort: per-repo AGENTS.md (hybrid: Rust Tauri shell + Go backend/byteport + SvelteKit frontend) and README badges (CI, crates.io/byteport, License, Phenotype).",
+  "verification_result": {
+    "status": "pass",
+    "commands": [
+      "git -C BytePort-wt-SD4-2026-06-12 status --short (only AGENTS.md + README.md modified)",
+      "git -C BytePort-wt-SD4-2026-06-12 diff --stat HEAD~1 (2 files changed, +239/-15)",
+      "git -C BytePort-wt-SD4-2026-06-12 log --oneline -1 (commit a26d35cd: docs(agents): add AGENTS.md and README badges (SD4 SOTA pattern))"
+    ],
+    "notes": "AGENTS.md is the SD4 hybrid variant: the Quick start block leads with the justfile's build/test/lint/fmt/ci/hygiene recipes (which dispatch to all three engines), then shows the per-engine cargo + go + pnpm commands. README.md swap: kept the existing ci.yml badge + License + Phenotype, removed the redundant quality-gate + release badges, added crates.io/byteport. Both committed on chore/SD4-2026-06-12 from main. Worklog written to repo root, not committed (per task spec)."
+  }
+}

@@ -28,6 +28,13 @@
 
 # BytePort
 
+[![CI](https://github.com/KooshaPari/BytePort/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/KooshaPari/BytePort/actions/workflows/ci.yml)
+[![crates.io](https://img.shields.io/crates/v/byteport.svg)](https://crates.io/crates/byteport)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Phenotype](https://img.shields.io/badge/Phenotype-org-blueviolet)](https://github.com/KooshaPari)
+
+## Badges
+
 [![Build](https://img.shields.io/github/actions/workflow/status/KooshaPari/BytePort/ci.yml?branch=main&label=build)](https://github.com/KooshaPari/BytePort/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/KooshaPari/BytePort?include_prereleases&sort=semver)](https://github.com/KooshaPari/BytePort/releases)
 [![License](https://img.shields.io/github/license/KooshaPari/BytePort)](LICENSE)
