@@ -19,7 +19,7 @@ var (
 const (
 	ProviderOpenAI    = "openai"
 	ProviderAnthropic = "anthropic"
-	ProviderGemini    = "gemini" // TODO: Implement provider
+	ProviderGemini    = "gemini" // Gemini provider implemented (lib/providers/gemini/gemini.go)
 	ProviderLocal     = "local"
 )
 
