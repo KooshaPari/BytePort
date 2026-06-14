@@ -1,6 +1,27 @@
-// Prevents additional console window on Windows in release, DO NOT REMOVE!!
-#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+use clap::{Parser, Subcommand};
+
+#[derive(Debug, Parser)]
+#[command(
+    name = "byteport",
+    version,
+    about = "BytePort core engine CLI",
+    long_about = None
+)]
+struct Cli {
+    #[command(subcommand)]
+    command: Option<Command>,
+}
+
+#[derive(Debug, Subcommand)]
+enum Command {
+    /// Launch the Tauri desktop shell
+    Desktop,
+}
 
 fn main() {
-    app_lib::run();
+    let cli = Cli::parse();
+
+    match cli.command.unwrap_or(Command::Desktop) {
+        Command::Desktop => app_lib::run(),
+    }
 }
