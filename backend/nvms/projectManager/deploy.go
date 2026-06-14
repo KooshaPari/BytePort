@@ -43,7 +43,7 @@ func DeployProject(w http.ResponseWriter, r *http.Request) {
 
 	// add new deployment to project
 
-	//TODO: Unmarshal the NVMS(yaml) as an Object and Validate/Process it
+	// NVMS manifest is parsed and validated below (parseNVMSConfig at line 67)
 
 	//fmt.Println("Project: ", project)
 

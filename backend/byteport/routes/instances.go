@@ -9,6 +9,7 @@ import (
 
 func GetInstances(c *gin.Context) {
 	var instances []models.Instance
-	models.DB.Find(&instances).Where("owner = ?", c.MustGet("user").(models.User).UUID)
+	user := c.MustGet("user").(models.User)
+	models.DB.Where("owner = ?", user.UUID).Find(&instances)
 	c.JSON(http.StatusOK, instances)
 }
