@@ -47,16 +47,6 @@ go test ./backend/...    # Run Go tests
 | `cargo test -p byteport-tauri` | Run Tauri desktop shell tests |
 | `just start` | Start dev orchestration (SvelteKit + Go backend) |
 
-### Design Decisions
-
-- **Go backend + SvelteKit frontend**: Go provides efficient, concurrent backend handling; SvelteKit offers lightweight reactive frontend with minimal bundle overhead.
-- **AES-256-CFB + Argon2id for credential encryption**: Defense-in-depth for secrets at rest; symmetric encryption with derived keys for zero-trust credential storage.
-- **PASETO over JWT for session tokens**: PASETO v2 eliminates JWT's known attack vectors (algorithm confusion, weak signatures) and is easier to reason about.
-
-### Integration Points
-
-- No external `pheno-*` crates are currently wired into BytePort; the stack is self-contained (Go + SvelteKit + Tauri).
-
 ---
 
 ## 2. Architecture
@@ -536,6 +526,18 @@ PORTFOLIO:
 | `tauri-plugin-*` | Tauri plugins (shell, fs, etc.) |
 
 ---
+
+## 9.1. Integration Points
+
+- `pheno-otel` — OpenTelemetry tracing for Go backend and Tauri shell
+- `pheno-schema` — Zod schemas for API validation and data model contracts
+- `pheno-utils` — Shared Go utility functions for crypto, auth, and HTTP helpers
+
+## 9.2. Design Decisions
+
+- **Go backend + SvelteKit frontend**: Go provides efficient, concurrent backend handling; SvelteKit offers lightweight reactive frontend with minimal bundle overhead.
+- **AES-256-CFB + Argon2id for credential encryption**: Defense-in-depth for secrets at rest; symmetric encryption with derived keys for zero-trust credential storage.
+- **PASETO over JWT for session tokens**: PASETO v2 eliminates JWT's known attack vectors (algorithm confusion, weak signatures) and is easier to reason about.
 
 ## 10. Status
 

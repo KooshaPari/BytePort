@@ -4,6 +4,10 @@
 > SD4 SOTA pattern (V18 build/test/style/do-not-touch constitution) on
 > 2026-06-12. Read this fully before making changes.
 
+## Active DAG
+- **V3 DAG:** `FLEET_DAG_v3.db` (Phenotype org task graph)
+- **Current focus:** L5 #88 — Focus-repo README + AGENTS.md standardization
+
 ---
 
 ## 1. Quick start (build, test, lint)

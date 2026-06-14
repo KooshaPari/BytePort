@@ -1,0 +1,73 @@
+{
+  "task_id": "L5-84",
+  "date": "2026-06-11",
+  "title": "BytePort full integration — wire pheno-errors + pheno-tracing + pheno-config",
+  "status": "completed",
+  "branch": "chore/l5-84-byteport-integration-2026-06-11",
+  "worktree": "repos",
+  "commit": "5e3bdf47",
+  "pushed": false,
+  "author": "forge",
+  "refs": {
+    "dag": "FLEET_100TASK_DAG_V3.md#L5-#84"
+  },
+  "summary": "Created the standalone crate BytePort/crates/integration/ with path dependencies to pheno-errors, pheno-tracing, and pheno-config. Implemented BytePortApp struct with a run() -> Result<(), AppError> method that initializes tracing and logs a startup span. BytePortApp::new(prefix) loads config via pheno-config::load_from_env, and BytePortApp::with_config(config) allows explicit construction for tests. All 2 tests pass (app_loads_config, app_initializes_tracing) and clippy is clean. Verified via cargo test --manifest-path crates/integration/Cargo.toml.",
+  "scope": {
+    "created": [
+      "BytePort/crates/integration/Cargo.toml",
+      "BytePort/crates/integration/src/lib.rs",
+      "BytePort/worklogs/l5-84-byteport-integration-2026-06-11.json"
+    ],
+    "modified": []
+  },
+  "public_api": {
+    "byteport_integration::BytePortConfig": "struct { name: String, port: Option<u16> } — BytePort application configuration",
+    "byteport_integration::BytePortApp": "struct { config: BytePortConfig } — canonical BytePort app entry point",
+    "byteport_integration::BytePortApp::new": "fn(prefix: &str) -> Result<Self, AppError> — loads config from env via pheno-config",
+    "byteport_integration::BytePortApp::with_config": "fn(config: BytePortConfig) -> Self — explicit construction for testing",
+    "byteport_integration::BytePortApp::init_tracing": "fn(&self) — initializes pretty tracing via pheno-tracing::init",
+    "byteport_integration::BytePortApp::init_tracing_json": "fn(&self) — initializes JSON tracing via pheno-tracing::init_json",
+    "byteport_integration::BytePortApp::init_tracing_file": "fn(&self, dir: &Path) — initializes file tracing via pheno-tracing::init_with_file",
+    "byteport_integration::BytePortApp::run": "fn(&self) -> Result<(), AppError> — initializes tracing and logs startup, returning Ok(())"
+  },
+  "dependencies": {
+    "pheno-errors": "path = ../../../pheno-errors (AppError, AppResult)",
+    "pheno-tracing": "path = ../../../pheno-tracing (init, init_json, init_with_file)",
+    "pheno-config": "path = ../../../pheno-config (load_from_env)",
+    "tracing": "0.1",
+    "serde": "1.0 (derive)"
+  },
+  "test_results": {
+    "command": "cargo test --manifest-path crates/integration/Cargo.toml",
+    "unit": 2,
+    "integration": 0,
+    "doctest": 0,
+    "total": 2,
+    "passed": 2,
+    "failed": 0
+  },
+  "test_coverage": [
+    "BytePort/crates/integration/src/lib.rs: app_loads_config (line 77) — loads config via BPTEST_ prefix, asserts name and port",
+    "BytePort/crates/integration/src/lib.rs: app_initializes_tracing (line 86) — constructs app with explicit config and calls init_tracing without panic"
+  ],
+  "verification": {
+    "cargo_test": "2/2 pass via cargo test --manifest-path crates/integration/Cargo.toml",
+    "cargo_clippy": "clean (no warnings) via cargo clippy --manifest-path crates/integration/Cargo.toml --all-targets",
+    "rust_edition": "2021",
+    "rust_msrv": "1.75"
+  },
+  "spec_alignment": "The L5 #84 spec called for creating branch chore/l5-84-byteport-integration-2026-06-11, adding BytePort/crates/integration/Cargo.toml with path deps to pheno-errors, pheno-tracing, and pheno-config, implementing BytePortApp with run() -> Result<(), AppError>, tests app_loads_config and app_initializes_tracing, and verification via cargo test --manifest-path crates/integration/Cargo.toml. All deliverables are present verbatim.",
+  "spec_deviations": "None. All spec deliverables are present and verified.",
+  "constraints_respected": [
+    "Branch is local-only (chore/l5-84-byteport-integration-2026-06-11) and NOT pushed to origin per task directive.",
+    "The crate is a standalone package (explicit versions in Cargo.toml, workspace = true in Cargo.toml) but isolated under BytePort/crates/integration.",
+    "No touch of other crates or files beyond creating the integration crate.",
+    "Both canonical test names from the spec are present verbatim and pass.",
+    "cargo test --manifest-path crates/integration/Cargo.toml passes with 2/2 tests."
+  ],
+  "no_touch": [
+    "Other crates in the workspace",
+    "CI workflows",
+    "Documentation files (no README.md created for the integration crate per task brevity directive)"
+  ]
+}
