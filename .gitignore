@@ -75,3 +75,7 @@ byteport
 .serena/
 .codex/
 .cursor/
+# untracked files from prior session
+.audit/
+.cargo/
+jest.config.js
