@@ -79,3 +79,4 @@ byteport
 .audit/
 .cargo/
 jest.config.js
+scripts/coverage*.sh
