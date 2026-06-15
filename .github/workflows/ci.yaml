@@ -1,0 +1,79 @@
+name: CI
+on:
+  push:
+    branches:
+      - master
+      - main
+  pull_request:
+
+
+permissions:
+  contents: read
+jobs:
+  vet:
+    name: Go Vet
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        module:
+          - backend/byteport
+          - backend/nvms
+    steps:
+      - name: Checkout the code
+        uses: actions/checkout@v6
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: ${{ matrix.module }}/go.mod
+          cache-dependency-path: ${{ matrix.module }}/go.sum
+      - name: Run go vet
+        working-directory: ${{ matrix.module }}
+        run: go vet ./...
+
+  build:
+    name: Go Build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        module:
+          - backend/byteport
+          - backend/nvms
+    steps:
+      - name: Checkout the code
+        uses: actions/checkout@v6
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: ${{ matrix.module }}/go.mod
+          cache-dependency-path: ${{ matrix.module }}/go.sum
+      - name: Run go build
+        working-directory: ${{ matrix.module }}
+        run: go build ./...
+
+  fmt:
+    name: Go Fmt (advisory)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout the code
+        uses: actions/checkout@v6
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: 'stable'
+      - name: Check formatting
+        run: |
+          unformatted=$(gofmt -l backend/byteport backend/nvms)
+          if [ -n "$unformatted" ]; then
+            echo "::warning::The following files are not gofmt-clean (advisory; does not block merge):"
+            echo "$unformatted"
+            exit 1
+          fi
