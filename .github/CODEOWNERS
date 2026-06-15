@@ -1,11 +1,5 @@
-# Phenotype-org standard CODEOWNERS
-# Source: https://github.com/KooshaPari/phenotype-tooling/blob/main/templates/CODEOWNERS
-#
-# To adopt: copy this file verbatim to .github/CODEOWNERS in your repo.
-#
-# Repos that need path-specific ownership (e.g. workflows owned by
-# platform team, docs owned by docs team) should extend this file
-# with additional rules BELOW this one. Rules in CODEOWNERS are
-# "last match wins", so path-specific overrides should come last.
+# CODEOWNERS — default reviewers for this repository.
+# Order matters: later rules override earlier ones.
 
-* @KooshaPari
+# Default owner
+* @kooshapari
