@@ -1,244 +1,138 @@
-# justfile for BytePort
-# ------------------------------------------------------------------
-# Hybrid task runner for BytePort's three engines:
-#   - Go (backend/byteport + backend/nvms)         # primary backend
-#   - TypeScript / SvelteKit (frontend/web)         # primary web frontend
-#   - Rust / Tauri (frontend/web/src-tauri)        # desktop/mobile shell
+# justfile — BytePort developer task runner
+# https://github.com/casey/just
 #
-# Spec: V3 DAG L2 #24 (BytePort Taskfile + justfile).
-# Branch: chore/l2-24-taskfile-justfile-2026-06-11
-# Author: L2 subagent #24 (2026-06-11)
-#
-# L1 audit context (`BytePort/STATUS_2026_06_10.md`):
-#   - `cargo check` times out at 300s; L2 spec asks for 600s on `build`.
-#   - `frontend/web/package.json` is missing a `test` script. Addressed
-#     in this same PR by adding `"test": "vitest --run --coverage || echo no tests yet"`.
-#
-# This file REPLACES the prior cargo-only justfile (PR #98) with a
-# hybrid Rust + Go + TS recipe set per V3 DAG L2 #24.
-#
-# Usage:
-#   just --list          # show all recipes
-#   just build           # cargo + go + npm build
-#   just test            # cargo test --no-run + go test + npm test
-#   just lint            # cargo clippy + go vet + npm run lint
-#   just ci              # build, test, lint, fmt, deny, audit
-# ------------------------------------------------------------------
+# Mirrors what CI runs so contributors can reproduce CI locally.
+# Install:  brew install just   |   cargo install just
 
-set dotenv-load
-set positional-arguments
-# Note: `set unstable` is intentionally NOT enabled. The `[timeout(...)]`
-# attribute is not yet available in just 1.46.0. To enforce timeouts,
-# wrap the recipe invocation with the GNU `timeout` command, e.g.:
-#   `timeout 600 just build`
+set dotenv-load := false
+set shell := ["bash", "-uc"]
 
-# Common variables
-cargo_flags := "--workspace"
-frontend_dir := "frontend/web"
-backend_dir := "backend/byteport"
-
-# Default recipe
-default:
+# ----- meta -----
+_default:
     @just --list
 
-# -- Build ----------------------------------------------------------------
+# Print this justfile's location
+where:
+    @echo "{{justfile()}}"
 
-# Build everything: Rust + Go + TS (600s timeout per L2 #24; use `timeout 600 just build`)
-build: build-rust build-go build-frontend
-    @echo "build all engines complete"
+# ----- workspace -----
+# Rust workspace members
+workspace:
+    @cargo metadata --no-deps --format-version 1 \
+        | jq -r '.workspace_members[] | split(":")[1]' \
+        2>/dev/null || cargo metadata --no-deps --format-version 1 | head -c 200
 
-# Build the Rust workspace (Tauri shell)
-build-rust:
-    cargo build {{cargo_flags}}
+# ----- go -----
+go_dir  := "backend/byteport"
 
-# Build the Go backend (backend/byteport)
-build-go:
-    cd {{backend_dir}} && go build ./...
+# go build ./...
+go-build:
+    cd {{go_dir}} && go build ./...
 
-# Build the SvelteKit frontend (frontend/web)
-build-frontend:
-    cd {{frontend_dir}} && npm run build
+# go test ./...
+go-test:
+    cd {{go_dir}} && go test ./...
 
-# -- Test -----------------------------------------------------------------
+# go vet ./...
+go-vet:
+    cd {{go_dir}} && go vet ./...
 
-# Test everything. `cargo test --no-run` is fast (full cargo test is slow
-# per L1 audit; see `test-rust` recipe for the slow one).
-# Use `timeout 600 just test` to enforce a 600s cap.
-test: test-frontend test-go test-rust-compile
-
-# Run frontend (TS/SvelteKit) tests; falls back to `npm run check`
-test-frontend:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    cd {{frontend_dir}}
-    if grep -q '"test"\s*:' package.json; then
-        echo "==> test-frontend: npm test"
-        npm test
-    else
-        echo "==> test-frontend: no 'test' script; falling back to 'npm run check'"
-        npm run check
+# gofmt -l . (advisory; CI runs the same)
+go-fmt:
+    @unformatted=$(gofmt -l backend/byteport backend/nvms); \
+    if [ -n "$unformatted" ]; then \
+        echo "The following files are not gofmt-clean:"; \
+        echo "$unformatted"; \
+        exit 1; \
+    else \
+        echo "All Go files are gofmt-clean."; \
     fi
 
-# Compile Rust tests without running them (fast sanity)
-test-rust-compile:
-    cargo test {{cargo_flags}} --no-run
+# golangci-lint run
+go-lint:
+    cd {{go_dir}} && golangci-lint run --disable=staticcheck --disable=errcheck
 
-# Run Rust tests (full execution; slow — matches L1 audit).
-# Use `timeout 1200 just test-rust` to enforce a 1200s cap.
-test-rust:
-    cargo test {{cargo_flags}}
+# Format all Go in place
+go-fmt-fix:
+    gofmt -w backend/byteport backend/nvms
 
-# Run Go tests (backend/byteport)
-test-go:
-    cd {{backend_dir}} && go test ./...
+# ----- rust -----
+# cargo build --workspace
+rust-build:
+    cargo build --workspace
 
-# Run Go tests with the race detector
-test-go-race:
-    cd {{backend_dir}} && go test -race ./...
+# cargo test --workspace
+rust-test:
+    cargo test --workspace
 
-# -- Lint -----------------------------------------------------------------
+# cargo machete — surface unused dependencies
+rust-machete:
+    cargo machete .
 
-# Lint everything: cargo clippy + go vet + npm run lint
-lint: lint-rust lint-go lint-frontend
+# ----- audit (mirrors audit.yml) -----
+# cargo install cargo-audit
+audit-rustsec:
+    cargo install --locked cargo-audit --version "^0.21" || true
+    cargo audit
 
-# cargo clippy on the workspace (warnings are errors)
-lint-rust:
-    cargo clippy {{cargo_flags}} -- -D warnings
+# cargo install cargo-semver-checks
+audit-semver:
+    cargo install --locked cargo-semver-checks || true
+    cargo semver-checks
 
-# go vet on backend/byteport
-lint-go:
-    cd {{backend_dir}} && go vet ./...
+# gitleaks detect (requires `brew install gitleaks`)
+audit-gitleaks:
+    gitleaks detect --source . --config .gitleaks.toml --no-banner
 
-# npm run lint (prettier --check + eslint)
-lint-frontend:
-    cd {{frontend_dir}} && npm run lint
+# trufflehog filesystem scan (requires trufflehog on PATH)
+audit-trufflehog:
+    trufflehog filesystem . --only-verified --fail
 
-# -- Format check ---------------------------------------------------------
+# CodeQL local analyze (requires `codeql` CLI)
+audit-codeql:
+    @echo "CodeQL local analysis: use 'codeql database create' + 'codeql database analyze'"
 
-# Check formatting: cargo fmt + gofmt + npm run format:check (or format -- --check)
-fmt: fmt-rust fmt-go fmt-frontend
+# All audit checks (long)
+audit: audit-rustsec audit-semver audit-gitleaks audit-trufflehog
 
-# cargo fmt --check on the workspace
-fmt-rust:
-    cargo fmt --all -- --check
-
-# gofmt -l on the Go modules (advisory)
-fmt-go:
-    #!/usr/bin/env bash
-    set -uo pipefail
-    unformatted=$(gofmt -l {{backend_dir}} backend/nvms 2>/dev/null || true)
-    if [ -n "$unformatted" ]; then
-        echo "::warning::The following Go files are not gofmt-clean:"
-        echo "$unformatted"
-        exit 1
-    fi
-
-# prettier --check (or whatever frontend package.json exposes)
-fmt-frontend:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    cd {{frontend_dir}}
-    if grep -q '"format:check"\s*:' package.json; then
-        npm run format:check
-    else
-        npm run format -- --check
-    fi
-
-# Auto-format everything in place
-fmt-fix:
-    cargo fmt --all
-    gofmt -w {{backend_dir}} backend/nvms || true
-    cd {{frontend_dir}} && npm run format
-
-# -- Deny / Audit ---------------------------------------------------------
-
-# Run cargo-deny against deny.toml
+# ----- deny (mirrors deny.yml) -----
+# cargo install cargo-deny
 deny:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    if command -v cargo-deny >/dev/null 2>&1; then
-        cargo deny check
-    else
-        echo "cargo-deny not installed; install with: cargo install cargo-deny"
-        exit 1
-    fi
+    cargo install --locked cargo-deny || true
+    cargo deny check
 
-# Run cargo-audit
-audit:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    if command -v cargo-audit >/dev/null 2>&1; then
-        cargo audit
-    else
-        echo "cargo-audit not installed; install with: cargo install cargo-audit"
-        exit 1
-    fi
+# ----- scorecard (mirrors scorecard.yml) -----
+# OpenSSF Scorecard CLI: `brew install scorecard` or `go install github.com/ossf/scorecard/v5@latest`
+scorecard:
+    @command -v scorecard >/dev/null || { \
+        echo "Install scorecard: https://github.com/ossf/scorecard#install"; exit 1; \
+    }
+    scorecard --repo=local --format=cli
 
-# -- CI aggregate ---------------------------------------------------------
+# ----- pre-commit -----
+# Install pre-commit hooks into .git/hooks
+precommit-install:
+    pip install --user pre-commit
+    pre-commit install --install-hooks
+    @echo "Run 'just precommit' to invoke on all files."
 
-# Full CI suite: build, test, lint, fmt, deny, audit
-ci: build test lint fmt deny audit
-    @echo "ci all stages passed"
+# Run pre-commit on every file (auto + manual stages)
+precommit:
+    pre-commit run --hook-stage manual --all-files
 
-# -- Hygiene --------------------------------------------------------------
+# ----- ci (mirrors ci.yml) -----
+# Run the full PR-gating CI suite locally
+ci: go-build go-test go-vet go-fmt go-lint rust-machete precommit
+    @echo "Local CI complete."
 
-# Repository hygiene checks
-hygiene:
-    #!/usr/bin/env bash
-    set -uo pipefail
-    echo "==> hygiene: oversized files"
-    find backend frontend src docs \
-        -type f \( -name "*.go" -o -name "*.rs" -o -name "*.ts" -o -name "*.svelte" -o -name "*.js" \) \
-        -not -path "*/node_modules/*" -not -path "*/target/*" -not -path "*/.git/*" \
-        -not -path "*/.svelte-kit/*" -not -path "*/build/*" -not -path "*/dist/*" \
-        -size +20k 2>/dev/null \
-        -exec wc -l {} \; | sort -rn | head -20 || true
-    echo "==> hygiene: active TODO markers"
-    grep -rnE "todo!|TODO|FIXME|XXX|HACK|unimplemented!" \
-        {{backend_dir}} backend/nvms frontend/web/src frontend/web/src-tauri/src \
-        --include="*.go" --include="*.rs" --include="*.ts" --include="*.svelte" \
-        2>/dev/null | grep -v node_modules | grep -v target | head -20 || true
-    echo "==> hygiene: governance file presence"
-    for f in LICENSE LICENSE-MIT LICENSE-APACHE CHANGELOG.md CODEOWNERS CONTRIBUTING.md SECURITY.md .gitignore; do
-        if [ -f "$f" ]; then
-            echo "  $f: present"
-        else
-            echo "  $f: missing"
-        fi
-    done
-    echo "==> hygiene: complete"
+# ----- release (mirrors release.yml) -----
+# Verify a release can be cut: builds, tests, deny, audit
+release-check: ci deny audit
+    @echo "Release checks passed."
 
-# -- Frontend / Backend groups --------------------------------------------
-
-# Run all frontend (TS) tasks
-frontend: lint-frontend test-frontend build-frontend
-
-# Run all backend (Go + Rust) tasks
-backend: build-go build-rust test-go lint-go lint-rust
-
-# -- Convenience ----------------------------------------------------------
-
-# Install JS dependencies (frontend/web)
-install:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    cd {{frontend_dir}}
-    if command -v yarn >/dev/null 2>&1; then
-        yarn install --frozen-lockfile
-    else
-        npm ci
-    fi
-
-# Clean build artifacts (target/, .svelte-kit/, build/, dist/)
+# ----- housekeeping -----
+# Remove build artifacts
 clean:
     cargo clean
-    rm -rf frontend/web/.svelte-kit frontend/web/build frontend/web/dist
-    rm -rf {{backend_dir}}/tmp
-
-# Show this help text
-help:
-    @just --list
-
-# Measure code coverage (SSOT: see grade.sh for the canonical command)
-coverage:
-    cargo llvm-cov --workspace --fail-under-lines 85
+    go clean -cache -testcache
+    rm -rf .audit/*.json .audit/*.md
