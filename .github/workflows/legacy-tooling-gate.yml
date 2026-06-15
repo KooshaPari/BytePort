@@ -8,13 +8,10 @@ on:
 
 permissions:
   contents: read
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
+  actions: read
 jobs:
   legacy-tooling-scan:
+    timeout-minutes: 10
     name: Legacy Tooling Anti-Pattern Scan
     runs-on: ubuntu-latest
     timeout-minutes: 30

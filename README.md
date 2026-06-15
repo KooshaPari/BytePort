@@ -39,6 +39,7 @@
 [![Release](https://img.shields.io/github/v/release/KooshaPari/BytePort?include_prereleases&sort=semver)](https://github.com/KooshaPari/BytePort/releases)
 [![License](https://img.shields.io/github/license/KooshaPari/BytePort)](LICENSE)
 [![Phenotype](https://img.shields.io/badge/Phenotype-org-blueviolet)](https://github.com/KooshaPari)
+[![AI Slop Inside](https://sladge.net/badge.svg)](https://sladge.net)
 
 > **Architecture:** See [ARCHITECTURE.md](ARCHITECTURE.md) for component architecture.
 

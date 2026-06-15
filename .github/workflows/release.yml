@@ -6,14 +6,11 @@ on:
       - "v*"
 
 permissions:
-  contents: write
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
+  contents: read
+  actions: read
 jobs:
   release:
+    timeout-minutes: 15
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:

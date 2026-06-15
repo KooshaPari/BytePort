@@ -2,13 +2,10 @@ name: FR Coverage
 on: [pull_request]
 permissions:
   contents: read
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
+  actions: read
 jobs:
   coverage:
+    timeout-minutes: 10
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
