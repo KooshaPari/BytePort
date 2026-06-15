@@ -80,3 +80,10 @@ byteport
 .cargo/
 jest.config.js
 scripts/coverage*.sh
+
+# Coverage/profiling artifacts
+*.profraw
+*.profdata
+
+# Test artifacts
+*.test
