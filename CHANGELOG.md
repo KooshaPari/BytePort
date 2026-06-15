@@ -8,13 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Initial CHANGELOG scaffold.
 
 ### Changed
-- update nvms and byteport library sources
-- remove backend/.history/ from git index
-- remove 17K+ .history/ IDE auto-saves from git index
-- rename ci.yaml to ci.yml and add stub inventory
 
 ### Deprecated
 
@@ -24,4 +19,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
-[Unreleased]: https://github.com/KooshaPari/BytePort/compare/v0.1.0...HEAD
+## [0.1.0] - 2026-06-14
+
+### Added
+
+- Initial release with version tracking.
+
+[Unreleased]: https://github.com/KooshaPari/BytePort/compare/0.1.0...HEAD
+[0.1.0]: https://github.com/KooshaPari/BytePort/releases/tag/0.1.0
