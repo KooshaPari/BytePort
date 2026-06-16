@@ -1,5 +1,14 @@
 # Security Policy
 
+## Threat model
+
+The current per-component STRIDE threat model lives at
+[`docs/security/threat-model.md`](docs/security/threat-model.md). It enumerates
+the production attack surface (SvelteKit frontend, Tauri shell, Go backend,
+`nvms` orchestrator, LLM providers, AWS, CI/CD pipeline) and the mitigations
+in place today. Review cadence: on every minor release, on any new external
+dependency, and quarterly at minimum.
+
 ## Reporting Vulnerabilities
 
 Please report security vulnerabilities via GitHub Security Advisories:
