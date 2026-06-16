@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # SC4 Provenance Metadata Template
 
 > **Source audit:** `FLEET-AUDIT-REPORT.md` — SC4 (build provenance metadata) is the last of the 6 biggest P0 pillars (priority 30, 10/11 repos at score 0).
@@ -17,6 +18,8 @@ SC4 (build provenance metadata) = the SLSA Build provenance attestation is publi
 Replace the S8 template's `Attest build provenance` step with the official GitHub Action. Here's the enhanced version:
 
 ```yaml
+=======
+>>>>>>> 4dc786b3 (ci(BytePort): add SLSA Build L2 release+attest workflow (lifts audit S8 from 0 to 2))
 name: Release + SLSA Build Attestation
 
 on:
@@ -30,10 +33,21 @@ on:
         required: true
         type: string
 
+<<<<<<< HEAD
 permissions:
   contents: read
   id-token: write
   attestations: write  # required for SC4 — grants the action access to write attestations
+=======
+# Required for SLSA Build L3:
+# - id-token: write (OIDC token for signing provenance)
+# - contents: read (read repo for the build)
+# - attestations: write (write the provenance attestation)
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+>>>>>>> 4dc786b3 (ci(BytePort): add SLSA Build L2 release+attest workflow (lifts audit S8 from 0 to 2))
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -43,6 +57,7 @@ jobs:
   build:
     name: Build + Attest
     runs-on: ubuntu-24.04
+<<<<<<< HEAD
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # e.g., de0fac2e4500dabe0009e67214ff5f5447ce83dd
@@ -110,3 +125,63 @@ After applying:
 - **Audit that produced it:** `FLEET-AUDIT-30-PILLAR.md` (SC4 P0)
 - **Reference repo:** `KooshaPari/OmniRoute` (SC4=3)
 - **License:** Same as the parent repo
+=======
+    # No mutable action references. All third-party actions MUST be SHA-pinned.
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.2.2
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@ffb18e4a4a47253c5f0bd7d526f2c6f1e7c5dd84 # stable
+        with:
+          toolchain: stable
+
+      - name: Cache cargo registry and build artifacts
+        uses: Swatinem/rust-cache@9d47cdaad80c8cb6c652d2b0e2a8c73ad9a91ad7 # v2.7.7
+        with:
+          workspaces: |
+            . -> target
+
+      - name: Build artifact
+        working-directory: .
+        env:
+          REPO_FULL: ${{ github.repository }}
+          REF: ${{ github.ref }}
+          SHA: ${{ github.sha }}
+          RUNNER_OS: ${{ runner.os }}
+        run: |
+          set -euo pipefail
+          cargo build --release --locked --workspace --all-targets
+          mkdir -p dist
+          cat > target/release/BUILD_MANIFEST.txt <<EOF
+          repository: ${REPO_FULL}
+          ref:        ${REF}
+          sha:        ${SHA}
+          runner:     ${RUNNER_OS}
+          built_at:   $(date -u +%Y-%m-%dT%H:%M:%SZ)
+          EOF
+          # Bundle the workspace release binaries + manifest into a single tarball
+          # so the SLSA Build provenance attests a single, stable artifact path.
+          tar -czf dist/byteport-release.tar.gz \
+            -C target/release \
+            $(find target/release -maxdepth 1 -type f -executable) \
+            BUILD_MANIFEST.txt
+          echo "=== Build artifact ==="
+          ls -la dist/
+
+      - name: Attest build provenance
+        # The official SLSA Build L3 action.
+        # Pin to a specific SHA — find latest at:
+        # https://github.com/actions/attest-build-provenance/releases
+        uses: actions/attest-build-provenance@35a8f9717e7a2adb1c2c3b2ac88961ba9c230e98 # v1.3.0
+        with:
+          subject-name: dist/byteport-release.tar.gz
+          subject-digest: sha256:$(sha256sum dist/byteport-release.tar.gz | awk '{print $1}')
+          push-to-registry: false  # set true if you also publish to GHCR
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd0de8ccd5686b70862 # v4.6.0
+        with:
+          name: ${{ github.event.inputs.version || github.ref_name }}-artifact
+          path: dist/
+>>>>>>> 4dc786b3 (ci(BytePort): add SLSA Build L2 release+attest workflow (lifts audit S8 from 0 to 2))
