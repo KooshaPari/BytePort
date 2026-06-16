@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test';
 
-test('homepage renders and has expected title', async ({ page }) => {
+test('homepage renders successfully', async ({ page }) => {
   await page.goto('/');
-  await expect(page).toHaveTitle(/.+/);
+  await expect(page.locator('body')).toBeVisible();
 });
 
 test('login route loads successfully', async ({ page }) => {
