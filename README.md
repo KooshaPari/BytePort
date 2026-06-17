@@ -42,6 +42,7 @@
 [![AI Slop Inside](https://sladge.net/badge.svg)](https://sladge.net)
 
 > **Architecture:** See [ARCHITECTURE.md](ARCHITECTURE.md) for component architecture.
+> **Threat model:** See [docs/security/threat-model.md](docs/security/threat-model.md) for the per-component STRIDE analysis.
 
 ## What is this
 
