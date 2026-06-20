@@ -52,3 +52,11 @@ target/
 # Worktrees (in case you git-worktree-add within the repo)
 .worktrees/
 *-wtrees/
+
+# LLVM / Rust coverage & profile artifacts (cargo-with-llvm-cov, grcov, etc.)
+*.profraw
+*.profdata
+*.gcda
+*.gcno
+*.lcov
+.instr-profile
