@@ -250,7 +250,37 @@ cargo bench --workspace
 
 ---
 
-## 9. License
+## 9. Architecture Decision Records
+
+BytePort documents architecture decisions in two locations:
+- **`ADR.md`** (root) --- summary of key decisions
+- **`docs/adr/`** --- individual ADR files with full context
+- **`docs/decisions/`** --- MADR-format decision records template
+
+| ID | Title | Status | Location |
+|----|-------|--------|----------|
+| ADR-001 | NVMS/BytePort IaC Manifest Format | Accepted | [`ADR.md`](ADR.md) |
+| ADR-002 | AWS as Primary Deployment Target | Accepted | [`ADR.md`](ADR.md) |
+| ADR-003 | Go Backend + Web Frontend Architecture | Accepted | [`ADR.md`](ADR.md) |
+| ADR-004 | LLM-Assisted Portfolio Template Generation | Accepted | [`ADR.md`](ADR.md) |
+| ADR-005 | CLI-First Interface | Accepted | [`ADR.md`](ADR.md) |
+| ADR-001 | Architecture --- Backend and System Architecture | Accepted | [`docs/adr/ADR-001-architecture.md`](docs/adr/ADR-001-architecture.md) |
+| ADR-002 | Zero-Copy Strategy | --- | [`docs/adr/ADR-002-zero-copy-strategy.md`](docs/adr/ADR-002-zero-copy-strategy.md) |
+| ADR-003 | Adaptive Compression | --- | [`docs/adr/ADR-003-adaptive-compression.md`](docs/adr/ADR-003-adaptive-compression.md) |
+| ADR-004 | Schema Registry | --- | [`docs/adr/ADR-004-schema-registry.md`](docs/adr/ADR-004-schema-registry.md) |
+| ADR-005 | Load Balancing | --- | [`docs/adr/ADR-005-load-balancing.md`](docs/adr/ADR-005-load-balancing.md) |
+| ADR-006 | Transport Layer | --- | [`docs/adr/ADR-006-transport-layer.md`](docs/adr/ADR-006-transport-layer.md) |
+| ADR-007 | Security Architecture | --- | [`docs/adr/ADR-007-security-architecture.md`](docs/adr/ADR-007-security-architecture.md) |
+| ADR-008 | Observability | --- | [`docs/adr/ADR-008-observability.md`](docs/adr/ADR-008-observability.md) |
+| ADR-009 | Error Handling | --- | [`docs/adr/ADR-009-error-handling.md`](docs/adr/ADR-009-error-handling.md) |
+| ADR-010 | Wire Protocol | --- | [`docs/adr/ADR-010-wire-protocol.md`](docs/adr/ADR-010-wire-protocol.md) |
+| ADR-011 | Configuration Schema | --- | [`docs/adr/ADR-011-configuration-schema.md`](docs/adr/ADR-011-configuration-schema.md) |
+| ADR-012 | API Design | --- | [`docs/adr/ADR-012-api-design.md`](docs/adr/ADR-012-api-design.md) |
+| ADR-013 | Performance Optimization | --- | [`docs/adr/ADR-013-performance-optimization.md`](docs/adr/ADR-013-performance-optimization.md) |
+| ADR-014 | Feature Flags | --- | [`docs/adr/ADR-014-feature-flags.md`](docs/adr/ADR-014-feature-flags.md) |
+| --- | Record Architecture Decisions (MADR template) | --- | [`docs/decisions/0001-record-architecture-decisions.md`](docs/decisions/0001-record-architecture-decisions.md) |
+
+## 10. License
 
 MIT. See `LICENSE`.
 Copyright 2026 Koosha Pari.
