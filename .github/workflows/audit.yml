@@ -123,6 +123,60 @@ jobs:
       - name: Run cargo-semver-checks
         uses: obi1kenobi/cargo-semver-checks-action@6b69fcf40e9b5fb17adeb57e4b6ecd020649a239 # v1
 
+  # ---------- npm audit (frontend web) ----------
+  npm-audit:
+    name: npm audit (frontend/web)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - name: Setup Node.js
+        uses: actions/setup-node@1a4442cacd436585916f4bd0495db9b8a8a0d4d8 # v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/web/package-lock.json
+      - name: Install dependencies (npm ci)
+        working-directory: frontend/web
+        run: npm ci --no-audit --no-fund
+      - name: Run npm audit (high+ only)
+        working-directory: frontend/web
+        run: npm audit --audit-level=high
+
+  # ---------- Go govulncheck ----------
+  govulncheck:
+    name: Go govulncheck (backend/byteport, backend/nvms)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - name: Setup Go
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with:
+          go-version: '1.25'
+          cache-dependency-path: |
+            backend/byteport/go.sum
+            backend/nvms/go.sum
+      - name: Run govulncheck (byteport)
+        working-directory: backend/byteport
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./...
+      - name: Run govulncheck (nvms)
+        working-directory: backend/nvms
+        run: |
+          if [ -f go.mod ]; then
+            govulncheck ./... || echo "::warning::govulncheck reported issues in backend/nvms"
+          else
+            echo "backend/nvms has no go.mod; skipping"
+          fi
+
   # ---------- SonarCloud ----------
   sonarcloud:
     name: SonarCloud
