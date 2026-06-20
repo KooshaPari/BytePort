@@ -20,7 +20,7 @@ func DeployProject(c *gin.Context) {
 	var newProject models.Project
 	if err := c.ShouldBindJSON(&newProject); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-
+		return
 	}
 	if err := newProject.BeforeSave(models.DB); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save project"})
@@ -32,11 +32,13 @@ func DeployProject(c *gin.Context) {
 	jsonProject, err := json.Marshal(newProject)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to convert project to json"})
+		return
 	}
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonProject))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create request"})
+		return
 	}
 	accessToken, err := lib.GenerateNVMSToken(newProject)
 	if err != nil {
@@ -60,6 +62,7 @@ func DeployProject(c *gin.Context) {
 	if err != nil {
 
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to deploy project"})
+		return
 	}
 	defer resp.Body.Close()
 
@@ -67,11 +70,13 @@ func DeployProject(c *gin.Context) {
 	if err != nil {
 
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to deploy project"})
+		return
 	}
 
 	if resp.StatusCode != http.StatusOK {
 
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to deploy project"})
+		return
 	}
 
 	if err := json.Unmarshal(body, &newProject); err != nil {
@@ -116,7 +121,7 @@ func TerminateInstance(c *gin.Context) {
 	var project models.Project
 	if err := c.ShouldBindJSON(&project); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-
+		return
 	}
 	project.User = user
 	//fmt.Println("Deleting project: ", project)
@@ -125,11 +130,13 @@ func TerminateInstance(c *gin.Context) {
 	jsonProject, err := json.Marshal(project)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to convert project to json"})
+		return
 	}
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonProject))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create request"})
+		return
 	}
 	accessToken, err := lib.GenerateNVMSToken(project)
 	if err != nil {
@@ -150,12 +157,14 @@ func TerminateInstance(c *gin.Context) {
 	if err != nil {
 
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to deploy project"})
+		return
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to deploy project"})
+		return
 	}
 
 	fmt.Println("Removing project from db: ")

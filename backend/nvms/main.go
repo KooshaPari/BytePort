@@ -24,14 +24,12 @@ func initRouter() *spinhttp.Router {
 }
 func validateAction(handler http.HandlerFunc) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-		/*  err := lib.AuthMiddleware(w, r)
+		err := lib.AuthMiddleware(w, r)
 		if err != nil {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
-		} else {*/
+		}
 		handler(w, r)
-		//}
-		//return
 	}
 }
 func main() {}
