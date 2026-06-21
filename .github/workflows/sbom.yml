@@ -47,6 +47,6 @@ jobs:
 
       - name: Attach to release (on tag)
         if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@c95f20ddfc40fe273f2e886b5d5cc2a201cb4b1d # v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           files: sbom.cdx.json
