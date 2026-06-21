@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	spinhttp "github.com/fermyon/spin-go-sdk/http"
+	spinhttp "github.com/fermyon/spin/sdk/go/v2/http"
 )
 
 // NewEC2 creates a new EC2 Client

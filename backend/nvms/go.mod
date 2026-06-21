@@ -6,7 +6,7 @@ toolchain go1.25.11
 
 require (
 	aidanwoods.dev/go-paseto v1.6.0
-	github.com/fermyon/spin-go-sdk v0.0.0-20240918180601-c2d4ef2e0904
+	github.com/fermyon/spin/sdk/go/v2 v2.2.0
 	github.com/google/uuid v1.6.0
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/kooshapari/nanovms v0.0.0

@@ -12,7 +12,7 @@ import (
 	"nvms/models"
 	"strings"
 
-	spinhttp "github.com/fermyon/spin-go-sdk/http"
+	spinhttp "github.com/fermyon/spin/sdk/go/v2/http"
 )
 
 func getArchiveURL(archiveURL string) string {

@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"nvms/projectManager"
 
-	spinhttp "github.com/fermyon/spin-go-sdk/http"
+	spinhttp "github.com/fermyon/spin/sdk/go/v2/http"
 	"github.com/julienschmidt/httprouter"
 )
 
