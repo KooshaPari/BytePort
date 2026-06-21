@@ -12,7 +12,7 @@ path = "src/lib.rs"
 [dependencies]
 pheno-errors = { path = "../../../pheno-errors" }
 pheno-tracing = { path = "../../../pheno-tracing" }
-pheno-config = { path = "../../../pheno-config" }
+pheno-config = { path = "../../../Configra/crates/pheno-config" }
 tracing = "0.1"
 serde = { version = "1.0", features = ["derive"] }
 

@@ -1,8 +1,9 @@
-# deny.yml — BytePort cargo-deny license/source/advisory gate
+# deny.yml — BytePort deny/license/source/advisory gate
 #
-# Renamed from cargo-deny.yml. Reads deny.toml at repo root.
+# cargo-deny for Rust (deny.toml at repo root) + gomod check for Go modules
+# (covers license, advisory, and module hygiene via `go mod verify`).
 #
-# Triggers: Cargo manifest changes, weekly schedule, manual dispatch.
+# Triggers: Cargo + Go manifest changes, weekly schedule, manual dispatch.
 # Concurrency: one in-flight run per ref; new commits cancel old runs.
 
 name: cargo-deny
@@ -15,6 +16,8 @@ on:
       - 'deny.toml'
       - '**/Cargo.toml'
       - '**/Cargo.lock'
+      - 'backend/**/go.mod'
+      - 'backend/**/go.sum'
   push:
     branches: [main, master]
     paths:
@@ -23,8 +26,11 @@ on:
       - 'deny.toml'
       - '**/Cargo.toml'
       - '**/Cargo.lock'
+      - 'backend/**/go.mod'
+      - 'backend/**/go.sum'
   schedule:
-    - cron: '0 9 * * 1'  # Mondays 09:00 UTC
+    - cron: '0 9 * * 1'  # Mondays 09:00 UTC — cargo-deny
+    - cron: '0 11 * * 3' # Wednesdays 11:00 UTC — gomod check (offset to avoid thundering herd)
   workflow_dispatch:
 
 concurrency:
@@ -49,3 +55,27 @@ jobs:
         uses: EmbarkStudios/cargo-deny-action@bb137d7af7e4fb67e5f82a49c4fce4fad40782fe # v6
         with:
           rust-version: stable
+
+  gomod-check:
+    name: Go modules check (backend/byteport)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - name: Setup Go
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with:
+          go-version: '1.25'
+          cache-dependency-path: backend/byteport/go.sum
+      - name: Verify go.sum integrity
+        working-directory: backend/byteport
+        run: go mod verify
+      - name: Verify build (clean module graph)
+        working-directory: backend/byteport
+        run: go build ./...
+      - name: Run govulncheck
+        working-directory: backend/byteport
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./...
