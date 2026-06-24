@@ -49,6 +49,10 @@ frontend/**/src-tauri/gen/
 .kotlin/
 target/
 
+# Build logs (ephemeral cargo / make / npm / tsc output)
+*.log
+logs/
+
 # Worktrees (in case you git-worktree-add within the repo)
 .worktrees/
 *-wtrees/
