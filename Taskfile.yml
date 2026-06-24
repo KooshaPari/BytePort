@@ -292,6 +292,75 @@ tasks:
       - task --list
 
   coverage:
-    desc: Measure code coverage (SSOT: see grade.sh for the canonical command).
+    desc: "Measure code coverage (SSOT: see grade.sh for the canonical command)."
     cmds:
       - cargo llvm-cov --workspace --fail-under-lines 85
+
+  # -- Eval layer (Benchora + portage) ---------------------------------
+  # These tasks shell out to the eval-layer tooling pinned in mise.toml.
+  # If those tools aren't installed, the tasks emit a helpful hint and
+  # exit 0 (they're not part of the default `task ci` pipeline).
+
+  bench:
+    desc: "Run criterion benches via Benchora. Requires `benchora` on PATH (install via `cargo install benchora --locked`). Gracefully no-ops if no benches/ directory exists in this crate."
+    cmds:
+      - |
+        if [ ! -d benches ]; then
+          echo "task bench: no benches/ directory in this crate; skipping."
+          exit 0
+        fi
+        if ! command -v benchora >/dev/null 2>&1; then
+          echo "::notice::benchora not installed; install with 'cargo install benchora --locked'."
+          echo "task bench: skipping."
+          exit 0
+        fi
+        echo "==> task bench: running Benchora on benches/"
+        benchora run --bench-dir benches --output target/benchora-report.json
+
+  bench-compare:
+    desc: "Compare current bench results against the baseline in target/benchora-baseline.json. Exit code 1 if any benchmark regressed by more than $BENCHORA_REGRESSION_THRESHOLD_PCT (default 5)."
+    cmds:
+      - |
+        if ! command -v benchora >/dev/null 2>&1; then
+          echo "::notice::benchora not installed; skipping bench-compare."
+          exit 0
+        fi
+        threshold=${BENCHORA_REGRESSION_THRESHOLD_PCT:-5}
+        echo "==> task bench-compare: regression threshold ${threshold}%"
+        benchora compare \
+          --baseline target/benchora-baseline.json \
+          --current target/benchora-report.json \
+          --fail-on-regression \
+          --regression-threshold-pct "$threshold"
+
+  eval:
+    desc: "Run portage agent evals. Requires `portage` on PATH (install via `uv tool install portage` or `pipx install portage`). Gracefully no-ops if no portage/tasks.toml exists."
+    cmds:
+      - |
+        if [ ! -f portage/tasks.toml ]; then
+          echo "task eval: no portage/tasks.toml; skipping."
+          exit 0
+        fi
+        if ! command -v portage >/dev/null 2>&1; then
+          echo "::notice::portage not installed; install with 'uv tool install portage'."
+          echo "task eval: skipping."
+          exit 0
+        fi
+        echo "==> task eval: running portage on portage/tasks.toml"
+        portage run --tasks portage/tasks.toml --output target/portage-report.json
+
+  eval-compare:
+    desc: "Compare current eval results against the baseline."
+    cmds:
+      - |
+        if ! command -v portage >/dev/null 2>&1; then
+          echo "::notice::portage not installed; skipping eval-compare."
+          exit 0
+        fi
+        portage compare \
+          --baseline target/portage-baseline.json \
+          --current target/portage-report.json
+
+  eval-pipeline:
+    desc: "Full eval-pipeline: bench + bench-compare + eval + eval-compare. Used by the periodic SOTA regression job (see .github/workflows/eval.yml)."
+    deps: [bench, bench-compare, eval, eval-compare]  # noqa
