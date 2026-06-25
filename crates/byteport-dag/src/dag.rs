@@ -65,8 +65,7 @@ where
 
     /// Insert a directed edge `from -> to`.
     ///
-    /// Both endpoints must already exist. This method does **not** check
-    /// for cycles — call [`check_cycle`] or [`topological_sort`] separately.
+    /// Both endpoints must already exist.
     pub fn add_edge(&mut self, from: K, to: K) -> Result<(), DagError> {
         if !self.nodes.contains(&from) {
             return Err(DagError::NodeNotFound(format!("{:?}", from)));
