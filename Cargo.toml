@@ -2,5 +2,6 @@
 resolver = "3"
 members = [
     "crates/byteport-transport",
+    "crates/byteport-cli",
     "frontend/web/src-tauri",
 ]
