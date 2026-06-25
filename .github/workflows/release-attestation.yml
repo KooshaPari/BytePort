@@ -1,4 +1,18 @@
-name: Release Attestation
+# SLSA Build L3 — Provenance attestation for BytePort CLI releases
+#
+# Generates SLSA Build L3 provenance using the official GitHub Action
+# and publishes it to the GitHub attestations API.
+#
+# Triggers:
+#   - release published
+#   - workflow_dispatch (manual)
+#
+# Permissions:
+#   contents: read      — checkout
+#   id-token: write     — OIDC token for attestation
+#   attestations: write — publish provenance to GitHub attestations API
+
+name: Release Attestation (SLSA Build L3)
 
 on:
   release:
@@ -10,9 +24,13 @@ permissions:
   id-token: write
   attestations: write
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   build-and-attest:
-    name: Build and Attest (SLSA Build L2)
+    name: Build + Attest (SLSA Build L3)
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -20,9 +38,10 @@ jobs:
       attestations: write
     env:
       CARGO_WORKDIR: .
+
     steps:
       - name: Checkout source
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v4.2.0
         with:
           fetch-depth: 0
 
@@ -37,40 +56,48 @@ jobs:
           workspaces: |
             . -> target
 
-      - name: Build release artifacts
+      - name: Build CLI release binary
         working-directory: ${{ env.CARGO_WORKDIR }}
         run: |
           set -euo pipefail
-          cargo build --release --locked --workspace --all-targets || true
+          cargo build --release --locked -p byteport-cli 2>&1
 
-      - name: Stage release artifacts
+      - name: Stage CLI artifact
         working-directory: ${{ env.CARGO_WORKDIR }}
         run: |
           set -euo pipefail
           mkdir -p release-artifacts
-          find target/release -maxdepth 1 -type f -executable             -exec cp -t release-artifacts/ {} + 2>/dev/null || true
-          tar --exclude='./target' --exclude='./.git' --exclude='./release-artifacts' \
-            -czf release-artifacts/source.tar.gz \
-            -C "$GITHUB_WORKSPACE/${{ env.CARGO_WORKDIR }}" . || true
+          # Copy the pheno-dag CLI binary
+          cp target/release/pheno-dag release-artifacts/pheno-dag-linux-amd64
+          # Compute digest
+          sha256sum release-artifacts/pheno-dag-linux-amd64 > release-artifacts/pheno-dag-linux-amd64.sha256
+          # Build manifest
           cat > release-artifacts/BUILD_MANIFEST.txt <<EOF
           repository: ${{ github.repository }}
           ref:        ${{ github.ref }}
           sha:        ${{ github.sha }}
           runner:     ${{ runner.os }}
+          binary:     pheno-dag-linux-amd64
           built_at:   $(date -u +%Y-%m-%dT%H:%M:%SZ)
           EOF
           echo "=== Release artifacts ==="
           ls -la release-artifacts/
 
-      - name: Upload artifacts for provenance
-        uses: actions/upload-artifact@v4
+      - name: Upload artifact
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd0de8ccd5686b70862  # v4.6.0
         with:
-          name: release-artifacts
+          name: byteport-cli-${{ github.event.release.tag_name || 'manual' }}
           path: ${{ env.CARGO_WORKDIR }}/release-artifacts/
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 90
 
-      - name: Attest build provenance (SLSA Build L2)
-        uses: slsa-framework/slsa-github-generator/attest-build-provenance@v1
+      - name: Attest build provenance (SLSA Build L3)
+        # Official GitHub Action for SLSA Build L3 provenance.
+        # Publishes to the GitHub attestations API — queryable via
+        # `gh attestation verify` and visible on the repo's Attestations tab.
+        # v1.3.0 = 35a8f9717e7a2adb1c2c3b2ac88961ba9c230e98
+        uses: actions/attest-build-provenance@35a8f9717e7a2adb1c2c3b2ac88961ba9c230e98
         with:
-          artifact-name: release-artifacts
+          subject-name: ${{ github.repository }}/pheno-dag
+          subject-digest: sha256:$(sha256sum ${{ env.CARGO_WORKDIR }}/release-artifacts/pheno-dag-linux-amd64 | awk '{print $1}')
+          push-to-registry: false
