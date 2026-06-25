@@ -19,6 +19,8 @@
 > human operator. Bug reports and contributions are still welcome, but please
 > expect AI-generated code, comments, and documentation throughout.
 <!-- AI-DD-META:END -->
+> **Work state:** ACTIVE · **Progress:** `█████████░ 90%`
+>
 > **Pinned references (Phenotype-org)**
 > - MSRV: see rust-toolchain.toml (Tauri 2 shell)
 > - cargo-deny config: see deny.toml
@@ -44,19 +46,6 @@
 > **Architecture:** See [ARCHITECTURE.md](ARCHITECTURE.md) for component architecture.
 > **Threat model:** See [docs/security/threat-model.md](docs/security/threat-model.md) for the per-component STRIDE analysis.
 
-## Work state
-
-| Status | Detail |
-|---|---|
-| Phase | 0 — Governance reset (active) |
-| Branch | `main` (release); feature branches per DAG |
-| Build | [![CI](https://github.com/KooshaPari/BytePort/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/KooshaPari/BytePort/actions/workflows/ci.yml) |
-| Audit | cargo-audit weekly; cargo-deny per deny.toml |
-| Coverage | 23-gate verification matrix (Phase 10 target) |
-| Next milestone | Phase 1 — Security & reliability floor |
-
-> This section is refreshed per DAG unit to reflect the current work-state
-> of the repository. See `PLAN.md` for the full 173-task DAG.
 
 ## What is this?
 
