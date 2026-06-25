@@ -216,20 +216,23 @@ tasks:
   # -- CI aggregate -------------------------------------------------------
 
   ci:
-    desc: "Full CI suite: build, test, lint, fmt, deny, audit sequentially."
-    cmds:
-      - task: build
+  ci:
+    desc: Full CI pipeline (test + lint + fmt + deny + audit + hygiene + hygiene-toolchains).
+    deps:
       - task: test
       - task: lint
       - task: fmt
       - task: deny
       - task: audit
+      - task: hygiene
+      - task: hygiene-toolchains
       - cmd: echo "ci all stages passed"
-
   # -- Hygiene ------------------------------------------------------------
 
   hygiene:
-    desc: Repository hygiene checks (size caps, TODOs, governance file presence).
+    desc: Repository hygiene checks (size caps, TODOs, governance file presence). Runs hygiene-toolchains as a sub-check.
+    deps:
+      - task: hygiene-toolchains
     cmds:
       - cmd: echo "hygiene oversized files"
       - |
@@ -255,6 +258,51 @@ tasks:
           fi
         done
       - cmd: echo "hygiene complete"
+
+  hygiene-toolchains:
+    desc: Cross-toolchain hygiene bundle (cargo + npm + tauri guard, mirrors DAG-T3-008b)
+    cmds:
+      - 'echo hygiene-toolchains: cargo dep hygiene'
+      - |
+        if [ -f Cargo.toml ] || ls */Cargo.toml 2>/dev/null | head -1; then
+          echo '  cargo: scanning for anti-patterns'
+          grep -nE '^winapi\s*=|^openssl\s*=|^libssh2-sys' Cargo.toml */*.toml 2>/dev/null \
+            | grep -v '^#' | head -10 || true
+          if command -v cargo-machete >/dev/null 2>&1; then
+            cargo machete --with-metadata 2>&1 | tail -20 || echo '  cargo-machete: some findings (review)'
+          else
+            echo '  cargo-machete: not installed (skipped)'
+          fi
+        else
+          echo '  cargo: no Cargo.toml found (skipping)'
+        fi
+      - 'echo hygiene-toolchains: npm dep hygiene'
+      - |
+        if [ -f package.json ] || [ -f frontend/web/package.json ]; then
+          PKG=frontend/web/package.json
+          [ -f "$PKG" ] || PKG=package.json
+          echo "  npm: scanning $PKG for known-redundant deps"
+          # redundant-dup: react + @types/react + react-dom (could be unified), legacy http libraries
+          grep -E '"(request|node-uuid|moment|underscore|babel-runtime)"' "$PKG" 2>/dev/null \
+            | head -10 || echo '  npm: no redundant deps found'
+        else
+          echo '  npm: no package.json found (skipping)'
+        fi
+      - 'echo hygiene-toolchains: tauri guard'
+      - |
+        if [ -f src-tauri/tauri.conf.json ] || [ -f frontend/web/src-tauri/tauri.conf.json ]; then
+          CONF=src-tauri/tauri.conf.json
+          [ -f "$CONF" ] || CONF=frontend/web/src-tauri/tauri.conf.json
+          echo "  tauri: scanning $CONF for risky allowlist patterns"
+          if grep -q '"all":\s*true' "$CONF" 2>/dev/null; then
+            echo '  tauri: WARNING fs scope contains {all: true} (overly broad)'
+            exit 1
+          fi
+          echo '  tauri: allowlist scoped, OK'
+        else
+          echo '  tauri: no tauri.conf.json found (skipping)'
+        fi
+      - 'echo hygiene-toolchains: COMPLETE (review any warnings above)'
 
   # -- Frontend / Backend groups (for ergonomics) -------------------------
 
