@@ -1,6 +1,7 @@
 [workspace]
-resolver = "3"
+resolver = "2"
 members = [
     "crates/byteport-transport",
+    "crates/byteport-cli",
     "frontend/web/src-tauri",
 ]
