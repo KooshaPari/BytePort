@@ -23,6 +23,59 @@ pub struct AppState {
     pub uploader: Arc<dyn UploadTransport>,
 }
 
+/// Application-level error type for the desktop IPC bridge.
+///
+/// Wraps transport errors and configuration errors with enough context
+/// for the frontend to render a useful message. The `thiserror` derive
+/// is intentionally not used here to keep the crate free of one more
+/// dependency; a manual impl is only ~15 lines.
+#[derive(Debug, thiserror::Error)]
+pub enum AppError {
+    /// The requested transport is not configured (missing env var,
+    /// invalid endpoint URL, etc.).
+    #[error("transport not configured: {0}")]
+    NotConfigured(String),
+
+    /// The underlying transport returned an error.
+    #[error("upload transport error: {0}")]
+    Transport(#[from] byteport_transport::UploadTransportError),
+
+    /// Generic I/O error.
+    #[error("i/o error: {0}")]
+    Io(#[from] std::io::Error),
+
+    /// Serialization error (JSON, base64, etc.).
+    #[error("serialization error: {0}")]
+    Serde(#[from] serde_json::Error),
+
+    /// Catch-all for any other error, preserving the source message.
+    #[error("internal error: {0}")]
+    Other(String),
+}
+
+// `tauri::ipc::IpcResponse` only requires `serde::Serialize`, but the
+// frontend (SvelteKit) expects a stable JSON shape with a `kind` tag so
+// the renderer can pick the right user-facing message.
+impl serde::Serialize for AppError {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut s = serializer.serialize_struct("AppError", 2)?;
+        let kind = match self {
+            Self::NotConfigured(_) => "not_configured",
+            Self::Transport(_) => "transport",
+            Self::Io(_) => "io",
+            Self::Serde(_) => "serde",
+            Self::Other(_) => "other",
+        };
+        s.serialize_field("kind", kind)?;
+        s.serialize_field("message", &self.to_string())?;
+        s.end()
+    }
+}
+
 /// Read the upload endpoint from `BYTEPORT_UPLOAD_URL` or fall back to the
 /// local dev default. Centralised so tests can stub the env.
 fn upload_endpoint() -> String {
