@@ -39,6 +39,26 @@
 
 ---
 
+### 2026-06-25 — E3: Recover tools CLI worktree (recover/byteport-stash-1-tools-cli)
+
+**recover(E3): recover byteport-cli crate from stash-1 tools CLI branch**
+
+- Cherry-picked 2 commits from `recover/byteport-stash-1-tools-cli` onto fresh `main`:
+  - `e927c790` — docs: add work-state header section to README
+  - `cfc560ad` — chore(byteport): add byteport-cli crate to workspace
+- 4 files changed (+230 lines):
+  - `crates/byteport-cli/Cargo.toml` — crate manifest for byteport-cli
+  - `crates/byteport-cli/src/main.rs` — CLI binary (codec, transport, UI, upload subcommands via clap)
+  - `Cargo.toml` — added `crates/byteport-cli` to workspace members
+  - `README.md` — added work-state header section
+- Branch: `recover/E3-tools-cli-worktree`
+- PR: [#249](https://github.com/KooshaPari/BytePort/pull/249)
+- Labels: `area:compute-infra`, `epic-e`
+- Epic: epic_E — BytePort: terminal UI, tools CLI, otel, governance
+- Grade: 8/10 (B) — cargo check blocked by concurrent lock, all recovery operations verified
+
+---
+
 ### 2026-06-25 — B11: Delete local NVMS implementation after repoint
 
 **consolidate(B11): delete local NVMS implementation after repoint**
