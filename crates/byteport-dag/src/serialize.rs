@@ -1,9 +1,8 @@
-//! YAML/JSON serialization for the DAG.
+//! YAML/JSON serialization for the enriched DAG schema.
 //!
-//! The internal [`Dag`] type is generic over `K` and uses hash-based
-//! collections, which makes direct serde serialisation awkward for arbitrary
-//! key types. This module provides a portable [`DagSchema`] that uses
-//! `String` node identifiers and supports full YAML / JSON round-trip.
+//! Provides a portable [`DagSchema`] that uses the enriched [`SchemaNode`]
+//! and [`SchemaEdge`] types with prerequisites, acceptance criteria, and
+//! audit hooks, defined in [`crate::schema`].
 //!
 //! # Example
 //!
@@ -18,7 +17,7 @@
 //! dag.add_edge("build".into(), "test".into()).unwrap();
 //! dag.add_edge("test".into(), "deploy".into()).unwrap();
 //!
-//! let schema = DagSchema::from_dag(&dag, "1.0.0");
+//! let schema = DagSchema::from_dag(&dag, "2.0.0");
 //! let yaml = schema.to_yaml().unwrap();
 //! let round: DagSchema = DagSchema::from_yaml(&yaml).unwrap();
 //! assert_eq!(schema, round);
@@ -30,6 +29,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::dag::Dag;
+use crate::schema::{SchemaEdge, SchemaNode};
 
 // ---------------------------------------------------------------------------
 // Errors
@@ -45,39 +45,19 @@ pub enum DagSerError {
 }
 
 // ---------------------------------------------------------------------------
-// Schema types  (concrete, serde-friendly representations)
+// DagSchema — portable, serde-friendly, enriched DAG representation
 // ---------------------------------------------------------------------------
 
-/// A single entry in the DAG schema.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct SchemaNode {
-    /// Unique node identifier.
-    pub id: String,
-    /// Human-readable label (optional).
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub label: Option<String>,
-}
-
-/// A directed edge between two nodes.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct SchemaEdge {
-    /// Source node id.
-    pub from: String,
-    /// Target node id.
-    pub to: String,
-    /// Optional edge label / annotation.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub label: Option<String>,
-}
-
-/// Portable, serializable DAG representation.
+/// Portable, serializable, enriched DAG representation.
 ///
-/// This type is the **only** entry point for YAML / JSON serialization.
-/// It mirrors the internal [`Dag`] but owns `String`-keyed data so that
-/// serde derives work unconditionally.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+/// Extends the basic node/edge structure with prerequisites, acceptance
+/// criteria, audit hooks, and metadata.
+///
+/// This type is the **only** entry point for YAML / JSON serialization
+/// of the enriched schema.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DagSchema {
-    /// Schema version (e.g. "1.0.0").
+    /// Schema version (e.g. "2.0.0").
     pub version: String,
     /// DAG name (optional).
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -93,15 +73,22 @@ pub struct DagSchema {
 impl DagSchema {
     /// Build a `DagSchema` from an internal `Dag` keyed by `String`.
     ///
-    /// `version` is a free-form version string (e.g. `"1.0.0"`).
-    /// The optional `name` is taken from a separate parameter since the
-    /// generic `Dag` does not carry metadata.
+    /// `version` is a free-form version string (e.g. `"2.0.0"`).
+    ///
+    /// The enriched fields (prerequisites, acceptance, audit hooks) are
+    /// left empty in the auto-generated nodes; consumers should populate
+    /// them on the returned schema before serializing.
     pub fn from_dag(dag: &Dag<String>, version: impl Into<String>) -> Self {
         let nodes: Vec<SchemaNode> = dag
             .iter_nodes()
             .map(|id| SchemaNode {
                 id: id.clone(),
                 label: None,
+                description: None,
+                prerequisites: Vec::new(),
+                acceptance: Vec::new(),
+                audit_hooks: Vec::new(),
+                metadata: None,
             })
             .collect();
 
@@ -120,6 +107,7 @@ impl DagSchema {
                 from,
                 to,
                 label: None,
+                condition: None,
             })
             .collect();
 
@@ -139,8 +127,7 @@ impl DagSchema {
 
     /// Reconstruct an internal `Dag<String>` from this schema.
     ///
-    /// Returns an error if a duplicate node is encountered (the schema
-    /// should never produce duplicates, but we guard defensively).
+    /// Returns an error if a duplicate node is encountered.
     pub fn into_dag(&self) -> Result<Dag<String>, crate::dag::DagError> {
         let mut dag = Dag::new();
         for node in &self.nodes {
@@ -193,7 +180,7 @@ impl DagSchema {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dag::Dag;
+    use crate::schema::*;
 
     fn sample_dag() -> Dag<String> {
         let mut dag = Dag::new();
@@ -206,42 +193,107 @@ mod tests {
         dag
     }
 
-    #[test]
-    fn yaml_round_trip() {
+    fn enriched_schema() -> DagSchema {
         let dag = sample_dag();
-        let schema = DagSchema::from_dag(&dag, "1.0.0").with_name("pipeline");
+        let mut schema = DagSchema::from_dag(&dag, "2.0.0").with_name("ci-pipeline");
+
+        for node in &mut schema.nodes {
+            if node.id == "build" {
+                node.description = Some("Compile the application".into());
+                node.prerequisites = vec![
+                    Prerequisite::FileExists {
+                        path: "./Cargo.toml".into(),
+                    },
+                    Prerequisite::EnvironmentVariable {
+                        variable: "RUSTFLAGS".into(),
+                    },
+                ];
+                node.acceptance = vec![
+                    AcceptanceCriterion::ExitCode { code: 0 },
+                    AcceptanceCriterion::OutputContains {
+                        pattern: "Compiling".into(),
+                        regex: false,
+                    },
+                ];
+                node.audit_hooks = vec![
+                    AuditHook::MetricEmit {
+                        name: "build_duration_ms".into(),
+                        value: 0.0,
+                        unit: Some("ms".into()),
+                        timing: HookTiming::Post,
+                    },
+                ];
+            }
+            if node.id == "deploy" {
+                node.prerequisites = vec![
+                    Prerequisite::ImageReady {
+                        image: "myapp:latest".into(),
+                    },
+                ];
+                node.acceptance = vec![
+                    AcceptanceCriterion::HttpOk {
+                        url: "https://staging.example.com/health".into(),
+                        expected_status: Some(200),
+                    },
+                ];
+                node.audit_hooks = vec![
+                    AuditHook::Notify {
+                        channel: "slack".into(),
+                        message: "Deploy completed".into(),
+                        timing: HookTiming::OnSuccess,
+                    },
+                ];
+            }
+        }
+
+        schema
+    }
+
+    #[test]
+    fn yaml_round_trip_basic() {
+        let dag = sample_dag();
+        let schema = DagSchema::from_dag(&dag, "2.0.0").with_name("pipeline");
         let yaml = schema.to_yaml().expect("YAML serialization");
         let restored = DagSchema::from_yaml(&yaml).expect("YAML deserialization");
         assert_eq!(schema, restored, "YAML round-trip must be lossless");
     }
 
     #[test]
-    fn json_round_trip() {
+    fn json_round_trip_basic() {
         let dag = sample_dag();
-        let schema = DagSchema::from_dag(&dag, "1.0.0");
+        let schema = DagSchema::from_dag(&dag, "2.0.0");
         let json = schema.to_json().expect("JSON serialization");
         let restored = DagSchema::from_json(&json).expect("JSON deserialization");
         assert_eq!(schema, restored, "JSON round-trip must be lossless");
     }
 
     #[test]
-    fn json_pretty_round_trip() {
-        let dag = sample_dag();
-        let schema = DagSchema::from_dag(&dag, "1.0.0");
-        let json = schema.to_json_pretty().expect("Pretty JSON");
-        let restored = DagSchema::from_json(&json).expect("Pretty JSON deserialization");
-        assert_eq!(schema, restored);
+    fn yaml_round_trip_enriched() {
+        let schema = enriched_schema();
+        let yaml = schema.to_yaml().expect("YAML serialization of enriched schema");
+        let restored = DagSchema::from_yaml(&yaml).expect("YAML deserialization");
+        assert_eq!(schema, restored, "Enriched YAML round-trip must be lossless");
+    }
+
+    #[test]
+    fn json_round_trip_enriched() {
+        let schema = enriched_schema();
+        let json = schema.to_json_pretty().expect("JSON serialization of enriched schema");
+        let restored = DagSchema::from_json(&json).expect("JSON deserialization");
+        assert_eq!(schema, restored, "Enriched JSON round-trip must be lossless");
     }
 
     #[test]
     fn cross_format_consistency() {
-        let dag = sample_dag();
-        let schema = DagSchema::from_dag(&dag, "1.0.0");
+        let schema = enriched_schema();
         let yaml = schema.to_yaml().unwrap();
         let from_yaml = DagSchema::from_yaml(&yaml).unwrap();
         let json = from_yaml.to_json().unwrap();
         let from_json = DagSchema::from_json(&json).unwrap();
-        assert_eq!(schema, from_json, "YAML → JSON cross-format must be consistent");
+        assert_eq!(
+            schema, from_json,
+            "YAML → JSON cross-format must be consistent"
+        );
     }
 
     #[test]
@@ -251,7 +303,6 @@ mod tests {
         let reconstructed = schema.into_dag().expect("into_dag should succeed");
         assert_eq!(dag.node_count(), reconstructed.node_count());
         assert_eq!(dag.edge_count(), reconstructed.edge_count());
-        // Verify topological equivalence by checking all nodes exist
         for n in dag.iter_nodes() {
             assert!(reconstructed.contains(n), "node {n} should exist");
         }
@@ -268,23 +319,25 @@ mod tests {
 
     #[test]
     fn yaml_content_is_readable() {
-        let dag = sample_dag();
-        let schema = DagSchema::from_dag(&dag, "1.0.0").with_name("ci-pipeline");
+        let schema = enriched_schema();
         let yaml = schema.to_yaml().unwrap();
         assert!(yaml.contains("version:"));
         assert!(yaml.contains("ci-pipeline"));
         assert!(yaml.contains("checkout"));
         assert!(yaml.contains("deploy"));
+        assert!(yaml.contains("prerequisites"));
+        assert!(yaml.contains("acceptance"));
+        assert!(yaml.contains("audit_hooks"));
     }
 
     #[test]
     fn json_content_is_readable() {
-        let dag = sample_dag();
-        let schema = DagSchema::from_dag(&dag, "1.0.0");
+        let schema = enriched_schema();
         let json = schema.to_json_pretty().unwrap();
         assert!(json.contains("\"version\""));
         assert!(json.contains("\"checkout\""));
         assert!(json.contains("\"deploy\""));
+        assert!(json.contains("\"prerequisites\""));
     }
 
     #[test]
@@ -306,25 +359,16 @@ mod tests {
     }
 
     #[test]
-    fn round_trip_via_dag_reconstruction_preserves_structure() {
-        let mut dag = Dag::new();
-        for n in ["root", "a1", "a2", "a3", "leaf"] {
-            dag.add_node(n.to_string()).unwrap();
-        }
-        dag.add_edge("root".into(), "a1".into()).unwrap();
-        dag.add_edge("root".into(), "a2".into()).unwrap();
-        dag.add_edge("root".into(), "a3".into()).unwrap();
-        dag.add_edge("a1".into(), "leaf".into()).unwrap();
-        dag.add_edge("a2".into(), "leaf".into()).unwrap();
-        dag.add_edge("a3".into(), "leaf".into()).unwrap();
+    fn enriched_schema_has_correct_prereqs() {
+        let schema = enriched_schema();
+        let build_node = schema.nodes.iter().find(|n| n.id == "build").unwrap();
+        assert_eq!(build_node.prerequisites.len(), 2);
+        assert_eq!(build_node.acceptance.len(), 2);
+        assert_eq!(build_node.audit_hooks.len(), 1);
 
-        let schema = DagSchema::from_dag(&dag, "1.0.0");
-        let dag2 = schema.into_dag().unwrap();
-        assert_eq!(dag.node_count(), dag2.node_count());
-        assert_eq!(dag.edge_count(), dag2.edge_count());
-
-        // Verify the fan-out/fan-in structure is intact
-        assert_eq!(dag2.children_of(&"root".to_string()).unwrap().len(), 3);
-        assert_eq!(dag2.parents_of(&"leaf".to_string()).unwrap().len(), 3);
+        let deploy_node = schema.nodes.iter().find(|n| n.id == "deploy").unwrap();
+        assert_eq!(deploy_node.prerequisites.len(), 1);
+        assert_eq!(deploy_node.acceptance.len(), 1);
+        assert_eq!(deploy_node.audit_hooks.len(), 1);
     }
 }

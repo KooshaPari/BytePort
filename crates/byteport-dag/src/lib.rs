@@ -4,33 +4,35 @@
 //!
 //! ## Modules
 //!
-//! | Module        | Description                                         |
-//! |---------------|-----------------------------------------------------|
-//! | [`artifact`] | Artifact-aware scheduling (file-level conflict detection) |
-//! | [`dag`]       | Generic directed-acyclic-graph data structure        |
-//! | [`topo`]      | Topological sort (Kahn's algorithm + DFS variant)   |
-//! | [`scheduler`] | Parallel-bucket scheduler built on topological order |
-//! | [`serialize`] | YAML/JSON round-trip serialization (DagSchema)      |
+//! | Module        | Description                                                |
+//! |---------------|------------------------------------------------------------|
+//! | [`dag`]       | Generic directed-acyclic-graph data structure               |
+//! | [`topo`]      | Topological sort (Kahn's algorithm + DFS variant)          |
+//! | [`scheduler`] | Parallel-bucket scheduler built on topological order        |
+//! | [`schema`]    | Enriched node/edge schema: prereqs, acceptance, audit hooks |
+//! | [`serialize`] | YAML/JSON round-trip serialization for the enriched schema |
 //!
 //! ## Example
 //!
 //! ```rust
 //! use byteport_dag::dag::Dag;
-//! use byteport_dag::scheduler;
+//! use byteport_dag::serialize::DagSchema;
 //!
-//! let mut dag = Dag::new();
-//! dag.add_node("build").unwrap();
-//! dag.add_node("test").unwrap();
-//! dag.add_node("deploy").unwrap();
-//! dag.add_edge("build", "test").unwrap();
-//! dag.add_edge("test", "deploy").unwrap();
+//! let mut dag: Dag<String> = Dag::new();
+//! dag.add_node("build".into()).unwrap();
+//! dag.add_node("test".into()).unwrap();
+//! dag.add_node("deploy".into()).unwrap();
+//! dag.add_edge("build".into(), "test".into()).unwrap();
+//! dag.add_edge("test".into(), "deploy".into()).unwrap();
 //!
-//! let sched = scheduler::schedule(&dag).unwrap();
-//! assert_eq!(sched.buckets.len(), 3);
+//! let schema = DagSchema::from_dag(&dag, "2.0.0");
+//! let yaml = schema.to_yaml().unwrap();
+//! let round: DagSchema = DagSchema::from_yaml(&yaml).unwrap();
+//! assert_eq!(schema, round);
 //! ```
 
-pub mod artifact;
 pub mod dag;
 pub mod topo;
 pub mod scheduler;
+pub mod schema;
 pub mod serialize;
