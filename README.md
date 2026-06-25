@@ -19,13 +19,15 @@
 > human operator. Bug reports and contributions are still welcome, but please
 > expect AI-generated code, comments, and documentation throughout.
 <!-- AI-DD-META:END -->
+
 **Work state:** docs polish in progress; README standardized for CI-green merges.
-`██████████` 10/10
+`██████████` 10/10 | ACTIVE · **Progress:** `█████████░ 90%`
+
 **Usage / Quickstart:** `git clone` the repo, read `ARCHITECTURE.md` for system context, then run the stack from `backend/byteport/`, `backend/nvms/`, and `frontend/web/` using the commands below.
 
 BytePort is a polyglot deployment platform for self-hosted portfolio and infrastructure workflows. It combines a Go backend, a Go-based NVMS runtime, a SvelteKit web frontend, and a Tauri shell so one manifest can drive deployment, endpoint registration, and showcase metadata generation across the stack.
 
-> **Pinned references (Phenotype-org)**
+**Pinned references (Phenotype-org)**
 > - MSRV: see rust-toolchain.toml (Tauri 2 shell)
 > - cargo-deny config: see deny.toml
 > - cargo-audit: rustsec/audit-check@v2 weekly
@@ -50,19 +52,6 @@ BytePort is a polyglot deployment platform for self-hosted portfolio and infrast
 > **Architecture:** See [ARCHITECTURE.md](ARCHITECTURE.md) for component architecture.
 > **Threat model:** See [docs/security/threat-model.md](docs/security/threat-model.md) for the per-component STRIDE analysis.
 
-## Work state
-
-| Status | Detail |
-|---|---|
-| Phase | 0 — Governance reset (active) |
-| Branch | `main` (release); feature branches per DAG |
-| Build | [![CI](https://github.com/KooshaPari/BytePort/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/KooshaPari/BytePort/actions/workflows/ci.yml) |
-| Audit | cargo-audit weekly; cargo-deny per deny.toml |
-| Coverage | 23-gate verification matrix (Phase 10 target) |
-| Next milestone | Phase 1 — Security & reliability floor |
-
-> This section is refreshed per DAG unit to reflect the current work-state
-> of the repository. See `PLAN.md` for the full 173-task DAG.
 
 ## What is this?
 
