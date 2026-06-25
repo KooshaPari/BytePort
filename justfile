@@ -39,7 +39,7 @@ go-vet:
 
 # gofmt -l . (advisory; CI runs the same)
 go-fmt:
-    @unformatted=$(gofmt -l backend/byteport backend/nvms); \
+    @unformatted=$(gofmt -l backend/byteport); \
     if [ -n "$unformatted" ]; then \
         echo "The following files are not gofmt-clean:"; \
         echo "$unformatted"; \
@@ -54,7 +54,7 @@ go-lint:
 
 # Format all Go in place
 go-fmt-fix:
-    gofmt -w backend/byteport backend/nvms
+    gofmt -w backend/byteport
 
 # ----- rust -----
 # cargo build --workspace
