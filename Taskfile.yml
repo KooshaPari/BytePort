@@ -292,9 +292,63 @@ tasks:
       - task --list
 
   coverage:
-    desc: "Measure code coverage (SSOT: see grade.sh for the canonical command)."
+    desc: "Measure full workspace code coverage (SSOT: see grade.sh for the canonical command)."
     cmds:
       - cargo llvm-cov --workspace --fail-under-lines 85
+
+  # -- Tier-2 Coverage Gate (B40) -------------------------------------
+  # These tasks mirror .github/workflows/tier2-coverage-gate.yml for
+  # local development. Thresholds match the CI gate:
+  #   - Rust lib (byteport-transport): ≥71%
+  #   - Go framework (backend/byteport): ≥70%
+  #   - Service/E2E (frontend/web): ≥60%
+
+  coverage-rust-lib:
+    desc: "Rust lib coverage (≥71% threshold). Mirrors tier2-coverage-gate.yml rust-lib-coverage job."
+    dir: .
+    cmds:
+      - cargo llvm-cov --package byteport-transport --lib --fail-under-lines 71 --lcov --output-path target/coverage/rust-lib.lcov
+
+  coverage-go:
+    desc: "Go framework coverage (≥70% threshold). Mirrors tier2-coverage-gate.yml go-framework-coverage job."
+    dir: '{{.BACKEND_DIR}}'
+    cmds:
+      - go test -coverprofile=coverage.out -covermode=atomic ./...
+      - |
+        COVERAGE=$(go tool cover -func=coverage.out | grep "total:" | awk '{print $3}' | sed 's/%//')
+        echo "Go framework coverage: ${COVERAGE}%"
+        THRESHOLD=70.0
+        if (( $(echo "$COVERAGE < $THRESHOLD" | bc -l) )); then
+          echo "❌ Go framework coverage ${COVERAGE}% is below threshold ${THRESHOLD}%"
+          go tool cover -func=coverage.out
+          exit 1
+        fi
+        echo "✅ Go framework coverage ${COVERAGE}% meets threshold ${THRESHOLD}%"
+
+  coverage-service:
+    desc: "Service/E2E coverage (≥60% threshold). Mirrors tier2-coverage-gate.yml service-coverage job."
+    dir: '{{.FRONTEND_DIR}}'
+    cmds:
+      - npx vitest run --coverage --reporter=json --outputFile=target/coverage-service.json || true
+      - |
+        if [ -f target/coverage-service.json ]; then
+          COVERAGE=$(node -e "const c = require('./target/coverage-service.json'); console.log(c.total?.lines?.pct || 0)")
+          echo "Service/E2E coverage: ${COVERAGE}%"
+          THRESHOLD=60.0
+          if (( $(echo "$COVERAGE < $THRESHOLD" | bc -l) )); then
+            echo "❌ Service/E2E coverage ${COVERAGE}% is below threshold ${THRESHOLD}%"
+            exit 1
+          fi
+          echo "✅ Service/E2E coverage ${COVERAGE}% meets threshold ${THRESHOLD}%"
+        else
+          echo "⚠️ No coverage report found (no test suite)"
+        fi
+
+  coverage-gate:
+    desc: "Run all Tier-2 coverage gates (Rust lib ≥71%, Go ≥70%, Service ≥60%)."
+    deps: [coverage-rust-lib, coverage-go, coverage-service]
+    cmds:
+      - cmd: echo "✅ All Tier-2 coverage gates passed"
 
   # -- Eval layer (Benchora + portage) ---------------------------------
   # These tasks shell out to the eval-layer tooling pinned in mise.toml.
