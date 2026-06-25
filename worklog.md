@@ -1,6 +1,19 @@
 # BytePort Worklog
 
 ### 2026-06-25 — E4: Lift recovered tools CLI to branch + open PR
+### 2026-06-25 — A21: Refresh README work-state header
+
+**docs(A21): add work-state header to README**
+
+- Inserted `> **Work state:** ACTIVE` blockquote after `<!-- AI-DD-META:END -->`
+- Removed verbose `## Work state` section (merged into STATUS.md)
+- Branch: `docs/A21-readme-workstate`
+- PR: [#246](https://github.com/KooshaPari/BytePort/pull/246)
+- Epic: epic_A — Hygiene garden & branch slim
+
+---
+
+## Recent Entries
 
 **recover(E4): lift tools CLI to PR — byteport-cli crate (clap + transport client)**
 
