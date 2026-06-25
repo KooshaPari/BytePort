@@ -1,7 +1,7 @@
 # Taskfile.yml for BytePort
 # ------------------------------------------------------------------
 # Hybrid task runner for BytePort's three engines:
-#   - Go (backend/byteport + backend/nvms)         # primary backend
+#   - Go (backend/byteport)                          # primary backend
 #   - TypeScript / SvelteKit (frontend/web)         # primary web frontend
 #   - Rust / Tauri (frontend/web/src-tauri)        # desktop/mobile shell
 #
@@ -162,7 +162,7 @@ tasks:
     dir: .
     cmds:
       - |
-        unformatted=$(gofmt -l backend/byteport backend/nvms 2>/dev/null || true)
+        unformatted=$(gofmt -l backend/byteport 2>/dev/null || true)
         if [ -n "$unformatted" ]; then
           echo "::warning::The following Go files are not gofmt-clean:"
           echo "$unformatted"
@@ -184,7 +184,7 @@ tasks:
     desc: Auto-format everything in place.
     cmds:
       - cargo fmt --all
-      - cmd: gofmt -w backend/byteport backend/nvms
+      - cmd: gofmt -w backend/byteport
         ignore_error: true
       - cmd: npm run format
         dir: '{{.FRONTEND_DIR}}'
@@ -242,7 +242,7 @@ tasks:
       - cmd: echo "hygiene active TODO markers"
       - |
         grep -rnE "todo!|TODO|FIXME|XXX|HACK|unimplemented!" \
-          backend/byteport backend/nvms frontend/web/src frontend/web/src-tauri/src \
+          backend/byteport frontend/web/src frontend/web/src-tauri/src \
           --include="*.go" --include="*.rs" --include="*.ts" --include="*.svelte" \
           2>/dev/null | grep -v node_modules | grep -v target | head -20 || true
       - cmd: echo "hygiene governance file presence"
