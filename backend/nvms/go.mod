@@ -9,6 +9,7 @@ require (
 	github.com/fermyon/spin-go-sdk v0.0.0-20240918180601-c2d4ef2e0904
 	github.com/google/uuid v1.6.0
 	github.com/julienschmidt/httprouter v1.3.0
+	github.com/kooshapari/nanovms v0.0.0
 	github.com/zalando/go-keyring v0.2.8
 	gopkg.in/yaml.v2 v2.4.0
 )
@@ -20,3 +21,5 @@ require (
 	golang.org/x/crypto v0.50.0 // indirect
 	golang.org/x/sys v0.44.0 // indirect
 )
+
+replace github.com/kooshapari/nanovms => ../../../phenotype-tooling/crates/nanovms
