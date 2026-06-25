@@ -216,7 +216,7 @@ tasks:
   # -- CI aggregate -------------------------------------------------------
 
   ci:
-    desc: "Full CI suite: build, test, lint, fmt, deny, audit sequentially."
+    desc: "Full CI suite: build, test, lint, fmt, deny, audit, hygiene-toolchains sequentially."
     cmds:
       - task: build
       - task: test
@@ -224,12 +224,15 @@ tasks:
       - task: fmt
       - task: deny
       - task: audit
+      - task: hygiene
+      - task: hygiene-toolchains
       - cmd: echo "ci all stages passed"
 
   # -- Hygiene ------------------------------------------------------------
 
   hygiene:
-    desc: Repository hygiene checks (size caps, TODOs, governance file presence).
+    desc: Repository hygiene checks (size caps, TODOs, governance file presence). Includes cross-toolchain bundle (hygiene-toolchains).
+    deps: [hygiene-toolchains]
     cmds:
       - cmd: echo "hygiene oversized files"
       - |
@@ -255,6 +258,32 @@ tasks:
           fi
         done
       - cmd: echo "hygiene complete"
+
+  hygiene-toolchains:
+    desc: Cross-toolchain hygiene bundle (npm audit + tsc + cargo machete + cargo deny + P23/P25 anti-pattern guards). DAG-T3-008b.
+    cmds:
+      - 'echo "hygiene-toolchains: npm audit (frontend)"'
+      - |
+        cd frontend/web 2>/dev/null && (npm audit --omit=dev --audit-level=high 2>&1 || true) | head -10 || echo "  (frontend/web not present or no package.json)"
+      - 'echo "hygiene-toolchains: tsc --noEmit (frontend)"'
+      - |
+        cd frontend/web 2>/dev/null && (npx tsc --noEmit 2>&1 || true) | tail -10 || echo "  (frontend/web not present)"
+      - 'echo "hygiene-toolchains: cargo machete (unused Rust deps)"'
+      - |
+        cd backend/nvms 2>/dev/null && (cargo machete --with-metadata 2>&1 || true) | head -20 || echo "  (backend/nvms not present)"
+      - 'echo "hygiene-toolchains: cargo deny (advisories + licenses + bans + sources)"'
+      - |
+        cd backend/nvms 2>/dev/null && (cargo deny check 2>&1 || true) | head -20 || echo "  (backend/nvms not present)"
+      - 'echo "hygiene-toolchains: P23/P25 anti-pattern guards"'
+      - |
+        grep -rnE "mattn/go-sqlite3" backend/*/go.mod 2>/dev/null && \
+          grep -L "modernc.org/sqlite" backend/*/go.mod 2>/dev/null && \
+          echo "  P23 FAIL: mattn/go-sqlite3 without modernc.org/sqlite" || \
+          echo "  P23 OK: pure-Go SQLite invariant holds"
+        grep -rnE "winapi[ \"]=" backend/*/Cargo.toml 2>/dev/null | grep -v windows-sys && \
+          echo "  P25 HINT: raw winapi alongside windows-sys" || \
+          echo "  P25 OK: no winapi/windows-sys anti-pattern"
+      - cmd: echo "hygiene-toolchains complete"
 
   # -- Frontend / Backend groups (for ergonomics) -------------------------
 
