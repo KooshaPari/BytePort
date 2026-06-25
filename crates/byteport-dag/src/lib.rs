@@ -6,6 +6,7 @@
 //!
 //! | Module        | Description                                         |
 //! |---------------|-----------------------------------------------------|
+//! | [`artifact`] | Artifact-aware scheduling (file-level conflict detection) |
 //! | [`dag`]       | Generic directed-acyclic-graph data structure        |
 //! | [`topo`]      | Topological sort (Kahn's algorithm + DFS variant)   |
 //! | [`scheduler`] | Parallel-bucket scheduler built on topological order |
@@ -28,6 +29,7 @@
 //! assert_eq!(sched.buckets.len(), 3);
 //! ```
 
+pub mod artifact;
 pub mod dag;
 pub mod topo;
 pub mod scheduler;
