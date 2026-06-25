@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- B34: Tier-1 enforcement on PR (cargo audit security scan, CycloneDX SBOM
+  generation/validation, LICENSE presence check, CHANGELOG update check)
+
 ### Changed
 
 ### Deprecated

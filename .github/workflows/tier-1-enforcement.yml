@@ -87,6 +87,7 @@ jobs:
             echo "✅ LICENSE.md file present"
             head -5 LICENSE.md
             lic_file="LICENSE.md"
+<<<<<<< HEAD
           elif [ -f LICENSE-Apache-2.0 ]; then
             echo "✅ LICENSE-Apache-2.0 file present"
             head -5 LICENSE-Apache-2.0
@@ -95,6 +96,8 @@ jobs:
             echo "✅ LICENSE.txt file present"
             head -5 LICENSE.txt
             lic_file="LICENSE.txt"
+=======
+>>>>>>> ed412378 (feat(ci): add Tier-1 enforcement workflow on PR)
           else
             echo "❌ No LICENSE file found"
             exit 1
