@@ -23,10 +23,10 @@ pub fn dirs_home() -> Option<PathBuf> {
 /// assert_eq!(expand("/etc/passwd"), PathBuf::from("/etc/passwd"));
 /// ```
 pub fn expand(p: &str) -> PathBuf {
-    if let Some(rest) = p.strip_prefix("~/")
-        && let Some(home) = dirs_home()
-    {
-        return home.join(rest);
+    if let Some(rest) = p.strip_prefix("~/") {
+        if let Some(home) = dirs_home() {
+            return home.join(rest);
+        }
     }
     PathBuf::from(p)
 }
