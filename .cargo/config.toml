@@ -24,7 +24,10 @@
 # `cargo llvm-cov --workspace --lcov --output-path coverage-rust.lcov`
 # which sets the rest of the pipeline (LLVM_PROFILE_FILE, branch
 # coverage, HTML output, etc.).
-[build]
+# Coverage instrumentation applied only to native (host) builds.
+# Cross-compilation targets (wasm, etc.) are excluded because
+# the profiler runtime is not available outside the host triple.
+[target.x86_64-pc-windows-msvc]
 rustflags = ["-C", "instrument-coverage"]
 
 # Convenience aliases so BytePort contributors can run coverage
