@@ -56,3 +56,14 @@ c7920f60 feat(transport): add terminal_ui and ui ports (recovered from stash sid
 ## Verification
 
 `cargo check --workspace` was invoked but timed out due to network dependency resolution (clap-ext git dep). The modified Rust files (`terminal_ui.rs`, `mod.rs`) pass `rustfmt --check` (only minor formatting diffs — no syntax errors).
+
+## A11 Verification (2026-06-24)
+
+| Check | Status | Detail |
+|-------|--------|--------|
+| `terminal_ui.rs` on `main` | PASS | 370 lines at `crates/byteport-transport/src/ports/terminal_ui.rs` |
+| `mod.rs` wiring | PASS | `pub mod terminal_ui;` present in `ports/mod.rs` |
+| Local branch remnants | PASS | No `recover/byteport-stash-*` local branches exist |
+| Remote branch remnants | PASS | No `recover/byteport-stash-*` remote refs exist |
+| Stale remote-tracking pruned | PASS | `git remote prune origin` executed |
+| `refs/original` / `refs/replace` | PASS | Namespace clean — no spilled refs |
