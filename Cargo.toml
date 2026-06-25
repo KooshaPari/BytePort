@@ -2,10 +2,7 @@
 resolver = "3"
 members = [
     "crates/byteport-transport",
-    "crates/byteport-cli",
     "crates/byteport-dag",
-    "crates/byteport-otel",
-    "crates/byteport-registry-adapter",
-    "crates/phenotype-types",
+    "crates/byteport-cli",
     "frontend/web/src-tauri",
 ]
