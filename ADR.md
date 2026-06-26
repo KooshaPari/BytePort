@@ -71,3 +71,20 @@
 **Decision:** CLI is the primary interface. Web UI is secondary for status/monitoring.
 
 **Rationale:** CLI fits naturally into existing developer workflows and CI/CD pipelines. Scriptable and composable.
+
+---
+
+## ADR-008 — OTel CLI Command Lifecycle Tracing
+
+**Status:** Accepted
+
+**Context:** BytePort CLI commands need observability for debugging and usage monitoring. E7 requires tracing CLI command lifecycle with OTel spans.
+
+**Decision:** Use the `byteport-otel` tracing module to create explicit spans for each CLI command (codec, transport, ui, upload) and sub-spans for each sub-operation within those commands. Spans use `SpanKind::Internal` for command execution and `SpanKind::Client` for transport operations, consistent with ADR-007 patterns.
+
+**Rationale:** Explicit span creation (via `start_cli_command_span` and `start_cli_sub_span`) provides consistent attribute naming and telemetry structure across all CLI commands. The existing `byteport-otel` crate provides the tracer and provider, so CLI tracing integrates naturally.
+
+**Alternatives Considered:**
+- `#[tracing::instrument]` only: simpler but loses structured span lifecycle attributes
+- Manual `opentelemetry::trace::Span` everywhere: verbose and error-prone
+- Clap middleware hooks: more elegant but coupling telemetry to argument parsing is fragile

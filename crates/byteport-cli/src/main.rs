@@ -10,6 +10,7 @@ use byteport_transport::ports::terminal_ui::TerminalUiAdapter;
 use byteport_transport::ports::transport::{Transport, WireTransportAdapter};
 use byteport_transport::ports::ui::{MockUiAdapter, PromptMessage, UiPort, UiView};
 use byteport_otel::metrics::{record_cli_error, record_cli_invocation};
+use byteport_otel::tracing::{start_cli_command_span, start_cli_sub_span};
 use byteport_transport::{S3UploadTransport, UploadRequest, UploadTransport};
 use clap::{Parser, Subcommand};
 use tracing::info;
@@ -109,9 +110,18 @@ fn main() {
 
     let cli = Cli::parse();
     match cli.command {
-        Command::Codec { action } => run_codec(action),
-        Command::Transport { action } => run_transport(action),
-        Command::Ui { action } => run_ui(action),
+        Command::Codec { action } => {
+            let _span = start_cli_command_span("codec");
+            run_codec(action);
+        }
+        Command::Transport { action } => {
+            let _span = start_cli_command_span("transport");
+            run_transport(action);
+        }
+        Command::Ui { action } => {
+            let _span = start_cli_command_span("ui");
+            run_ui(action);
+        }
         Command::Upload {
             key,
             content_type,
@@ -119,16 +129,21 @@ fn main() {
             endpoint,
             bucket,
             prefix,
-        } => run_upload(key, content_type, content_length, endpoint, bucket, prefix),
+        } => {
+            let _span = start_cli_command_span("upload");
+            run_upload(key, content_type, content_length, endpoint, bucket, prefix);
+        }
     }
     info!("byteport-cli shutting down");
 }
 
 fn run_codec(action: CodecAction) {
+    let _span = start_cli_sub_span("codec", "execute");
     record_cli_invocation("codec");
     let codec = WireCodecAdapter::new();
     match action {
         CodecAction::Encode { data } => {
+            let _op_span = start_cli_sub_span("codec", "encode");
             let encoded = match codec.encode(data.as_bytes()) {
                 Ok(v) => v,
                 Err(e) => {
@@ -141,6 +156,7 @@ fn run_codec(action: CodecAction) {
             println!("{}", String::from_utf8_lossy(&encoded));
         }
         CodecAction::Decode { hex } => {
+            let _op_span = start_cli_sub_span("codec", "decode");
             let decoded = match codec.decode(hex.as_bytes()) {
                 Ok(v) => v,
                 Err(e) => {
@@ -156,6 +172,7 @@ fn run_codec(action: CodecAction) {
 }
 
 fn run_transport(action: TransportAction) {
+    let _span = start_cli_sub_span("transport", "execute");
     record_cli_invocation("transport");
     let mut transport = WireTransportAdapter::new();
     if let Err(e) = transport.connect("memory://pipe") {
@@ -165,6 +182,7 @@ fn run_transport(action: TransportAction) {
     }
     match action {
         TransportAction::Ping { data } => {
+            let _op_span = start_cli_sub_span("transport", "ping");
             let sent = match transport.send(data.as_bytes()) {
                 Ok(v) => v,
                 Err(e) => {
@@ -182,9 +200,11 @@ fn run_transport(action: TransportAction) {
 }
 
 fn run_ui(action: UiAction) {
+    let _span = start_cli_sub_span("ui", "execute");
     record_cli_invocation("ui");
     match action {
         UiAction::View { view } => {
+            let _op_span = start_cli_sub_span("ui", "view");
             let ui_view = match view.to_lowercase().as_str() {
                 "dashboard" => UiView::Dashboard,
                 "devicelist" | "device-list" | "devices" => UiView::DeviceList,
@@ -200,6 +220,7 @@ fn run_ui(action: UiAction) {
             println!("{header}");
         }
         UiAction::Prompt { kind, title, body } => {
+            let _op_span = start_cli_sub_span("ui", "prompt");
             let msg = match kind.to_lowercase().as_str() {
                 "info" => PromptMessage::info(title, body),
                 "warning" => PromptMessage::warning(title, body),
@@ -234,6 +255,7 @@ fn run_upload(
     bucket: String,
     prefix: Option<String>,
 ) {
+    let _span = start_cli_sub_span("upload", "execute");
     record_cli_invocation("upload");
     let transport = S3UploadTransport::new(endpoint, bucket, prefix);
     let request = UploadRequest {
@@ -242,19 +264,22 @@ fn run_upload(
         content_length,
     };
     info!("s3 upload request: {}", request.object_key);
-    match transport.create_upload(&request) {
-        Ok(instruction) => {
-            println!("Upload method: {}", instruction.method);
-            println!("Upload URL: {}", instruction.url);
-            println!("Headers:");
-            for (k, v) in &instruction.headers {
-                println!("  {k}: {v}");
+    {
+        let _op_span = start_cli_sub_span("upload", "create_upload");
+        match transport.create_upload(&request) {
+            Ok(instruction) => {
+                println!("Upload method: {}", instruction.method);
+                println!("Upload URL: {}", instruction.url);
+                println!("Headers:");
+                for (k, v) in &instruction.headers {
+                    println!("  {k}: {v}");
+                }
             }
-        }
-        Err(e) => {
-            record_cli_error("upload", "create_upload_failure");
-            eprintln!("Upload error: {e}");
-            std::process::exit(1);
+            Err(e) => {
+                record_cli_error("upload", "create_upload_failure");
+                eprintln!("Upload error: {e}");
+                std::process::exit(1);
+            }
         }
     }
 }

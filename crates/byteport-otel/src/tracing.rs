@@ -53,6 +53,36 @@ pub fn start_decode_span(encoder_id: i64) -> Span {
         .start_with_context(&tracer, &cx)
 }
 
+/// Start a span for a top-level CLI command lifecycle.
+///
+/// The span is named `byteport.cli.{command_name}` with `SpanKind::Internal`.
+pub fn start_cli_command_span(command_name: &str) -> Span {
+    let tracer = opentelemetry::global::tracer(TRACER_NAME);
+    let cx = opentelemetry::Context::current();
+    tracer
+        .span_builder(format!("byteport.cli.{command_name}"))
+        .with_kind(SpanKind::Internal)
+        .with_attributes(vec![KeyValue::new("byteport.cli.command", command_name)])
+        .start_with_context(&tracer, &cx)
+}
+
+/// Start a child span within a CLI command.
+///
+/// The span is named `byteport.cli.{command_name}.{sub_operation}` and is
+/// linked to the current OTel context.
+pub fn start_cli_sub_span(command_name: &str, sub_operation: &str) -> Span {
+    let tracer = opentelemetry::global::tracer(TRACER_NAME);
+    let cx = opentelemetry::Context::current();
+    tracer
+        .span_builder(format!("byteport.cli.{command_name}.{sub_operation}"))
+        .with_kind(SpanKind::Internal)
+        .with_attributes(vec![
+            KeyValue::new("byteport.cli.command", command_name),
+            KeyValue::new("byteport.cli.sub_operation", sub_operation),
+        ])
+        .start_with_context(&tracer, &cx)
+}
+
 /// Start a transport span.
 pub fn start_transport_span(transport_id: i64, operation: &str) -> Span {
     let tracer = opentelemetry::global::tracer(TRACER_NAME);
