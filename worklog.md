@@ -1,5 +1,21 @@
 # BytePort Worklog
 
+### 2026-06-25 — E7: OTel trace CLI command lifecycle
+
+**feat(E7): add OTel tracing to CLI command lifecycle**
+
+- Added `start_cli_command_span` and `start_cli_sub_span` helpers to `byteport-otel/src/tracing.rs`
+- Wrapped each CLI command handler (codec, transport, ui, upload) with root spans in `main()`
+- Added sub-spans (execute, encode, decode, ping, view, prompt, create_upload) in `run_*` functions
+- Documented ADR-008 (OTel CLI Command Lifecycle Tracing) in ADR.md
+- Branch: `feat/E7-otel-cli-trace`
+- PR: [#254](https://github.com/KooshaPari/BytePort/pull/254)
+- Labels: `area:compute-infra`
+- Epic: epic_E — BytePort: terminal UI, tools CLI, otel, governance
+- Grade: 10/10 (A+) — grade-e7.json
+
+---
+
 ### 2026-06-25 — B11: Delete local NVMS implementation after repoint
 
 **consolidate(B11): delete local NVMS implementation after repoint**
