@@ -3,6 +3,9 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+#[cfg(feature = "otel")]
+use tracing::instrument;
+
 pub mod ports;
 
 pub type TransportResult<T> = Result<T, UploadTransportError>;
@@ -64,6 +67,7 @@ impl S3UploadTransport {
     }
 }
 
+#[cfg_attr(feature = "otel", instrument(skip(self, request), fields(object_key = %request.object_key, content_length = %request.content_length)))]
 impl UploadTransport for S3UploadTransport {
     fn create_upload(&self, request: &UploadRequest) -> TransportResult<UploadInstruction> {
         if request.object_key.trim().is_empty() {

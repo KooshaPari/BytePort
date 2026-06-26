@@ -11,6 +11,7 @@ use byteport_transport::ports::transport::{Transport, WireTransportAdapter};
 use byteport_transport::ports::ui::{MockUiAdapter, PromptMessage, UiPort, UiView};
 use byteport_transport::{S3UploadTransport, UploadRequest, UploadTransport};
 use clap::{Parser, Subcommand};
+use tracing::info;
 
 /// BytePort tools CLI — interact with the transport, codec, UI, and upload layers.
 #[derive(Parser, Debug)]
@@ -102,6 +103,9 @@ enum UiAction {
 }
 
 fn main() {
+    let _otel_guard = byteport_otel::init::init_default();
+    info!("byteport-cli starting");
+
     let cli = Cli::parse();
     match cli.command {
         Command::Codec { action } => run_codec(action),
@@ -125,10 +129,12 @@ fn run_codec(action: CodecAction) {
             let encoded = codec
                 .encode(data.as_bytes())
                 .expect("encode should succeed");
+            info!(data_len = %data.len(), encoded_len = %encoded.len(), "codec encode");
             println!("{}", String::from_utf8_lossy(&encoded));
         }
         CodecAction::Decode { hex } => {
             let decoded = codec.decode(hex.as_bytes()).expect("decode should succeed");
+            info!(hex_len = %hex.len(), decoded_len = %decoded.len(), "codec decode");
             println!("{}", String::from_utf8_lossy(&decoded));
         }
     }
@@ -140,6 +146,7 @@ fn run_transport(action: TransportAction) {
     match action {
         TransportAction::Ping { data } => {
             let sent = transport.send(data.as_bytes()).expect("send");
+            info!(sent_bytes = %sent, "transport ping sent");
             println!("Sent {sent} bytes");
             let echoed = transport.take_tx();
             println!("Echo (tx buffer): {}", String::from_utf8_lossy(&echoed));
@@ -176,6 +183,7 @@ fn run_ui(action: UiAction) {
                     std::process::exit(1);
                 }
             };
+            info!(kind = %kind, title = %title, "ui prompt");
             let ui = MockUiAdapter::new();
             match ui.prompt(&msg) {
                 Ok(resp) => println!("Prompt response: {resp:?}"),
@@ -201,6 +209,7 @@ fn run_upload(
         content_type,
         content_length,
     };
+    info!("s3 upload request: {}", request.object_key);
     match transport.create_upload(&request) {
         Ok(instruction) => {
             println!("Upload method: {}", instruction.method);
