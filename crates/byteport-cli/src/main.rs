@@ -9,6 +9,7 @@ use byteport_transport::ports::codec::{Codec, WireCodecAdapter};
 use byteport_transport::ports::terminal_ui::TerminalUiAdapter;
 use byteport_transport::ports::transport::{Transport, WireTransportAdapter};
 use byteport_transport::ports::ui::{MockUiAdapter, PromptMessage, UiPort, UiView};
+use byteport_otel::metrics::{record_cli_error, record_cli_invocation};
 use byteport_transport::{S3UploadTransport, UploadRequest, UploadTransport};
 use clap::{Parser, Subcommand};
 use tracing::info;
@@ -120,20 +121,34 @@ fn main() {
             prefix,
         } => run_upload(key, content_type, content_length, endpoint, bucket, prefix),
     }
+    info!("byteport-cli shutting down");
 }
 
 fn run_codec(action: CodecAction) {
+    record_cli_invocation("codec");
     let codec = WireCodecAdapter::new();
     match action {
         CodecAction::Encode { data } => {
-            let encoded = codec
-                .encode(data.as_bytes())
-                .expect("encode should succeed");
+            let encoded = match codec.encode(data.as_bytes()) {
+                Ok(v) => v,
+                Err(e) => {
+                    record_cli_error("codec", "encode_failure");
+                    eprintln!("Encode error: {e}");
+                    std::process::exit(1);
+                }
+            };
             info!(data_len = %data.len(), encoded_len = %encoded.len(), "codec encode");
             println!("{}", String::from_utf8_lossy(&encoded));
         }
         CodecAction::Decode { hex } => {
-            let decoded = codec.decode(hex.as_bytes()).expect("decode should succeed");
+            let decoded = match codec.decode(hex.as_bytes()) {
+                Ok(v) => v,
+                Err(e) => {
+                    record_cli_error("codec", "decode_failure");
+                    eprintln!("Decode error: {e}");
+                    std::process::exit(1);
+                }
+            };
             info!(hex_len = %hex.len(), decoded_len = %decoded.len(), "codec decode");
             println!("{}", String::from_utf8_lossy(&decoded));
         }
@@ -141,11 +156,23 @@ fn run_codec(action: CodecAction) {
 }
 
 fn run_transport(action: TransportAction) {
+    record_cli_invocation("transport");
     let mut transport = WireTransportAdapter::new();
-    transport.connect("memory://pipe").expect("connect");
+    if let Err(e) = transport.connect("memory://pipe") {
+        record_cli_error("transport", "connect_failure");
+        eprintln!("Transport connect error: {e}");
+        std::process::exit(1);
+    }
     match action {
         TransportAction::Ping { data } => {
-            let sent = transport.send(data.as_bytes()).expect("send");
+            let sent = match transport.send(data.as_bytes()) {
+                Ok(v) => v,
+                Err(e) => {
+                    record_cli_error("transport", "send_failure");
+                    eprintln!("Transport send error: {e}");
+                    std::process::exit(1);
+                }
+            };
             info!(sent_bytes = %sent, "transport ping sent");
             println!("Sent {sent} bytes");
             let echoed = transport.take_tx();
@@ -155,6 +182,7 @@ fn run_transport(action: TransportAction) {
 }
 
 fn run_ui(action: UiAction) {
+    record_cli_invocation("ui");
     match action {
         UiAction::View { view } => {
             let ui_view = match view.to_lowercase().as_str() {
@@ -163,6 +191,7 @@ fn run_ui(action: UiAction) {
                 "testresults" | "test-results" | "tests" => UiView::TestResults,
                 "settings" => UiView::Settings,
                 _ => {
+                    record_cli_error("ui", "unknown_view");
                     eprintln!("Unknown view: {view}");
                     std::process::exit(1);
                 }
@@ -179,6 +208,7 @@ fn run_ui(action: UiAction) {
                 "choice" => PromptMessage::choice(title, body, vec!["yes".into(), "no".into()]),
                 "input" => PromptMessage::input(title, body, None),
                 _ => {
+                    record_cli_error("ui", "unknown_prompt_kind");
                     eprintln!("Unknown prompt kind: {kind}");
                     std::process::exit(1);
                 }
@@ -188,6 +218,7 @@ fn run_ui(action: UiAction) {
             match ui.prompt(&msg) {
                 Ok(resp) => println!("Prompt response: {resp:?}"),
                 Err(e) => {
+                    record_cli_error("ui", "prompt_failure");
                     println!("Prompt result: {e} (cancelled expected for mock)")
                 }
             }
@@ -203,6 +234,7 @@ fn run_upload(
     bucket: String,
     prefix: Option<String>,
 ) {
+    record_cli_invocation("upload");
     let transport = S3UploadTransport::new(endpoint, bucket, prefix);
     let request = UploadRequest {
         object_key: key,
@@ -220,6 +252,7 @@ fn run_upload(
             }
         }
         Err(e) => {
+            record_cli_error("upload", "create_upload_failure");
             eprintln!("Upload error: {e}");
             std::process::exit(1);
         }

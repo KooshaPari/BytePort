@@ -7,6 +7,7 @@ use opentelemetry::{
     KeyValue,
     metrics::{Counter, Histogram, Meter, UpDownCounter, Result},
 };
+use std::sync::OnceLock;
 
 /// The global meter name used by BytePort.
 const METER_NAME: &str = "byteport";
@@ -100,6 +101,42 @@ impl BytePortMetrics {
     }
 }
 
+// ── CLI invocation metrics ──────────────────────────────────────────
+
+/// Lazily-initialised singleton for CLI invocation metrics.
+fn cli_meter() -> &'static opentelemetry::metrics::Meter {
+    static METER: OnceLock<opentelemetry::metrics::Meter> = OnceLock::new();
+    METER.get_or_init(|| opentelemetry::global::meter(METER_NAME))
+}
+
+/// Record a CLI command invocation.
+pub fn record_cli_invocation(command: &str) {
+    let meter = cli_meter();
+    let counter = meter
+        .u64_counter("byteport.cli.invocations")
+        .with_description("Number of CLI command invocations")
+        .with_unit("{count}")
+        .init();
+    counter.add(1, &[KeyValue::new("cli.command", command.to_owned())]);
+}
+
+/// Record a CLI command error.
+pub fn record_cli_error(command: &str, error_kind: &str) {
+    let meter = cli_meter();
+    let counter = meter
+        .u64_counter("byteport.cli.errors")
+        .with_description("Number of CLI command errors")
+        .with_unit("{count}")
+        .init();
+    counter.add(
+        1,
+        &[
+            KeyValue::new("cli.command", command.to_owned()),
+            KeyValue::new("error.kind", error_kind.to_owned()),
+        ],
+    );
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -110,5 +147,12 @@ mod tests {
         // should still succeed (no-op meter).
         let metrics = BytePortMetrics::new();
         assert!(metrics.is_ok(), "metrics should construct even without OTLP backend");
+    }
+
+    #[test]
+    fn cli_metrics_no_panic() {
+        // Should not panic with default (no-op) meter provider.
+        record_cli_invocation("codec");
+        record_cli_error("codec", "encode_failure");
     }
 }
