@@ -266,6 +266,10 @@ func ValidateGitRepo(repoURL, installationToken string) error {
 	cmd := exec.Command("git", "ls-remote", repoURL)
 	cmd.Env = append(cmd.Env, "GIT_ASKPASS=echo "+installationToken)
 
+	// Propagate OTel trace context to the child process so that
+	// git operations are linked to the parent trace.
+	PropagateContextToCmd(context.Background(), cmd)
+
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr

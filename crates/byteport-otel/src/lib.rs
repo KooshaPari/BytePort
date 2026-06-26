@@ -28,6 +28,7 @@
 pub mod config;
 pub mod init;
 pub mod metrics;
+pub mod propagation;
 pub mod tracing;
 
 // Re-export commonly used OTel types for convenience.

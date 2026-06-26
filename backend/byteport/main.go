@@ -13,6 +13,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -26,6 +27,14 @@ func initTracer() (*trace.TracerProvider, error) {
 		trace.WithBatcher(exporter),
 	)
 	otel.SetTracerProvider(tp)
+
+	// Register W3C TraceContext propagator so that context injected
+	// into child processes (via PropagateContextToCmd) is correctly
+	// serialized.
+	otel.SetTextMapPropagator(
+		propagation.TraceContext{},
+	)
+
 	return tp, nil
 }
 

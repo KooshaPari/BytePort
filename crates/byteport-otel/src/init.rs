@@ -54,6 +54,11 @@ pub fn init_telemetry(config: TelemetryConfig) -> TelemetryGuard {
 
     // ── Trace provider ────────────────────────────────────────────────
     let tracer_provider = if config.enable_tracing {
+        // Register the W3C TraceContext propagator so that context
+        // injection (e.g. to spawned child processes) works correctly.
+        opentelemetry::global::set_text_map_propagator(
+            opentelemetry_sdk::propagation::TraceContextPropagator::new(),
+        );
         match build_tracer_provider(&config, resource.clone()) {
             Ok(tp) => {
                 let _ = opentelemetry::global::set_tracer_provider(tp.clone());
