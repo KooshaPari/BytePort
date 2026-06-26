@@ -9,9 +9,10 @@
 - Replaced `.expect()` panics with error-recording match arms on all failure paths
 - Instruments: `byteport.cli.invocations` (counter) and `byteport.cli.errors` (counter), each with `cli.command` and `error.kind` attributes
 - Branch: `feat/E9-otel-metrics`
-- PR: [#253](https://github.com/KooshaPari/BytePort/pull/253)
+- PR: [#255](https://github.com/KooshaPari/BytePort/pull/255)
 - Labels: `area:compute-infra`
 - Epic: epic_E — BytePort: terminal UI, tools CLI, otel, governance
+- Grade: 10/10 (A+) — grade-e9.json
 
 ---
 
