@@ -118,41 +118,32 @@ go test ./backend/...    # Run Go tests
 ```
 BytePort/
 ├── backend/
-│   └── byteport/
-│       ├── main.go                # Entry point: Gin server, OTel, auth init
-│       ├── smoke_test.go          # Minimum floor test (FR-CI-FLOOR)
-│       ├── go.mod / go.sum        # Go module dependencies
-│       ├── lib/                   # Core business logic
-│       │   ├── auth.go           # PASETO token generation/validation
-│       │   ├── crypto.go         # AES-256 encryption, Argon2id hashing
-│       │   ├── git.go            # GitHub OAuth, token refresh job
-│       │   ├── apilink.go        # AWS/AI/Portfolio credential validation + SSRF protection
-│       │   └── index.go          # Package exports documentation
-│       ├── models/                # GORM data models
-│       │   ├── users.go          # User, AwsCreds, LLM, Portfolio, Git
-│       │   ├── projects.go       # Project with deployments map
-│       │   ├── instances.go      # Instance with AWS resources
-│       │   ├── repositories.go  # GitHub Repository/Owner/Permissions
-│       │   ├── secrets.go        # GitSecret (app credentials)
-│       │   ├── data.go          # Database connection, GORM automigrate
-│       │   └── types.go         # NVMS, Service, BuildPack, AWSConfig
-│       └── routes/               # Gin HTTP handlers
-│           ├── auth.go           # /signup, /login, /authenticate, /link, /user/:id/creds
-│           ├── deployment.go     # /deploy, /terminate
-│           ├── git.go            # /api/github/callback, /api/github/repositories
-│           ├── projects.go       # /projects
-│           ├── instances.go      # /instances
-│           └── pm.go             # Project model helpers
+│   ├── main.go                # Entry point: WorkOS AuthKit + Gin server
+│   ├── server.go              # NewAPIServer: route registration, CORS, auth middleware
+│   ├── handlers.go            # HTTP handlers (deployments, users)
+│   ├── lib/                   # Cross-cutting helpers (auth shim, cloud utilities)
+│   ├── internal/              # Hexagonal architecture
+│   │   ├── application/       # Use cases
+│   │   ├── domain/            # Domain entities + invariants
+│   │   ├── infrastructure/    # Adapters (auth/WorkOS, http/middleware, persistence, secrets)
+│   │   └── container/         # Dependency wiring
+│   ├── models/                # GORM data models
+│   ├── testhelpers/           # Shared test fixtures
+│   ├── bytebridge/            # Multi-protocol bridge (separate sub-module)
+│   └── nvms/                  # NVMS deployment service (separate sub-module)
 ├── frontend/
 │   └── web/                      # SvelteKit 2 application
 │       ├── src/                  # Svelte components + routes
 │       └── src-tauri/           # Tauri 2 desktop shell (Rust)
-├── nvms/                         # NVMS deployment service (Go, port 3000)
-│   └── ...                      # MicroVM/Firecracker deployment logic
-├── start                         # Dev orchestration script (tmux)
-├── golangci.yml                 # golangci-lint configuration
-└── justfile                     # Just task runner
+├── start                     # Dev orchestration script (tmux)
+├── golangci.yml              # golangci-lint configuration
+└── justfile                  # Just task runner
 ```
+
+> The legacy `backend/byteport/` Go module (PASETO/`go-keyring`-based auth,
+> `byteport/main.go`, `byteport/lib/{auth,git,apilink,crypto}.go`) was removed
+> in `fix/remove-dead-auth-stack`. The live `backend/` module is the only
+> Go entry point and uses WorkOS AuthKit via `internal/infrastructure/auth/`.
 
 ---
 
@@ -503,20 +494,22 @@ PORTFOLIO:
 
 ## 9. Dependencies
 
-### Go (`backend/byteport/go.mod`)
+### Go (`backend/go.mod`)
 
 | Package | Purpose |
 |---------|---------|
 | `github.com/gin-gonic/gin` | HTTP framework |
 | `github.com/gin-contrib/cors` | CORS middleware |
 | `gorm.io/gorm` | ORM |
+| `gorm.io/driver/postgres` | Postgres driver |
 | `gorm.io/driver/sqlite` | SQLite driver |
-| `github.com/o1egl/paseto` | PASETO token generation/validation |
+| `github.com/workos/workos-go/v4` | WorkOS AuthKit session/auth |
+| `github.com/hashicorp/vault/api` | HashiCorp Vault client (secrets) |
+| `github.com/aws/aws-sdk-go-v2/service/secretsmanager` | AWS Secrets Manager |
+| `github.com/go-jose/go-jose/v4` | JOSE (JWT/JWE/JWK) for WorkOS token validation |
 | `github.com/google/uuid` | UUID generation |
-| `golang.org/x/crypto/argon2` | Argon2id password hashing |
-| `github.com/aws/aws-sdk-go` | AWS SDK |
-| `go.opentelemetry.io/otel` | OpenTelemetry |
-| `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin` | Gin OTel middleware |
+| `golang.org/x/crypto` | Cryptographic primitives (argon2id password hashing, AES-GCM encryption) |
+| `github.com/joho/godotenv` | `.env` loading |
 
 ### Rust (`frontend/web/src-tauri/Cargo.toml`)
 

@@ -2,7 +2,7 @@
 #
 # Enforces code coverage thresholds across BytePort's three tiers:
 #   - Rust lib (crates/byteport-transport):  ≥71%
-#   - Go framework (backend/byteport):        ≥70%
+#   - Go framework (backend):                ≥70%
 #   - Service/E2E (frontend/web integration): ≥60%
 #
 # Trigger: every PR to main/master + push to main/master.
@@ -77,7 +77,7 @@ jobs:
           retention-days: 30
 
   # ─────────────────────────────────────────────────────────────────────
-  # Go framework coverage — backend/byteport
+  # Go framework coverage — backend
   # Threshold: ≥70%
   # ─────────────────────────────────────────────────────────────────────
   go-framework-coverage:
@@ -88,7 +88,7 @@ jobs:
       contents: read
     defaults:
       run:
-        working-directory: backend/byteport
+        working-directory: backend
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -96,8 +96,8 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version-file: backend/byteport/go.mod
-          cache-dependency-path: backend/byteport/go.sum
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
 
       - name: Run tests with coverage
         run: |
@@ -119,7 +119,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: coverage-go-framework
-          path: backend/byteport/coverage.out
+          path: backend/coverage.out
           retention-days: 30
 
   # ─────────────────────────────────────────────────────────────────────
@@ -213,11 +213,11 @@ jobs:
 
           # Go framework
           if [ "${{ needs.go-framework-coverage.result }}" = "success" ]; then
-            echo "| Go framework (backend/byteport) | ≥70% | ✅ Pass |" >> $GITHUB_STEP_SUMMARY
+            echo "| Go framework (backend) | ≥70% | ✅ Pass |" >> $GITHUB_STEP_SUMMARY
           elif [ "${{ needs.go-framework-coverage.result }}" = "skipped" ]; then
-            echo "| Go framework (backend/byteport) | ≥70% | ⏭️ Skipped |" >> $GITHUB_STEP_SUMMARY
+            echo "| Go framework (backend) | ≥70% | ⏭️ Skipped |" >> $GITHUB_STEP_SUMMARY
           else
-            echo "| Go framework (backend/byteport) | ≥70% | ❌ Fail |" >> $GITHUB_STEP_SUMMARY
+            echo "| Go framework (backend) | ≥70% | ❌ Fail |" >> $GITHUB_STEP_SUMMARY
           fi
 
           # Service
@@ -247,7 +247,7 @@ jobs:
               '| Tier | Threshold | Status |',
               '|------|-----------|--------|',
               `| Rust lib (byteport-transport) | ≥71% | ${{ needs.rust-lib-coverage.result === 'success' ? '✅ Pass' : '❌ Fail' }} |`,
-              `| Go framework (backend/byteport) | ≥70% | ${{ needs.go-framework-coverage.result === 'success' ? '✅ Pass' : '❌ Fail' }} |`,
+              `| Go framework (backend) | ≥70% | ${{ needs.go-framework-coverage.result === 'success' ? '✅ Pass' : '❌ Fail' }} |`,
               `| Service/E2E (frontend/web) | ≥60% | ${{ needs.service-coverage.result === 'success' ? '✅ Pass' : '❌ Fail' }} |`,
             ].join('\n');
 

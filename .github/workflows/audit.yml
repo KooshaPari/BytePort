@@ -148,7 +148,7 @@ jobs:
 
   # ---------- Go govulncheck ----------
   govulncheck:
-    name: Go govulncheck (backend/byteport, backend/nvms)
+    name: Go govulncheck (backend, backend/nvms)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -161,10 +161,10 @@ jobs:
         with:
           go-version: '1.25'
           cache-dependency-path: |
-            backend/byteport/go.sum
+            backend/go.sum
             backend/nvms/go.sum
-      - name: Run govulncheck (byteport)
-        working-directory: backend/byteport
+      - name: Run govulncheck (backend)
+        working-directory: backend
         run: |
           go install golang.org/x/vuln/cmd/govulncheck@latest
           govulncheck ./...

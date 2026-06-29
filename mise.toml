@@ -27,9 +27,9 @@ description = "Rust toolchain channel for the Tauri + workspace crates."
 # Pin to the same channel BytePort's CI uses (see .github/workflows/*.yml).
 value = "1.82.0"
 
-# -- Go (byteport + nvms backends) -------------------------------------
+# -- Go (backend + nvms backends) ---------------------------------------
 [env.go_version]
-description = "Go toolchain version for backend/byteport and backend/nvms."
+description = "Go toolchain version for backend and backend/nvms."
 value = "1.23.4"
 
 # -- Node (SvelteKit frontend) -----------------------------------------
@@ -93,11 +93,11 @@ description = "go-task version (Taskfile.yml is consumed by go-task, not make)."
 value = "3.42.2"
 
 # -- Per-directory overrides (if frontend or backend needs different) --
-# Backend/byteport uses Go only — no Rust toolchain needed in that subdir.
+# Backend uses Go only — no Rust toolchain needed in that subdir.
 # [env._backend_override_test]
-# path = "backend/byteport"
+# path = "backend"
 # [env._backend_override_test.rust_version]
-# value = ""   # intentionally empty: backend/byteport doesn't need rust.
+# value = ""   # intentionally empty: backend doesn't need rust.
 
 # ----------------------------------------------------------------------
 # TASKS — top-level commands exposed by `mise run <name>`. These are

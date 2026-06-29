@@ -30,7 +30,7 @@ version: '3'
 vars:
   CARGO_FLAGS: --workspace
   FRONTEND_DIR: frontend/web
-  BACKEND_DIR: backend/byteport
+  BACKEND_DIR: backend
 
 env:
   # Surface a consistent set of flags for downstream recipes. Override
@@ -313,7 +313,7 @@ tasks:
     cmds:
       - cargo clean
       - rm -rf frontend/web/.svelte-kit frontend/web/build frontend/web/dist
-      - rm -rf backend/byteport/tmp
+      - rm -rf backend/tmp
 
   help:
     desc: Show this help text.
