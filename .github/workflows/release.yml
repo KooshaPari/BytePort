@@ -47,23 +47,23 @@ jobs:
         working-directory: frontend/web
     steps:
       - name: Checkout
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        uses: actions/checkout@v4
 
       - name: Install Node.js
-        uses: actions/setup-node@60edb5dd8de00db5d5c64c9e3f6d6db5bf8f5d76 # v4
+        uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: frontend/web/package-lock.json
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@f7f7b7a1cf7bdf9d3dcd89d36e69a3d8f18f8f45 # stable
+        uses: dtolnay/rust-toolchain@stable
 
       - name: Install frontend dependencies
         run: npm ci
 
       - name: Build release artifacts
-        uses: tauri-apps/tauri-action@b85a6e2e1c5f0cd7ab5f00c4c286e2a6f3a5c5d1 # v0
+        uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -81,13 +81,13 @@ jobs:
       contents: write
     steps:
       - name: Checkout
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        uses: actions/checkout@v4
       - name: Download build artifacts
-        uses: actions/download-artifact@fa0a91e9fd1d49c64fa67f4b6c1db8d8a3a7d6dd # v4
+        uses: actions/download-artifact@v4
         with:
           path: dist-artifacts
       - name: Create release
-        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v2
+        uses: softprops/action-gh-release@v2
         with:
           draft: false
           generate_release_notes: true
