@@ -26,7 +26,7 @@ permissions:
 jobs:
 
   # ──────────────────────────────────────────────────────────────────────
-  # Go — backend/byteport
+  # Go — backend
   # ──────────────────────────────────────────────────────────────────────
   go-build:
     name: Go build
@@ -40,10 +40,10 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version-file: backend/byteport/go.mod
-          cache-dependency-path: backend/byteport/go.sum
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
       - name: go build
-        working-directory: backend/byteport
+        working-directory: backend
         run: go build ./...
 
   go-test:
@@ -54,15 +54,15 @@ jobs:
       contents: read
     defaults:
       run:
-        working-directory: backend/byteport
+        working-directory: backend
     steps:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version-file: backend/byteport/go.mod
-          cache-dependency-path: backend/byteport/go.sum
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
       - name: go test
         run: go test ./...
 
@@ -78,10 +78,10 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version-file: backend/byteport/go.mod
-          cache-dependency-path: backend/byteport/go.sum
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
       - name: go vet
-        working-directory: backend/byteport
+        working-directory: backend
         run: go vet ./...
 
   go-fmt:
@@ -99,7 +99,7 @@ jobs:
           go-version: stable
       - name: Check formatting
         run: |
-          unformatted=$(gofmt -l backend/byteport backend/nvms 2>/dev/null || true)
+          unformatted=$(gofmt -l backend backend/nvms 2>/dev/null || true)
           if [ -n "$unformatted" ]; then
             echo "::error::The following files are not gofmt-clean:"
             echo "$unformatted"
@@ -119,13 +119,13 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version-file: backend/byteport/go.mod
-          cache-dependency-path: backend/byteport/go.sum
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
           version: latest
-          working-directory: backend/byteport
+          working-directory: backend
           args: --disable=staticcheck --disable=errcheck
 
   # ──────────────────────────────────────────────────────────────────────
