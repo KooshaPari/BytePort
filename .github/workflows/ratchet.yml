@@ -47,7 +47,7 @@ jobs:
         # Rust: `dtolnay/rust-toolchain@stable`
         # Python: `actions/setup-python@v5 with python-version: '3.12'`
         # Node: `actions/setup-node@v4 with node-version: '20'`
-        uses: actions/setup-node@1a4442cacd436585916f4bd0495db9b8a8a0d4d8  # e.g., 1a4442cacd436585916f4bd0495db9b8a8a0d4d8
+        uses: actions/setup-node@v4  # e.g., 1a4442cacd436585916f4bd0495db9b8a8a0d4d8
         with:
           node-version: 20
           cache: 'npm'
@@ -104,7 +104,7 @@ jobs:
 2. Adapt the `Setup language` and `Run tests with coverage` steps for your stack.
 3. Pin the SHAs:
    - `actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd`
-   - `actions/setup-node@1a4442cacd436585916f4bd0495db9b8a8a0d4d8` (v4)
+   - `actions/setup-node@v4` (v4)
 4. Commit + push + open a PR.
 
 ## Q2 score lift
