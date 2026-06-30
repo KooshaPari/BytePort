@@ -91,7 +91,7 @@ func parseAllowedOrigins() []string {
 	origins := make([]string, 0, len(raw))
 	for _, origin := range raw {
 		origin = strings.TrimSpace(origin)
-		if origin != "" {
+		if origin != "" && origin != "*" {
 			origins = append(origins, origin)
 		}
 	}

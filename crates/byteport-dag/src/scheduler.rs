@@ -165,10 +165,7 @@ mod tests {
         assert_eq!(sched.max_concurrency, 3); // a1, a2, a3 in parallel
 
         let b1: std::collections::BTreeSet<_> = sched.buckets[1].iter().collect();
-        assert_eq!(
-            b1,
-            std::collections::BTreeSet::from([&"a1", &"a2", &"a3"])
-        );
+        assert_eq!(b1, std::collections::BTreeSet::from([&"a1", &"a2", &"a3"]));
     }
 
     #[test]

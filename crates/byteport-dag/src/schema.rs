@@ -169,23 +169,18 @@ fn default_exit_code() -> i32 {
 // ---------------------------------------------------------------------------
 
 /// When the hook fires relative to node execution.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum HookTiming {
     /// Fires before the node starts.
     Pre,
     /// Fires after the node completes (success or failure).
+    #[default]
     Post,
     /// Fires on successful completion only.
     OnSuccess,
     /// Fires on failure only.
     OnFailure,
-}
-
-impl Default for HookTiming {
-    fn default() -> Self {
-        Self::Post
-    }
 }
 
 /// An audit / observability hook attached to a DAG node.
@@ -443,19 +438,15 @@ mod tests {
                     image: "myapp:latest".into(),
                 },
             ],
-            acceptance: vec![
-                AcceptanceCriterion::HttpOk {
-                    url: "https://staging.example.com/health".into(),
-                    expected_status: Some(200),
-                },
-            ],
-            audit_hooks: vec![
-                AuditHook::Webhook {
-                    url: "https://hooks.example.com/deploy".into(),
-                    headers: None,
-                    timing: HookTiming::Post,
-                },
-            ],
+            acceptance: vec![AcceptanceCriterion::HttpOk {
+                url: "https://staging.example.com/health".into(),
+                expected_status: Some(200),
+            }],
+            audit_hooks: vec![AuditHook::Webhook {
+                url: "https://hooks.example.com/deploy".into(),
+                headers: None,
+                timing: HookTiming::Post,
+            }],
             metadata: Some(HashMap::from_iter(vec![
                 ("team".into(), "platform".into()),
                 ("tier".into(), "2".into()),

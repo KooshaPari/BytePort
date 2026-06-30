@@ -5,11 +5,11 @@
 //! upload, and UI. It serves as both a developer tool and a reference
 //! consumer for the transport layer.
 
+use byteport_otel::metrics::{record_cli_error, record_cli_invocation};
 use byteport_transport::ports::codec::{Codec, WireCodecAdapter};
 use byteport_transport::ports::terminal_ui::TerminalUiAdapter;
 use byteport_transport::ports::transport::{Transport, WireTransportAdapter};
 use byteport_transport::ports::ui::{MockUiAdapter, PromptMessage, UiPort, UiView};
-use byteport_otel::metrics::{record_cli_error, record_cli_invocation};
 use byteport_transport::{S3UploadTransport, UploadRequest, UploadTransport};
 use clap::{Parser, Subcommand};
 use tracing::info;
@@ -201,12 +201,12 @@ fn run_ui(action: UiAction) {
         }
         UiAction::Prompt { kind, title, body } => {
             let msg = match kind.to_lowercase().as_str() {
-                "info" => PromptMessage::info(title, body),
-                "warning" => PromptMessage::warning(title, body),
-                "error" => PromptMessage::error(title, body),
-                "confirm" => PromptMessage::confirm(title, body),
-                "choice" => PromptMessage::choice(title, body, vec!["yes".into(), "no".into()]),
-                "input" => PromptMessage::input(title, body, None),
+                "info" => PromptMessage::info(&title, body),
+                "warning" => PromptMessage::warning(&title, body),
+                "error" => PromptMessage::error(&title, body),
+                "confirm" => PromptMessage::confirm(&title, body),
+                "choice" => PromptMessage::choice(&title, body, vec!["yes".into(), "no".into()]),
+                "input" => PromptMessage::input(&title, body, None),
                 _ => {
                     record_cli_error("ui", "unknown_prompt_kind");
                     eprintln!("Unknown prompt kind: {kind}");

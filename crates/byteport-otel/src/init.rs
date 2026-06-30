@@ -8,24 +8,21 @@
 
 use std::time::Duration;
 
+use opentelemetry::trace::{TraceError, TracerProvider};
 use opentelemetry::KeyValue;
 use opentelemetry_otlp::WithExportConfig;
 use opentelemetry_sdk::{
-    metrics::MeterProviderBuilder,
-    trace::{Config, TpError, TracerProvider},
+    metrics::{MeterProviderBuilder, MetricResult},
+    trace::SdkTracerProvider,
     Resource,
 };
-use tracing_subscriber::{
-    EnvFilter,
-    layer::SubscriberExt,
-    util::SubscriberInitExt,
-};
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
 use crate::config::TelemetryConfig;
 
 /// A guard that flushes and shuts down the telemetry pipeline on drop.
 pub struct TelemetryGuard {
-    _tracer_provider: Option<TracerProvider>,
+    _tracer_provider: Option<SdkTracerProvider>,
 }
 
 impl Drop for TelemetryGuard {
@@ -33,7 +30,6 @@ impl Drop for TelemetryGuard {
         if let Some(tp) = self._tracer_provider.take() {
             let _ = tp.shutdown();
         }
-        opentelemetry::global::shutdown_tracer_provider();
     }
 }
 
@@ -42,15 +38,17 @@ impl Drop for TelemetryGuard {
 /// Returns a [`TelemetryGuard`] that must be kept alive for the application's
 /// lifetime. Dropping it triggers a graceful flush of all pending telemetry.
 pub fn init_telemetry(config: TelemetryConfig) -> TelemetryGuard {
-    let resource = Resource::new(vec![
-        KeyValue::new("service.name", config.service_name.clone()),
-        KeyValue::new("service.version", config.service_version.clone()),
-        #[cfg(feature = "semconv")]
-        KeyValue::new(
-            opentelemetry_semantic_conventions::resource::SERVICE_NAME,
-            config.service_name.clone(),
-        ),
-    ]);
+    let resource = Resource::builder()
+        .with_attributes(vec![
+            KeyValue::new("service.name", config.service_name.clone()),
+            KeyValue::new("service.version", config.service_version.clone()),
+            #[cfg(feature = "semconv")]
+            KeyValue::new(
+                opentelemetry_semantic_conventions::resource::SERVICE_NAME,
+                config.service_name.clone(),
+            ),
+        ])
+        .build();
 
     // ── Trace provider ────────────────────────────────────────────────
     let tracer_provider = if config.enable_tracing {
@@ -83,33 +81,45 @@ pub fn init_telemetry(config: TelemetryConfig) -> TelemetryGuard {
 
     // ── Tracing subscriber ────────────────────────────────────────────
     if config.enable_tracing {
-        let fmt_layer = if config.enable_stdout_log {
-            Some(
-                tracing_subscriber::fmt::layer()
-                    .json()
-                    .with_target(true)
-                    .with_thread_ids(true),
-            )
-        } else {
-            None
-        };
+        let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(&config.log_level));
 
-        let otel_layer = tracer_provider.as_ref().map(|_| {
-            tracing_opentelemetry::layer()
-                .with_tracer(opentelemetry::global::tracer("byteport"))
-        });
+        let subscriber = tracing_subscriber::registry().with(filter);
 
-        let filter = EnvFilter::try_from_default_env()
-            .unwrap_or_else(|_| EnvFilter::new(&config.log_level));
-
-        tracing_subscriber::registry()
-            .with(filter)
-            .with(fmt_layer)
-            .with(otel_layer)
-            .init();
+        match (config.enable_stdout_log, tracer_provider.as_ref()) {
+            (true, Some(tp)) => {
+                let tracer = tp.tracer("byteport");
+                subscriber
+                    .with(
+                        tracing_subscriber::fmt::layer()
+                            .json()
+                            .with_target(true)
+                            .with_thread_ids(true),
+                    )
+                    .with(tracing_opentelemetry::layer().with_tracer(tracer))
+                    .init();
+            }
+            (true, None) => {
+                subscriber
+                    .with(
+                        tracing_subscriber::fmt::layer()
+                            .json()
+                            .with_target(true)
+                            .with_thread_ids(true),
+                    )
+                    .init();
+            }
+            (false, Some(tp)) => {
+                let tracer = tp.tracer("byteport");
+                subscriber
+                    .with(tracing_opentelemetry::layer().with_tracer(tracer))
+                    .init();
+            }
+            (false, None) => {
+                subscriber.init();
+            }
+        }
     } else if config.enable_stdout_log {
-        let filter = EnvFilter::try_from_default_env()
-            .unwrap_or_else(|_| EnvFilter::new(&config.log_level));
+        let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(&config.log_level));
 
         tracing_subscriber::registry()
             .with(filter)
@@ -134,27 +144,23 @@ pub fn init_default() -> TelemetryGuard {
 
 // ── Internal helpers ─────────────────────────────────────────────────
 
-fn build_tracer_provider(
-    config: &TelemetryConfig,
-    resource: Resource,
-) -> Result<TracerProvider, TpError> {
+fn build_tracer_provider(config: &TelemetryConfig, resource: Resource) -> Result<SdkTracerProvider, TraceError> {
     let exporter = opentelemetry_otlp::SpanExporter::builder()
         .with_tonic()
         .with_endpoint(&config.otlp_endpoint)
         .with_timeout(Duration::from_secs(10))
         .build()?;
 
-    Ok(TracerProvider::builder()
-        .with_batch_exporter(exporter, opentelemetry_sdk::runtime::Tokio)
-        .with_config(Config::default().with_resource(resource))
+    Ok(SdkTracerProvider::builder()
+        .with_batch_exporter(exporter)
+        .with_resource(resource)
         .build())
 }
 
 fn build_meter_provider(
     config: &TelemetryConfig,
     resource: Resource,
-) -> Result<opentelemetry_sdk::metrics::MeterProvider, opentelemetry_otlp::new_with_tonic::MetricsExporterBuildError>
-{
+) -> MetricResult<opentelemetry_sdk::metrics::SdkMeterProvider> {
     let exporter = opentelemetry_otlp::MetricExporter::builder()
         .with_tonic()
         .with_endpoint(&config.otlp_endpoint)
@@ -163,7 +169,7 @@ fn build_meter_provider(
 
     Ok(MeterProviderBuilder::default()
         .with_reader(
-            opentelemetry_sdk::metrics::PeriodicReader::builder(exporter, opentelemetry_sdk::runtime::Tokio)
+            opentelemetry_sdk::metrics::PeriodicReader::builder(exporter)
                 .with_interval(Duration::from_secs(60))
                 .build(),
         )

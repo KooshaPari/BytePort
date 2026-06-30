@@ -79,15 +79,13 @@ impl serde::Serialize for AppError {
 /// Read the upload endpoint from `BYTEPORT_UPLOAD_URL` or fall back to the
 /// local dev default. Centralised so tests can stub the env.
 fn upload_endpoint() -> String {
-    std::env::var("BYTEPORT_UPLOAD_URL")
-        .unwrap_or_else(|_| "https://uploads.byteport.local".to_string())
+    std::env::var("BYTEPORT_UPLOAD_URL").unwrap_or_else(|_| "https://uploads.byteport.local".to_string())
 }
 
 /// Read the upload bucket from `BYTEPORT_UPLOAD_BUCKET` or fall back to
 /// the dev default.
 fn upload_bucket() -> String {
-    std::env::var("BYTEPORT_UPLOAD_BUCKET")
-        .unwrap_or_else(|_| "byteport-uploads".to_string())
+    std::env::var("BYTEPORT_UPLOAD_BUCKET").unwrap_or_else(|_| "byteport-uploads".to_string())
 }
 
 /// Tauri entry point.
@@ -110,9 +108,11 @@ pub fn run() {
     ));
 
     tauri::Builder::default()
-        .plugin(tauri_plugin_log::Builder::default()
-            .level(log::LevelFilter::Info)
-            .build())
+        .plugin(
+            tauri_plugin_log::Builder::default()
+                .level(log::LevelFilter::Info)
+                .build(),
+        )
         .setup(move |app| {
             // Register shared state for IPC handlers.
             app.manage(AppState {
@@ -172,10 +172,7 @@ pub mod ipc {
     /// frontend to perform. Returns the method, URL, and required
     /// headers.
     #[tauri::command]
-    pub fn create_upload(
-        state: State<'_, AppState>,
-        args: CreateUploadArgs,
-    ) -> Result<CreateUploadResponse, String> {
+    pub fn create_upload(state: State<'_, AppState>, args: CreateUploadArgs) -> Result<CreateUploadResponse, String> {
         let uploader: Arc<dyn UploadTransport> = Arc::clone(&state.uploader);
         let req = UploadRequest {
             object_key: args.object_key,

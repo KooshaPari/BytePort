@@ -32,8 +32,7 @@ pub mod tracing;
 
 // Re-export commonly used OTel types for convenience.
 pub use opentelemetry::{
-    Context,
-    KeyValue,
     metrics::{Counter, Histogram, UpDownCounter},
     trace::{Span, SpanKind, Status, Tracer},
+    Context, KeyValue,
 };
