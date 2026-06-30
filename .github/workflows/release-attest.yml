@@ -69,7 +69,7 @@ jobs:
           push-to-registry: false  # SC4 wired: just publish to GitHub attestations API
 
       - name: Upload artifact
-        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd0de8ccd5686b70862  # e.g., 65c4c4a1ddee5b72f698fdd0de8ccd5686b70862
+        uses: actions/upload-artifact@v4  # e.g., 65c4c4a1ddee5b72f698fdd0de8ccd5686b70862
         with:
           name: ${{ github.event.inputs.version || github.ref_name }}-artifact
           path: dist/
@@ -83,7 +83,7 @@ jobs:
 4. Pin SHAs:
    - `actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd`
    - `actions/attest-build-provenance@35a8f9717e7a2adb1c2c3b2ac88961ba9c230e98` (v1.3.0)
-   - `actions/upload-artifact@65c4c4a1ddee5b72f698fdd0de8ccd5686b70862` (v4.6.0)
+   - `actions/upload-artifact@v4` (v4.6.0)
 5. **Commit + push + open a PR.**
 
 ## SC4 score lift

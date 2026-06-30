@@ -18,6 +18,9 @@ use std::hash::Hash;
 use crate::dag::{Dag, DagError};
 use crate::topo;
 
+#[cfg(feature = "otel")]
+use tracing::instrument;
+
 /// A wall of parallel-execution buckets produced by the scheduler.
 ///
 /// Buckets are ordered: bucket[0] must finish before bucket[1] starts, etc.
@@ -32,6 +35,7 @@ pub struct Schedule<K> {
 /// Compute a parallel-bucket schedule from the given DAG.
 ///
 /// Returns an error if the DAG contains a cycle.
+#[cfg_attr(feature = "otel", instrument(skip(dag), fields(node_count = %dag.node_count(), edge_count = %dag.edge_count())))]
 pub fn schedule<K>(dag: &Dag<K>) -> Result<Schedule<K>, DagError>
 where
     K: Eq + Hash + Clone + std::fmt::Debug,

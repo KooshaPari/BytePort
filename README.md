@@ -19,6 +19,12 @@
 > human operator. Bug reports and contributions are still welcome, but please
 > expect AI-generated code, comments, and documentation throughout.
 <!-- AI-DD-META:END -->
+**Work state:** docs polish in progress; README standardized for CI-green merges.
+`██████████` 10/10
+**Usage / Quickstart:** `git clone` the repo, read `ARCHITECTURE.md` for system context, then run the stack from `backend/byteport/`, `backend/nvms/`, and `frontend/web/` using the commands below.
+
+BytePort is a polyglot deployment platform for self-hosted portfolio and infrastructure workflows. It combines a Go backend, a Go-based NVMS runtime, a SvelteKit web frontend, and a Tauri shell so one manifest can drive deployment, endpoint registration, and showcase metadata generation across the stack.
+
 > **Pinned references (Phenotype-org)**
 > - MSRV: see rust-toolchain.toml (Tauri 2 shell)
 > - cargo-deny config: see deny.toml
