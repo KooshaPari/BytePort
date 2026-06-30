@@ -1,10 +1,96 @@
+# fr-coverage.yml — Functional-Requirement coverage gate
+#
+# Enforces that Rust and Go test suites run and produce coverage data on every PR.
+# Thresholds are intentionally modest (50% lines) so the gate is immediately
+# green-able; raise via RATCHETS.md as coverage grows.
+#
+# Pillars: L11 (quality gates), L38 (ratchets), L32 (test infra).
+
 name: FR Coverage
-on: [pull_request]
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
+  pull-requests: write
+
 jobs:
-  coverage:
+  rust-coverage:
+    name: Rust coverage (>=50% lines)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-      - run: echo "FR coverage check (phenotype-tooling integration)"
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-llvm-cov
+
+      - name: Run Rust tests with coverage
+        run: |
+          cargo llvm-cov \
+            --all-features \
+            --fail-under-lines 50 \
+            --lcov --output-path target/coverage/rust.lcov
+        env:
+          CARGO_TERM_COLOR: always
+
+      - name: Upload Rust coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-rust
+          path: target/coverage/rust.lcov
+          retention-days: 14
+
+  go-coverage:
+    name: Go coverage (>=50%)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+
+      - name: Run Go tests with coverage
+        run: go test -coverprofile=coverage.out -covermode=atomic ./...
+
+      - name: Check Go coverage threshold (>=50%)
+        run: |
+          COVERAGE=$(go tool cover -func=coverage.out | grep "total:" | awk '{print $3}' | sed 's/%//')
+          echo "Go coverage: ${COVERAGE}%"
+          if (( $(echo "$COVERAGE < 50.0" | bc -l) )); then
+            echo "Go coverage ${COVERAGE}% is below 50% threshold"
+            go tool cover -func=coverage.out
+            exit 1
+          fi
+          echo "Go coverage ${COVERAGE}% meets threshold"
+
+      - name: Upload Go coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-go
+          path: backend/coverage.out
+          retention-days: 14
