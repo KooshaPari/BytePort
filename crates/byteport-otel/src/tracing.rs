@@ -3,7 +3,6 @@
 //! Provides convenience functions for creating spans with consistent
 //! attributes aligned with ADR-008.
 
-use opentelemetry::trace::TraceContextExt;
 use opentelemetry::{
     trace::{Span, SpanKind, Tracer, TracerProvider},
     KeyValue,
@@ -15,7 +14,7 @@ const TRACER_NAME: &str = "byteport";
 /// Start a root span for a BytePort request.
 ///
 /// Adds common attributes (`service.name`, `byteport.version`).
-pub fn start_request_span(tracer_provider: &impl TracerProvider, schema_id: i64, encoder_id: i64) -> Span {
+pub fn start_request_span(tracer_provider: &impl TracerProvider, schema_id: i64, encoder_id: i64) -> impl Span {
     let tracer = tracer_provider.tracer(TRACER_NAME);
     tracer
         .span_builder("byteport.request")
@@ -28,7 +27,7 @@ pub fn start_request_span(tracer_provider: &impl TracerProvider, schema_id: i64,
 }
 
 /// Start an encode span as a child of the current context.
-pub fn start_encode_span(encoder_id: i64) -> Span {
+pub fn start_encode_span(encoder_id: i64) -> impl Span {
     let tracer = opentelemetry::global::tracer(TRACER_NAME);
     let cx = opentelemetry::Context::current();
     tracer
@@ -39,7 +38,7 @@ pub fn start_encode_span(encoder_id: i64) -> Span {
 }
 
 /// Start a decode span as a child of the current context.
-pub fn start_decode_span(encoder_id: i64) -> Span {
+pub fn start_decode_span(encoder_id: i64) -> impl Span {
     let tracer = opentelemetry::global::tracer(TRACER_NAME);
     let cx = opentelemetry::Context::current();
     tracer
@@ -50,7 +49,7 @@ pub fn start_decode_span(encoder_id: i64) -> Span {
 }
 
 /// Start a transport span.
-pub fn start_transport_span(transport_id: i64, operation: &str) -> Span {
+pub fn start_transport_span(transport_id: i64, operation: &str) -> impl Span {
     let tracer = opentelemetry::global::tracer(TRACER_NAME);
     let cx = opentelemetry::Context::current();
     tracer
@@ -63,12 +62,12 @@ pub fn start_transport_span(transport_id: i64, operation: &str) -> Span {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use opentelemetry_sdk::trace::TracerProvider;
+    use opentelemetry_sdk::trace::SdkTracerProvider;
 
     /// Verify that span creation does not panic in a no-op environment.
     #[test]
     fn span_creation_no_panic() {
-        let provider = TracerProvider::default();
+        let provider = SdkTracerProvider::default();
         let _span = start_request_span(&provider, 1, 2);
         // If we get here without panicking, the test passes.
     }

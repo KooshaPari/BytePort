@@ -4,7 +4,7 @@
 //! Each instrument group is lazily initialised from the global meter.
 
 use opentelemetry::{
-    metrics::{Counter, Histogram, Meter, Result, UpDownCounter},
+    metrics::{Counter, Histogram, UpDownCounter},
     KeyValue,
 };
 use std::sync::OnceLock;
@@ -39,94 +39,102 @@ pub struct BytePortMetrics {
 
 impl BytePortMetrics {
     /// Initialise all metric instruments from the global meter.
-    pub fn new() -> Result<Self> {
+    pub fn new() -> Self {
         let meter = opentelemetry::global::meter(METER_NAME);
 
-        Ok(Self {
+        Self {
             // Serialization
             serialize_duration: meter
                 .f64_histogram("byteport.serialize.duration")
                 .with_description("Time to serialize a message")
                 .with_unit("s")
-                .init(),
+                .build(),
             serialize_bytes: meter
                 .u64_histogram("byteport.serialize.bytes")
                 .with_description("Serialized payload size")
                 .with_unit("By")
-                .init(),
+                .build(),
             serialize_errors: meter
                 .u64_counter("byteport.serialize.errors")
                 .with_description("Serialization error count")
-                .init(),
+                .build(),
 
             // Transport
             connection_count: meter
                 .i64_up_down_counter("byteport.connection.count")
                 .with_description("Active connections")
-                .init(),
+                .build(),
             connection_created: meter
                 .u64_counter("byteport.connection.created")
                 .with_description("New connections created")
-                .init(),
+                .build(),
             connection_closed: meter
                 .u64_counter("byteport.connection.closed")
                 .with_description("Connections closed")
-                .init(),
+                .build(),
             transport_latency: meter
                 .f64_histogram("byteport.transport.latency")
                 .with_description("Transport round-trip latency")
                 .with_unit("s")
-                .init(),
+                .build(),
             transport_errors: meter
                 .u64_counter("byteport.transport.errors")
                 .with_description("Transport error count")
-                .init(),
+                .build(),
 
             // Compression
             compression_ratio: meter
                 .f64_histogram("byteport.compression.ratio")
                 .with_description("Compression ratio (compressed/original)")
-                .init(),
+                .build(),
             compression_original: meter
                 .u64_counter("byteport.compression.bytes.original")
                 .with_description("Uncompressed byte count")
                 .with_unit("By")
-                .init(),
+                .build(),
             compression_compressed: meter
                 .u64_counter("byteport.compression.bytes.compressed")
                 .with_description("Compressed byte count")
                 .with_unit("By")
-                .init(),
+                .build(),
             compression_duration: meter
                 .f64_histogram("byteport.compression.duration")
                 .with_description("Compression time")
                 .with_unit("s")
-                .init(),
+                .build(),
 
             // Schema
             schema_validations: meter
                 .u64_counter("byteport.schema.validations")
                 .with_description("Schema validation count")
-                .init(),
+                .build(),
             schema_validation_errors: meter
                 .u64_counter("byteport.schema.validation_errors")
                 .with_description("Schema validation failure count")
-                .init(),
+                .build(),
             schema_lookups: meter
                 .u64_counter("byteport.schema.lookups")
                 .with_description("Schema registry lookups")
-                .init(),
+                .build(),
             schema_cache_hits: meter
                 .u64_counter("byteport.schema.cache.hits")
                 .with_description("Schema cache hits")
-                .init(),
+                .build(),
             schema_cache_misses: meter
                 .u64_counter("byteport.schema.cache.misses")
                 .with_description("Schema cache misses")
-                .init(),
-        })
+                .build(),
+        }
     }
+}
 
+impl Default for BytePortMetrics {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl BytePortMetrics {
     // ── Convenience recorders ─────────────────────────────────
 
     /// Record a serialisation operation.
@@ -178,7 +186,7 @@ pub fn record_cli_invocation(command: &str) {
         .u64_counter("byteport.cli.invocations")
         .with_description("Number of CLI command invocations")
         .with_unit("{count}")
-        .init();
+        .build();
     counter.add(1, &[KeyValue::new("cli.command", command.to_owned())]);
 }
 
@@ -189,7 +197,7 @@ pub fn record_cli_error(command: &str, error_kind: &str) {
         .u64_counter("byteport.cli.errors")
         .with_description("Number of CLI command errors")
         .with_unit("{count}")
-        .init();
+        .build();
     counter.add(
         1,
         &[
@@ -207,8 +215,8 @@ mod tests {
     fn metrics_can_be_constructed() {
         // In a test environment without a global meter provider, this
         // should still succeed (no-op meter).
-        let metrics = BytePortMetrics::new();
-        assert!(metrics.is_ok(), "metrics should construct even without OTLP backend");
+        let _metrics = BytePortMetrics::new();
+        // If we get here without panicking, the test passes.
     }
 
     #[test]

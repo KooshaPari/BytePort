@@ -201,12 +201,12 @@ fn run_ui(action: UiAction) {
         }
         UiAction::Prompt { kind, title, body } => {
             let msg = match kind.to_lowercase().as_str() {
-                "info" => PromptMessage::info(title, body),
-                "warning" => PromptMessage::warning(title, body),
-                "error" => PromptMessage::error(title, body),
-                "confirm" => PromptMessage::confirm(title, body),
-                "choice" => PromptMessage::choice(title, body, vec!["yes".into(), "no".into()]),
-                "input" => PromptMessage::input(title, body, None),
+                "info" => PromptMessage::info(&title, &body),
+                "warning" => PromptMessage::warning(&title, &body),
+                "error" => PromptMessage::error(&title, &body),
+                "confirm" => PromptMessage::confirm(&title, &body),
+                "choice" => PromptMessage::choice(&title, &body, vec!["yes".into(), "no".into()]),
+                "input" => PromptMessage::input(&title, &body, None),
                 _ => {
                     record_cli_error("ui", "unknown_prompt_kind");
                     eprintln!("Unknown prompt kind: {kind}");

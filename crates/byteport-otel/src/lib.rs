@@ -16,7 +16,7 @@
 //! ```rust,no_run
 //! use byteport_otel::init;
 //!
-//! let guard = init::init_telemetry(init::TelemetryConfig::default());
+//! let guard = init::init_telemetry(byteport_otel::config::TelemetryConfig::default());
 //! // application runs here
 //! drop(guard); // flushes all spans and metrics on shutdown
 //! ```
