@@ -37,6 +37,7 @@ func DeployProject(w http.ResponseWriter, r *http.Request) {
 	nvmsString, readMeString, codebase, files, err := ProvisionFiles(w, r, project)
 	if err != nil {
 		http.Error(w, "Error provisioning files", http.StatusInternalServerError)
+		return
 	}
 	fmt.Println("Got files")
 	//ln(response)
@@ -68,6 +69,7 @@ func DeployProject(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fmt.Println("Error parsing NVMS: ", err)
 		http.Error(w, "Error parsing NVMS: "+err.Error(), http.StatusBadRequest)
+		return
 	}
 	project.NvmsConfig = *nvmsConfig
 	project.Readme = readMeString

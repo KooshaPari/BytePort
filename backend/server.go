@@ -86,22 +86,32 @@ func NewAPIServer(c *container.Container) *APIServer {
 	}
 }
 
+func defaultOrigins() []string {
+	return []string{
+		"http://localhost:3000",
+		"http://localhost:5173",
+		"http://localhost:8002",
+		"https://byte.kooshapari.com",
+	}
+}
+
 func parseAllowedOrigins() []string {
 	raw := strings.Split(os.Getenv("ALLOWED_ORIGINS"), ",")
 	origins := make([]string, 0, len(raw))
 	for _, origin := range raw {
 		origin = strings.TrimSpace(origin)
 		if origin != "" {
+			// Harden: reject wildcard origin when AllowCredentials: true
+			// per CORS spec: Access-Control-Allow-Origin: * is forbidden
+			// with Access-Control-Allow-Credentials: true.
+			if origin == "*" {
+				return defaultOrigins()
+			}
 			origins = append(origins, origin)
 		}
 	}
 	if len(origins) == 0 {
-		origins = []string{
-			"http://localhost:3000",
-			"http://localhost:5173",
-			"http://localhost:8002",
-			"https://byte.kooshapari.com",
-		}
+		return defaultOrigins()
 	}
 	return origins
 }
