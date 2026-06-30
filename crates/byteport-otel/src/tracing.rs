@@ -3,11 +3,11 @@
 //! Provides convenience functions for creating spans with consistent
 //! attributes aligned with ADR-008.
 
-use opentelemetry::{
-    KeyValue,
-    trace::{Span, SpanKind, Tracer, TracerProvider},
-};
 use opentelemetry::trace::TraceContextExt;
+use opentelemetry::{
+    trace::{Span, SpanKind, Tracer, TracerProvider},
+    KeyValue,
+};
 
 /// The tracer name used by BytePort.
 const TRACER_NAME: &str = "byteport";
@@ -15,11 +15,7 @@ const TRACER_NAME: &str = "byteport";
 /// Start a root span for a BytePort request.
 ///
 /// Adds common attributes (`service.name`, `byteport.version`).
-pub fn start_request_span(
-    tracer_provider: &impl TracerProvider,
-    schema_id: i64,
-    encoder_id: i64,
-) -> Span {
+pub fn start_request_span(tracer_provider: &impl TracerProvider, schema_id: i64, encoder_id: i64) -> Span {
     let tracer = tracer_provider.tracer(TRACER_NAME);
     tracer
         .span_builder("byteport.request")

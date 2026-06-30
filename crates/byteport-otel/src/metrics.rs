@@ -4,8 +4,8 @@
 //! Each instrument group is lazily initialised from the global meter.
 
 use opentelemetry::{
+    metrics::{Counter, Histogram, Meter, Result, UpDownCounter},
     KeyValue,
-    metrics::{Counter, Histogram, Meter, UpDownCounter, Result},
 };
 use std::sync::OnceLock;
 
@@ -44,29 +44,86 @@ impl BytePortMetrics {
 
         Ok(Self {
             // Serialization
-            serialize_duration: meter.f64_histogram("byteport.serialize.duration").with_description("Time to serialize a message").with_unit("s").init(),
-            serialize_bytes: meter.u64_histogram("byteport.serialize.bytes").with_description("Serialized payload size").with_unit("By").init(),
-            serialize_errors: meter.u64_counter("byteport.serialize.errors").with_description("Serialization error count").init(),
+            serialize_duration: meter
+                .f64_histogram("byteport.serialize.duration")
+                .with_description("Time to serialize a message")
+                .with_unit("s")
+                .init(),
+            serialize_bytes: meter
+                .u64_histogram("byteport.serialize.bytes")
+                .with_description("Serialized payload size")
+                .with_unit("By")
+                .init(),
+            serialize_errors: meter
+                .u64_counter("byteport.serialize.errors")
+                .with_description("Serialization error count")
+                .init(),
 
             // Transport
-            connection_count: meter.i64_up_down_counter("byteport.connection.count").with_description("Active connections").init(),
-            connection_created: meter.u64_counter("byteport.connection.created").with_description("New connections created").init(),
-            connection_closed: meter.u64_counter("byteport.connection.closed").with_description("Connections closed").init(),
-            transport_latency: meter.f64_histogram("byteport.transport.latency").with_description("Transport round-trip latency").with_unit("s").init(),
-            transport_errors: meter.u64_counter("byteport.transport.errors").with_description("Transport error count").init(),
+            connection_count: meter
+                .i64_up_down_counter("byteport.connection.count")
+                .with_description("Active connections")
+                .init(),
+            connection_created: meter
+                .u64_counter("byteport.connection.created")
+                .with_description("New connections created")
+                .init(),
+            connection_closed: meter
+                .u64_counter("byteport.connection.closed")
+                .with_description("Connections closed")
+                .init(),
+            transport_latency: meter
+                .f64_histogram("byteport.transport.latency")
+                .with_description("Transport round-trip latency")
+                .with_unit("s")
+                .init(),
+            transport_errors: meter
+                .u64_counter("byteport.transport.errors")
+                .with_description("Transport error count")
+                .init(),
 
             // Compression
-            compression_ratio: meter.f64_histogram("byteport.compression.ratio").with_description("Compression ratio (compressed/original)").init(),
-            compression_original: meter.u64_counter("byteport.compression.bytes.original").with_description("Uncompressed byte count").with_unit("By").init(),
-            compression_compressed: meter.u64_counter("byteport.compression.bytes.compressed").with_description("Compressed byte count").with_unit("By").init(),
-            compression_duration: meter.f64_histogram("byteport.compression.duration").with_description("Compression time").with_unit("s").init(),
+            compression_ratio: meter
+                .f64_histogram("byteport.compression.ratio")
+                .with_description("Compression ratio (compressed/original)")
+                .init(),
+            compression_original: meter
+                .u64_counter("byteport.compression.bytes.original")
+                .with_description("Uncompressed byte count")
+                .with_unit("By")
+                .init(),
+            compression_compressed: meter
+                .u64_counter("byteport.compression.bytes.compressed")
+                .with_description("Compressed byte count")
+                .with_unit("By")
+                .init(),
+            compression_duration: meter
+                .f64_histogram("byteport.compression.duration")
+                .with_description("Compression time")
+                .with_unit("s")
+                .init(),
 
             // Schema
-            schema_validations: meter.u64_counter("byteport.schema.validations").with_description("Schema validation count").init(),
-            schema_validation_errors: meter.u64_counter("byteport.schema.validation_errors").with_description("Schema validation failure count").init(),
-            schema_lookups: meter.u64_counter("byteport.schema.lookups").with_description("Schema registry lookups").init(),
-            schema_cache_hits: meter.u64_counter("byteport.schema.cache.hits").with_description("Schema cache hits").init(),
-            schema_cache_misses: meter.u64_counter("byteport.schema.cache.misses").with_description("Schema cache misses").init(),
+            schema_validations: meter
+                .u64_counter("byteport.schema.validations")
+                .with_description("Schema validation count")
+                .init(),
+            schema_validation_errors: meter
+                .u64_counter("byteport.schema.validation_errors")
+                .with_description("Schema validation failure count")
+                .init(),
+            schema_lookups: meter
+                .u64_counter("byteport.schema.lookups")
+                .with_description("Schema registry lookups")
+                .init(),
+            schema_cache_hits: meter
+                .u64_counter("byteport.schema.cache.hits")
+                .with_description("Schema cache hits")
+                .init(),
+            schema_cache_misses: meter
+                .u64_counter("byteport.schema.cache.misses")
+                .with_description("Schema cache misses")
+                .init(),
         })
     }
 
@@ -80,7 +137,8 @@ impl BytePortMetrics {
 
     /// Record a serialisation error.
     pub fn record_serialize_error(&self, error_type: &str) {
-        self.serialize_errors.add(1, &[KeyValue::new("error.type", error_type.to_owned())]);
+        self.serialize_errors
+            .add(1, &[KeyValue::new("error.type", error_type.to_owned())]);
     }
 
     /// Record a transport operation.
@@ -93,7 +151,11 @@ impl BytePortMetrics {
 
     /// Record a compression operation.
     pub fn record_compression(&self, original: u64, compressed: u64, duration_s: f64) {
-        let ratio = if original > 0 { compressed as f64 / original as f64 } else { 1.0 };
+        let ratio = if original > 0 {
+            compressed as f64 / original as f64
+        } else {
+            1.0
+        };
         self.compression_ratio.record(ratio, &[]);
         self.compression_original.add(original, &[]);
         self.compression_compressed.add(compressed, &[]);

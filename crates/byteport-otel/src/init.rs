@@ -15,11 +15,7 @@ use opentelemetry_sdk::{
     trace::{Config, TpError, TracerProvider},
     Resource,
 };
-use tracing_subscriber::{
-    EnvFilter,
-    layer::SubscriberExt,
-    util::SubscriberInitExt,
-};
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
 use crate::config::TelemetryConfig;
 
@@ -94,13 +90,11 @@ pub fn init_telemetry(config: TelemetryConfig) -> TelemetryGuard {
             None
         };
 
-        let otel_layer = tracer_provider.as_ref().map(|_| {
-            tracing_opentelemetry::layer()
-                .with_tracer(opentelemetry::global::tracer("byteport"))
-        });
+        let otel_layer = tracer_provider
+            .as_ref()
+            .map(|_| tracing_opentelemetry::layer().with_tracer(opentelemetry::global::tracer("byteport")));
 
-        let filter = EnvFilter::try_from_default_env()
-            .unwrap_or_else(|_| EnvFilter::new(&config.log_level));
+        let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(&config.log_level));
 
         tracing_subscriber::registry()
             .with(filter)
@@ -108,8 +102,7 @@ pub fn init_telemetry(config: TelemetryConfig) -> TelemetryGuard {
             .with(otel_layer)
             .init();
     } else if config.enable_stdout_log {
-        let filter = EnvFilter::try_from_default_env()
-            .unwrap_or_else(|_| EnvFilter::new(&config.log_level));
+        let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(&config.log_level));
 
         tracing_subscriber::registry()
             .with(filter)
@@ -134,10 +127,7 @@ pub fn init_default() -> TelemetryGuard {
 
 // ── Internal helpers ─────────────────────────────────────────────────
 
-fn build_tracer_provider(
-    config: &TelemetryConfig,
-    resource: Resource,
-) -> Result<TracerProvider, TpError> {
+fn build_tracer_provider(config: &TelemetryConfig, resource: Resource) -> Result<TracerProvider, TpError> {
     let exporter = opentelemetry_otlp::SpanExporter::builder()
         .with_tonic()
         .with_endpoint(&config.otlp_endpoint)
@@ -153,8 +143,7 @@ fn build_tracer_provider(
 fn build_meter_provider(
     config: &TelemetryConfig,
     resource: Resource,
-) -> Result<opentelemetry_sdk::metrics::MeterProvider, opentelemetry_otlp::new_with_tonic::MetricsExporterBuildError>
-{
+) -> Result<opentelemetry_sdk::metrics::MeterProvider, opentelemetry_otlp::new_with_tonic::MetricsExporterBuildError> {
     let exporter = opentelemetry_otlp::MetricExporter::builder()
         .with_tonic()
         .with_endpoint(&config.otlp_endpoint)

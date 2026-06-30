@@ -5,11 +5,11 @@
 //! upload, and UI. It serves as both a developer tool and a reference
 //! consumer for the transport layer.
 
+use byteport_otel::metrics::{record_cli_error, record_cli_invocation};
 use byteport_transport::ports::codec::{Codec, WireCodecAdapter};
 use byteport_transport::ports::terminal_ui::TerminalUiAdapter;
 use byteport_transport::ports::transport::{Transport, WireTransportAdapter};
 use byteport_transport::ports::ui::{MockUiAdapter, PromptMessage, UiPort, UiView};
-use byteport_otel::metrics::{record_cli_error, record_cli_invocation};
 use byteport_transport::{S3UploadTransport, UploadRequest, UploadTransport};
 use clap::{Parser, Subcommand};
 use tracing::info;
