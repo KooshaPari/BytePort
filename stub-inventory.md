@@ -1,15 +1,14 @@
 # BytePort Stub Inventory
 
-> Generated 2026-05-05. Scan: TODO/FIXME/stub/placeholder/NOT IMPLEMENTED in `.rs`, `.py`, `.ts`, `.tsx`, `.go` files.
-> **Total: 7 entries across 4 files.**
+> Generated 2026-05-05. Last updated: 2026-06-30.
+> Scan: TODO/FIXME/stub/placeholder/NOT IMPLEMENTED in `.rs`, `.py`, `.ts`, `.tsx`, `.go` files.
+> **Total: 6 entries across 3 files.** (1 entry closed 2026-06-30)
 
-## Category: Dead-Code todo!() (1 entry) — Compiles Clean
+## Category: Dead-Code todo!() — RESOLVED
 
-| File | Line | Content |
-|------|------|---------|
-| `backend/nvms.rs` | 280 | `todo!()` in `locateNVMS()` function |
-
-**Note:** This `todo!()` is in a Go file (`backend/nvms.rs`), not Rust. The BytePort backend compiles clean — this function is unreachable in the current build. No action required.
+| File | Resolution | Date |
+|------|------------|------|
+| `backend/nvms.rs:280` `todo!()` in `locateNVMS()` | Removed dead function; replaced with explanatory comment pointing to Go provisioner layer. Never called in active codebase. | 2026-06-30 |
 
 ## Category: Comment Context / Embedded References (6 entries)
 
@@ -26,5 +25,8 @@ These are references to external projects or documentation, not actual stubs.
 
 ## Action Items
 
-- `backend/nvms/projectManager/deploy.go:51`: Implement NVMS yaml unmarshaling validation
-- `backend/nvms/lib/llm.go:22`: Implement Gemini LLM provider
+- `backend/nvms/projectManager/deploy.go:51`: NVMS yaml unmarshaling validation — the comment
+  is stale; `parseNVMSConfig()` at line 67 already handles this. Comment can be removed.
+- `backend/nvms/lib/llm.go:22`: Gemini provider is implemented in
+  `backend/nvms/lib/providers/gemini/gemini.go`. The TODO comment and `ProviderGemini` constant
+  are correct as-is; the inline `// TODO: Implement provider` comment should be removed.

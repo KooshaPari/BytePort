@@ -274,8 +274,8 @@ impl FromStr for ConfigValue {
         }
     }
 }
-fn locateNVMS(path: String) -> String {
-    // Locate nvms.yaml in targetDirectory
-    
-    todo!()
-}
+// locateNVMS: removed — function was declared but never called in the active
+// codebase. NVMS file location is handled by the Go provisioner layer
+// (backend/nvms/projectManager/deploy.go). If a Rust-side locator is needed
+// in future, implement with std::fs::read_dir walking for "nvms.yaml".
+// Tracked: stub-inventory.md → "backend/nvms.rs:280 todo!() in locateNVMS()".
