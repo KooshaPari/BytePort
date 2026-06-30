@@ -11,22 +11,21 @@ import (
 // Client provides an interface for interacting with the S3 API.
 
 func (c *Client) CreateBucket(ctx context.Context, name string) error {
-    fmt.Println("Creating bucket: ", name)
-    req, err := c.newRequest(ctx, http.MethodPut, "", name, nil)
-    if err != nil {
-        fmt.Println("Error creating request: ", err)
-        return err
-    }
+	fmt.Println("Creating bucket: ", name)
+	req, err := c.newRequest(ctx, http.MethodPut, "", name, nil)
+	if err != nil {
+		fmt.Println("Error creating request: ", err)
+		return err
+	}
 
-    resp, err := c.do(req)
-    if err != nil {
-        fmt.Println("Error creating bucket: ", err)
-        return err
-    }
-    defer resp.Body.Close()
-    return nil
+	resp, err := c.do(req)
+	if err != nil {
+		fmt.Println("Error creating bucket: ", err)
+		return err
+	}
+	defer resp.Body.Close()
+	return nil
 }
-
 
 // ListBuckets returns a list of buckets.
 func (c *Client) ListBuckets(ctx context.Context) (*ListBucketsResponse, error) {
@@ -98,7 +97,6 @@ func (c *Client) GetObject(ctx context.Context, bucketName, objectName string) (
 	if err != nil {
 		return nil, err
 	}
- 
 
 	return resp.Body, nil
 }
@@ -119,7 +117,7 @@ func (c *Client) DeleteObject(ctx context.Context, bucketName, objectName string
 	return nil
 }
 func (c *Client) DeleteBucket(ctx context.Context, bucketName string) error {
-	req, err := c.newRequest(ctx, http.MethodDelete, bucketName,"", nil)
+	req, err := c.newRequest(ctx, http.MethodDelete, bucketName, "", nil)
 	if err != nil {
 		return err
 	}
