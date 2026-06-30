@@ -8,4 +8,10 @@ publish = false
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
 thiserror = "2.0"
+byteport-otel = { path = "../byteport-otel", optional = true }
+tracing = { version = "0.1", optional = true }
+
+[features]
+default = ["otel"]
+otel = ["dep:byteport-otel", "dep:tracing"]
 

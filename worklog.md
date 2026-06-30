@@ -1,5 +1,21 @@
 # BytePort Worklog
 
+### 2026-06-25 — E9: OTel metrics on CLI invocation rate/error
+
+**feat(E9): add OTel metrics counters for CLI invocation rate/error**
+
+- Added `record_cli_invocation(command)` and `record_cli_error(command, error_kind)` to `byteport-otel/src/metrics.rs`
+- Wired invocation recording into all 4 CLI command handlers (codec, transport, ui, upload)
+- Replaced `.expect()` panics with error-recording match arms on all failure paths
+- Instruments: `byteport.cli.invocations` (counter) and `byteport.cli.errors` (counter), each with `cli.command` and `error.kind` attributes
+- Branch: `feat/E9-otel-metrics`
+- PR: [#255](https://github.com/KooshaPari/BytePort/pull/255)
+- Labels: `area:compute-infra`
+- Epic: epic_E — BytePort: terminal UI, tools CLI, otel, governance
+- Grade: 10/10 (A+) — grade-e9.json
+
+---
+
 ### 2026-06-25 — B11: Delete local NVMS implementation after repoint
 
 **consolidate(B11): delete local NVMS implementation after repoint**
