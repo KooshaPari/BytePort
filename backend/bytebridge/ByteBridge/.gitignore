@@ -1,2 +1,16 @@
 main.wasm
 .spin/
+
+# Standard hygiene
+.env
+.env.local
+*.pem
+*.key
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
+__pycache__/
+.pytest_cache/
+.venv/
