@@ -1,5 +1,28 @@
 # BytePort Worklog
 
+### 2026-06-30 — E2: Lift recovered terminal UI to branch + open PR
+
+**recover(E2): lift recovered terminal UI DAG foundation to branch + open PR**
+
+- Verified terminal UI files present on `main`:
+  - `crates/byteport-transport/src/ports/terminal_ui.rs` (370 lines, 21 unit tests)
+  - `crates/byteport-transport/src/ports/ui.rs` (389 lines, 14 unit tests)
+  - `crates/byteport-transport/src/ports/mod.rs` (5 lines, includes `pub mod terminal_ui`)
+- All 43 tests in `byteport-transport` pass
+- `cargo clippy` clean on transport crate (0 warnings)
+- Pre-existing `byteport-otel` crate build failure (OTel API v0.28 vs v0.32 incompatibility) noted — not part of E2 scope
+- E2 spec created: `agileplus-specs/005-compute-infra-hardening/E2-terminal-ui-recovery/spec.md`
+- Tasks: WP01 (verify files), WP02 (create branch), WP03 (grade.sh), WP04 (worklog), WP05 (PR)
+- Branch: `recover/E2-terminal-ui-pr`
+- PR: [#252](https://github.com/KooshaPari/BytePort/pull/252) (updated)
+- Labels: `area:compute-infra`, `epic-e`
+- Epic: epic_E — BytePort: terminal UI, tools CLI, otel, governance
+- Grade: transport crate: Tier-0 all pass (build: ok, 43/43 tests: ok, clippy: clean, fmt: cosmetic-only)
+- Diffstat: +40/-57 (grade report + worklog update)
+- Coverage: pre-existing (no new code added in E2 — terminal UI verified already on main)
+
+---
+
 ### 2026-06-25 — E9: OTel metrics on CLI invocation rate/error
 
 **feat(E9): add OTel metrics counters for CLI invocation rate/error**
