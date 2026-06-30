@@ -37,6 +37,7 @@ func DeployProject(w http.ResponseWriter, r *http.Request) {
 	nvmsString, readMeString, codebase, files, err := ProvisionFiles(w, r, project)
 	if err != nil {
 		http.Error(w, "Error provisioning files", http.StatusInternalServerError)
+		return
 	}
 	fmt.Println("Got files")
 	//ln(response)

@@ -126,10 +126,7 @@ impl Transport for WireTransportAdapter {
 
     fn send(&mut self, data: &[u8]) -> io::Result<usize> {
         if !self.connected {
-            return Err(io::Error::new(
-                io::ErrorKind::NotConnected,
-                "transport not connected",
-            ));
+            return Err(io::Error::new(io::ErrorKind::NotConnected, "transport not connected"));
         }
         self.tx.extend_from_slice(data);
         Ok(data.len())
@@ -137,10 +134,7 @@ impl Transport for WireTransportAdapter {
 
     fn recv(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         if !self.connected {
-            return Err(io::Error::new(
-                io::ErrorKind::NotConnected,
-                "transport not connected",
-            ));
+            return Err(io::Error::new(io::ErrorKind::NotConnected, "transport not connected"));
         }
         let len = self.rx.len().min(buf.len());
         if len > 0 {

@@ -36,11 +36,7 @@ pub struct S3UploadTransport {
 }
 
 impl S3UploadTransport {
-    pub fn new(
-        endpoint: impl Into<String>,
-        bucket: impl Into<String>,
-        key_prefix: Option<impl Into<String>>,
-    ) -> Self {
+    pub fn new(endpoint: impl Into<String>, bucket: impl Into<String>, key_prefix: Option<impl Into<String>>) -> Self {
         Self {
             endpoint: endpoint.into(),
             bucket: bucket.into(),
@@ -67,8 +63,8 @@ impl S3UploadTransport {
     }
 }
 
-#[cfg_attr(feature = "otel", instrument(skip(self, request), fields(object_key = %request.object_key, content_length = %request.content_length)))]
 impl UploadTransport for S3UploadTransport {
+    #[cfg_attr(feature = "otel", instrument(skip(self, request), fields(object_key = %request.object_key, content_length = %request.content_length)))]
     fn create_upload(&self, request: &UploadRequest) -> TransportResult<UploadInstruction> {
         if request.object_key.trim().is_empty() {
             return Err(UploadTransportError::EmptyObjectKey);
@@ -105,11 +101,7 @@ mod tests {
 
     #[test]
     fn s3_transport_prefixes_and_normalizes_object_keys() {
-        let transport = S3UploadTransport::new(
-            "https://storage.example.test/",
-            "byteport-uploads",
-            Some("/projects/"),
-        );
+        let transport = S3UploadTransport::new("https://storage.example.test/", "byteport-uploads", Some("/projects/"));
 
         let upload = transport
             .create_upload(&UploadRequest {
@@ -124,20 +116,13 @@ mod tests {
             upload.url,
             "https://storage.example.test/byteport-uploads/projects/demo/screenshot.png"
         );
-        assert_eq!(
-            upload.headers.get("content-type"),
-            Some(&"image/png".into())
-        );
+        assert_eq!(upload.headers.get("content-type"), Some(&"image/png".into()));
         assert_eq!(upload.headers.get("content-length"), Some(&"42".into()));
     }
 
     #[test]
     fn s3_transport_rejects_empty_object_key() {
-        let transport = S3UploadTransport::new(
-            "https://storage.example.test",
-            "byteport-uploads",
-            None::<String>,
-        );
+        let transport = S3UploadTransport::new("https://storage.example.test", "byteport-uploads", None::<String>);
 
         let error = transport
             .create_upload(&UploadRequest {
