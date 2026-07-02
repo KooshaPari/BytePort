@@ -7,11 +7,21 @@ description = "Reusable DAG unit abstraction: DagUnit lifecycle, YAML executor, 
 publish = false
 
 [dependencies]
-byteport-dag = { path = "../byteport-dag" }
-serde = { version = "1", features = ["derive"] }
 serde_yaml = "0.9"
-serde_json = "1"
 thiserror = "2.0"
 tracing = "0.1"
-uuid = { version = "1", features = ["v4"] }
-chrono = { version = "0.4", features = ["serde"] }
+
+[dependencies.byteport-dag]
+path = "../byteport-dag"
+
+[dependencies.serde]
+version = "1"
+features = [ "derive",]
+
+[dependencies.uuid]
+version = "1"
+features = [ "v4",]
+
+[dependencies.chrono]
+version = "0.4"
+features = [ "serde",]

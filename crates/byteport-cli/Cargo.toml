@@ -7,15 +7,25 @@ description = "CLI for Phenotype compute/infra — DAG execution and orchestrati
 publish = false
 
 [dependencies]
-byteport-dag = { path = "../byteport-dag" }
-byteport-otel = { path = "../byteport-otel" }
-byteport-transport = { path = "../byteport-transport" }
-clap = { version = "4", features = ["derive"] }
-opentelemetry = { version = "0.32", features = ["trace"] }
-serde = { version = "1", features = ["derive"] }
-serde_yaml = "0.9"
-thiserror = "2.0"
 tracing = "0.1"
 
-[dev-dependencies]
-opentelemetry_sdk = { version = "0.32", features = ["trace", "testing"] }
+[dependencies.byteport-dag]
+path = "../byteport-dag"
+
+[dependencies.byteport-otel]
+path = "../byteport-otel"
+
+[dependencies.byteport-transport]
+path = "../byteport-transport"
+
+[dependencies.clap]
+version = "4"
+features = [ "derive",]
+
+[dependencies.opentelemetry]
+version = "0.32"
+features = [ "trace",]
+
+[dev-dependencies.opentelemetry_sdk]
+version = "0.32"
+features = [ "trace", "testing",]
