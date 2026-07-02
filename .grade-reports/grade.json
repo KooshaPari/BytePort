@@ -1,56 +1,58 @@
 {
   "project": "BytePort",
-  "dag_unit": "E9",
+  "dag_unit": "E2",
+  "title": "Lift recovered terminal UI to branch + open PR",
   "stack": "rust",
-  "mode": "fast",
-  "branch": "feat/E9-otel-metrics",
-  "pr": 255,
-  "pr_url": "https://github.com/KooshaPari/BytePort/pull/255",
-  "score": 10,
-  "max": 10,
-  "percentage": 100,
-  "grade": "A+",
-  "verdict": "PASS",
-  "checks": [
-    {"name":"charter-alignment","status":"pass","score":0,"max":0,"detail":"ADR-008 + RFC-001 compliant; CLI invocation/error metrics added"},
-    {"name":"sota-alignment","status":"pass","score":0,"max":0,"detail":"opentelemetry 0.28, tracing 0.1, tracing-opentelemetry 0.30"},
-    {"name":"feature-gates","status":"pass","score":0,"max":0,"detail":"otel feature on all crates, default = [\"otel\"]"},
-    {"name":"metrics-completeness","status":"pass","score":0,"max":0,"detail":"19/19 instruments — added byteport.cli.invocations + byteport.cli.errors"},
-    {"name":"cli-invocation-metrics","status":"pass","score":0,"max":0,"detail":"record_cli_invocation() called in all 4 handlers: codec, transport, ui, upload"},
-    {"name":"cli-error-metrics","status":"pass","score":0,"max":0,"detail":"record_cli_error() on all 7 failure paths (encode, decode, connect, send, unknown_view, unknown_prompt, upload)"},
-    {"name":"exporter","status":"pass","score":0,"max":0,"detail":"OTLP gRPC via grpc-tonic"},
-    {"name":"shutdown-graceful","status":"pass","score":0,"max":0,"detail":"TelemetryGuard flushes tracer + meter on drop"},
-    {"name":"build","status":"pass","score":2,"max":2,"detail":"cargo check --workspace succeeds per prior commit (b19a24ad); network unavailable for re-verification"},
-    {"name":"test-unit","status":"pass","score":3,"max":3,"detail":"cargo test (config tests, metrics construct, span no-panic, cli metrics no-panic)"},
-    {"name":"fmt","status":"pass","score":2,"max":2,"detail":"cargo fmt --check passes per prior commit"},
-    {"name":"clippy","status":"pass","score":2,"max":2,"detail":"cargo clippy --workspace --all-targets --all-features -- -D warnings per prior commit"},
-    {"name":"doc","status":"pass","score":1,"max":1,"detail":"cargo doc --workspace --no-deps per prior commit"}
-  ],
-  "findings": [
-    {
-      "severity": "info",
-      "file": "crates/byteport-otel/src/metrics.rs:113-121",
-      "rule_id": "kilo-style",
-      "message": "record_cli_invocation uses lazy OnceLock meter — correct pattern, no hot-path alloc concern"
+  "mode": "e2-verification",
+  "status": "COMPLETED",
+  "branch": "recover/E2-terminal-ui-pr",
+  "pr": 252,
+  "pr_url": "https://github.com/KooshaPari/BytePort/pull/252",
+  "date": "2026-06-30",
+  "epic": "epic_E — BytePort: terminal UI, tools CLI, otel, governance",
+  "files_verified": {
+    "terminal_ui_rs": {
+      "path": "crates/byteport-transport/src/ports/terminal_ui.rs",
+      "lines": 370,
+      "tests": 21
     },
-    {
-      "severity": "info",
-      "file": "crates/byteport-cli/src/main.rs:127-259",
-      "rule_id": "kilo-style",
-      "message": "All 4 CLI handlers instrumented with invocation count; all error paths record structured error.kind"
+    "ui_rs": {
+      "path": "crates/byteport-transport/src/ports/ui.rs",
+      "lines": 389,
+      "tests": 14
     },
+    "mod_rs": {
+      "path": "crates/byteport-transport/src/ports/mod.rs",
+      "lines": 5,
+      "includes_terminal_ui": true
+    }
+  },
+  "tier_0": {
+    "build": "pass",
+    "test_unit": {"pass": 43, "fail": 0},
+    "clippy": "pass (0 warnings)",
+    "fmt": "cosmetic-only (single-line vs multi-line style, import ordering)"
+  },
+  "workspace_build": "failing — pre-existing byteport-otel crate (OTel SDK API v0.28 vs v0.32 incompatibility, not in E2 scope)",
+  "pre_existing_issues": [
     {
-      "severity": "info",
-      "file": "crates/byteport-otel/src/metrics.rs:41",
-      "rule_id": "kilo-style",
-      "message": "BytePortMetrics::new() returns Result — no-op meter succeeds without backend; fine for current use"
-    },
-    {
-      "severity": "warn",
-      "file": "crates/byteport-otel/src/tracing.rs:18-32",
-      "rule_id": "kilo-sota",
-      "message": "start_request_span takes TracerProvider impl (ADR-008 used global tracer) — acceptable trade-off for testability"
+      "crate": "byteport-otel",
+      "issue": "OTel SDK API v0.28 vs v0.32 incompatibility: `.init()` removed, `TracerProvider` → `SdkTracerProvider`, `shutdown_tracer_provider()` missing",
+      "scope": "pre-existing, not introduced by E2",
+      "affects": "workspace build only; transport crate independent"
     }
   ],
-  "timestamp": "2026-06-26T03:10:00Z"
+  "deliverables": {
+    "spec_created": "agileplus-specs/005-compute-infra-hardening/E2-terminal-ui-recovery/spec.md",
+    "tasks_created": ["WP01 (verify files)", "WP02 (create branch)", "WP03 (grade.sh)", "WP04 (worklog)", "WP05 (PR)"],
+    "branch_pushed": "recover/E2-terminal-ui-pr",
+    "worklog_updated": true
+  },
+  "diffstat": {
+    "files_changed": 2,
+    "additions": 40,
+    "deletions": 57
+  },
+  "auditor_note": "E1 terminal UI recovery landed on main via PR #248. E2 documents completion, updates worklog, and creates DAG-compatible audit trail. Terminal UI code already on main — no new code changes needed.",
+  "timestamp": "2026-06-30T12:00:00Z"
 }
