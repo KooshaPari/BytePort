@@ -4,8 +4,6 @@ jobs:
   golangci:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-go@v5
-      - uses: golangci/golangci-lint-action@v6
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v6      - uses: actions/setup-go@0a12ed9e1a4ce4b1a02a5f2dd1e3a9c9e6c7f8b1 # v5      - uses: golangci/golangci-lint-action@v6
         with:
           working-directory: backend

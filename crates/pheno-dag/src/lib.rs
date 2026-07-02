@@ -26,5 +26,5 @@
 //! DagUnits, resolves their dependency graph using `byteport-dag`, topologically
 //! sorts them, and executes them in order.
 
-pub mod unit;
 pub mod executor;
+pub mod unit;

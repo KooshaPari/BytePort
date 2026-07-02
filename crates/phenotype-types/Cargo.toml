@@ -3,12 +3,12 @@ name = "phenotype-types"
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
-authors = ["Koosha Pari"]
+authors = [ "Koosha Pari",]
 description = "Shared type definitions across the Phenotype ecosystem — OCI instance records, path helpers, and canonical data models used by compute/infra agents."
 
 [dependencies]
-serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-anyhow = "1"
-chrono = { version = "0.4", features = ["serde"] }
-tokio = { version = "1", features = ["fs"] }
+
+[dependencies.serde]
+version = "1"
+features = [ "derive",]

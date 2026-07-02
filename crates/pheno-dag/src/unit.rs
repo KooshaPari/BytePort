@@ -151,7 +151,12 @@ fn new_uuid() -> Uuid {
 
 impl DagUnit {
     /// Create a new DagUnit with the minimal required fields.
-    pub fn new(id: impl Into<String>, title: impl Into<String>, epic: impl Into<String>, repo: impl Into<String>) -> Self {
+    pub fn new(
+        id: impl Into<String>,
+        title: impl Into<String>,
+        epic: impl Into<String>,
+        repo: impl Into<String>,
+    ) -> Self {
         Self {
             id: id.into(),
             title: title.into(),
@@ -252,9 +257,7 @@ mod tests {
     #[test]
     fn unit_with_prereqs_and_gates() {
         let unit = DagUnit::new("F2", "Test", "epic_F", "KooshaPari/BytePort")
-            .with_prereq(PreReq::UnitCompleted {
-                unit_id: "F1".into(),
-            })
+            .with_prereq(PreReq::UnitCompleted { unit_id: "F1".into() })
             .with_gate(Gate::ExitCode { code: 0 });
 
         assert_eq!(unit.pre_reqs.len(), 1);
@@ -276,8 +279,7 @@ mod tests {
             version: "1.0.0".into(),
             units: vec![
                 DagUnit::new("F1", "Build", "epic_F", "KooshaPari/BytePort"),
-                DagUnit::new("F2", "Test", "epic_F", "KooshaPari/BytePort")
-                    .depends_on("F1"),
+                DagUnit::new("F2", "Test", "epic_F", "KooshaPari/BytePort").depends_on("F1"),
             ],
         };
 

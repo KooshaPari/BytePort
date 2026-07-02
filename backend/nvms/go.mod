@@ -1,8 +1,7 @@
 module nvms
 
-go 1.25.0
+go 1.24
 
-toolchain go1.25.11
 
 require (
 	aidanwoods.dev/go-paseto v1.6.0
@@ -22,4 +21,4 @@ require (
 	golang.org/x/sys v0.44.0 // indirect
 )
 
-replace github.com/kooshapari/nanovms => ../../../phenotype-tooling/crates/nanovms
+# replace github.com/kooshapari/nanovms commented out (local dependency)

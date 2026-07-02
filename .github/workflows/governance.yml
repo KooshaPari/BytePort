@@ -26,8 +26,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
-
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v6
       - name: Verify CODEOWNERS is present and non-empty
         run: |
           set -euo pipefail
@@ -58,7 +57,7 @@ jobs:
           set -euo pipefail
           bad=$(grep -rE 'uses:\s+[^@]+@(v[0-9]+|main|master)' .github/workflows/ || true)
           if [ -n "$bad" ]; then
-            echo "::error::Unpinned actions (use full commit SHA):"
+          bad=$(grep -rE 'uses: [^/]+/[^/]+@(v[0-9]+|main|master)' .github/workflows/ || true)
             echo "$bad"
             exit 1
           fi

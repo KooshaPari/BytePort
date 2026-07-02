@@ -138,9 +138,7 @@ pub fn run_grade(grade_sh_path: &Path, project_dir: &Path) -> Result<GradeReport
         .arg("--json")
         .current_dir(project_dir)
         .output()
-        .map_err(|e| {
-            AdapterError::Subprocess(format!("failed to execute grade.sh: {e}"))
-        })?;
+        .map_err(|e| AdapterError::Subprocess(format!("failed to execute grade.sh: {e}")))?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -156,9 +154,7 @@ pub fn run_grade(grade_sh_path: &Path, project_dir: &Path) -> Result<GradeReport
     // Read the JSON report from .grade-reports/grade.json.
     let report_path = project_dir.join(".grade-reports").join("grade.json");
     if !report_path.exists() {
-        return Err(AdapterError::ReportNotFound(
-            report_path.to_string_lossy().to_string(),
-        ));
+        return Err(AdapterError::ReportNotFound(report_path.to_string_lossy().to_string()));
     }
 
     let json_content = std::fs::read_to_string(&report_path)?;
