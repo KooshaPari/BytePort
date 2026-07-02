@@ -134,10 +134,7 @@ mod tests {
         let envs = current_context_envs();
         // Without a global provider / active span the propagator
         // should inject nothing.
-        assert!(
-            envs.is_empty(),
-            "expected empty envs, got {envs:?}"
-        );
+        assert!(envs.is_empty(), "expected empty envs, got {envs:?}");
     }
 
     /// With a span active in the current context, propagation
@@ -149,9 +146,7 @@ mod tests {
         let tracer = provider.tracer("test");
 
         // We must register the global propagator.
-        opentelemetry::global::set_text_map_propagator(
-            opentelemetry_sdk::propagation::TraceContextPropagator::new(),
-        );
+        opentelemetry::global::set_text_map_propagator(opentelemetry_sdk::propagation::TraceContextPropagator::new());
 
         let span = tracer.start("test-span");
         let cx = Context::current().with_span(span);

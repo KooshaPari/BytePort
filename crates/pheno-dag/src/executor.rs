@@ -158,11 +158,7 @@ impl Executor {
             Err(e) => return Err(ExecError::Cycle(e.to_string())),
         };
 
-        Ok(Self {
-            manifest,
-            index,
-            order,
-        })
+        Ok(Self { manifest, index, order })
     }
 
     /// Return the resolved execution order (unit IDs).
@@ -274,15 +270,10 @@ fn check_prereq(prereq: &crate::unit::PreReq) -> bool {
         }
         crate::unit::PreReq::Command { command } => {
             // Stub: commands are "satisfied" for now.
-            tracing::warn!(
-                "stub: prerequisite command `{}` — treating as satisfied",
-                command
-            );
+            tracing::warn!("stub: prerequisite command `{}` — treating as satisfied", command);
             true
         }
-        crate::unit::PreReq::EnvVar { variable } => {
-            std::env::var(variable).is_ok()
-        }
+        crate::unit::PreReq::EnvVar { variable } => std::env::var(variable).is_ok(),
         crate::unit::PreReq::ApiHealthy { url } => {
             // Stub: APIs are "healthy" for now.
             tracing::warn!("stub: API health check for `{}` — treating as healthy", url);

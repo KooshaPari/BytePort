@@ -11,11 +11,7 @@ use std::time::Duration;
 use opentelemetry::trace::TracerProvider;
 use opentelemetry::KeyValue;
 use opentelemetry_otlp::{ExporterBuildError, WithExportConfig};
-use opentelemetry_sdk::{
-    metrics::MeterProviderBuilder,
-    trace::SdkTracerProvider,
-    Resource,
-};
+use opentelemetry_sdk::{metrics::MeterProviderBuilder, trace::SdkTracerProvider, Resource};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
 use crate::config::TelemetryConfig;
@@ -54,9 +50,7 @@ pub fn init_telemetry(config: TelemetryConfig) -> TelemetryGuard {
     let tracer_provider = if config.enable_tracing {
         // Register the W3C TraceContext propagator so that context
         // injection (e.g. to spawned child processes) works correctly.
-        opentelemetry::global::set_text_map_propagator(
-            opentelemetry_sdk::propagation::TraceContextPropagator::new(),
-        );
+        opentelemetry::global::set_text_map_propagator(opentelemetry_sdk::propagation::TraceContextPropagator::new());
         match build_tracer_provider(&config, resource.clone()) {
             Ok(tp) => {
                 opentelemetry::global::set_tracer_provider(tp.clone());

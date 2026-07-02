@@ -159,7 +159,12 @@ fn run_dag(path: &PathBuf, verbose: bool) {
     };
 
     if verbose {
-        eprintln!("[info] parsed {}: {} nodes, {} edges", path.display(), schema.nodes.len(), schema.edges.len());
+        eprintln!(
+            "[info] parsed {}: {} nodes, {} edges",
+            path.display(),
+            schema.nodes.len(),
+            schema.edges.len()
+        );
         if let Some(ref name) = schema.name {
             eprintln!("[info] DAG name: {}", name);
         }
@@ -189,15 +194,13 @@ fn run_dag(path: &PathBuf, verbose: bool) {
 
     // 6. Verbose: dump the serialized plan as YAML
     if verbose {
-        let export = DagSchema::from_dag(&dag, &schema.version)
-            .with_name(schema.name.clone().unwrap_or_default());
+        let export = DagSchema::from_dag(&dag, &schema.version).with_name(schema.name.clone().unwrap_or_default());
         match export.to_yaml() {
             Ok(yaml) => println!("---\n{}", yaml),
             Err(e) => eprintln!("Warning: could not serialize schedule to YAML — {}", e),
         }
     }
 }
-
 
 // ---------------------------------------------------------------------------
 // Upload dispatch (OTel-traced, W3C propagation)
@@ -218,8 +221,14 @@ fn dispatch_upload(
     let tracer = global::tracer("byteport-cli");
     let mut span = tracer.start("transport.create_upload");
     span.set_attribute(opentelemetry::KeyValue::new("upload.object_key", key.to_owned()));
-    span.set_attribute(opentelemetry::KeyValue::new("upload.content_type", content_type.to_owned()));
-    span.set_attribute(opentelemetry::KeyValue::new("upload.content_length", content_length as i64));
+    span.set_attribute(opentelemetry::KeyValue::new(
+        "upload.content_type",
+        content_type.to_owned(),
+    ));
+    span.set_attribute(opentelemetry::KeyValue::new(
+        "upload.content_length",
+        content_length as i64,
+    ));
 
     // Inject current trace context into W3C env-var pairs so that
     // downstream processes (e.g. storage sidecars) can continue this span.
