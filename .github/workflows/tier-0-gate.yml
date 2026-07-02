@@ -36,10 +36,8 @@ jobs:
       contents: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v4      - name: Set up Go
+        uses: actions/setup-go@0a12ed9e1a4ce4b1a02a5f2dd1e3a9c9e6c7f8b1 # v5        with:
           go-version-file: backend/go.mod
           cache-dependency-path: backend/go.sum
       - name: go build
@@ -57,10 +55,8 @@ jobs:
         working-directory: backend
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v4      - name: Set up Go
+        uses: actions/setup-go@0a12ed9e1a4ce4b1a02a5f2dd1e3a9c9e6c7f8b1 # v5        with:
           go-version-file: backend/go.mod
           cache-dependency-path: backend/go.sum
       - name: go test
@@ -74,10 +70,8 @@ jobs:
       contents: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v4      - name: Set up Go
+        uses: actions/setup-go@0a12ed9e1a4ce4b1a02a5f2dd1e3a9c9e6c7f8b1 # v5        with:
           go-version-file: backend/go.mod
           cache-dependency-path: backend/go.sum
       - name: go vet
@@ -92,10 +86,8 @@ jobs:
       contents: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v4      - name: Set up Go
+        uses: actions/setup-go@0a12ed9e1a4ce4b1a02a5f2dd1e3a9c9e6c7f8b1 # v5        with:
           go-version: stable
       - name: Check formatting
         run: |
@@ -115,10 +107,8 @@ jobs:
       contents: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v4      - name: Set up Go
+        uses: actions/setup-go@0a12ed9e1a4ce4b1a02a5f2dd1e3a9c9e6c7f8b1 # v5        with:
           go-version-file: backend/go.mod
           cache-dependency-path: backend/go.sum
       - name: golangci-lint
@@ -139,8 +129,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
-      - name: Install Rust toolchain
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v4      - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
@@ -157,8 +146,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
-      - name: Install Rust toolchain
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v4      - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt
@@ -173,8 +161,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
-      - name: Install Rust toolchain
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v4      - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
@@ -194,10 +181,8 @@ jobs:
       contents: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v4      - name: Set up Node.js
+        uses: actions/setup-node@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v4        with:
           node-version: '20'
           cache: 'npm'
           cache-dependency-path: frontend/web/package-lock.json
@@ -216,10 +201,8 @@ jobs:
       contents: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v4      - name: Set up Node.js
+        uses: actions/setup-node@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v4        with:
           node-version: '20'
           cache: 'npm'
           cache-dependency-path: frontend/web/package-lock.json
@@ -241,10 +224,8 @@ jobs:
       contents: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v4      - name: Set up Node.js
+        uses: actions/setup-node@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v4        with:
           node-version: '20'
           cache: 'npm'
           cache-dependency-path: frontend/web/package-lock.json
