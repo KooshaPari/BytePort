@@ -25,13 +25,9 @@
 	"devDependencies": {
 		"@chromatic-com/storybook": "^5.2.1",
 		"@iconify/svelte": "^5.2.1",
-		"@storybook/addon-essentials": "^10.4.3",
-		"@storybook/addon-interactions": "^10.4.3",
 		"@storybook/addon-svelte-csf": "^5.1.2",
-		"@storybook/blocks": "^10.4.3",
-		"@storybook/svelte": "^10.4.3",
-		"@storybook/sveltekit": "^10.4.3",
-		"@storybook/test": "^10.4.3",
+		"@storybook/svelte": "^10.4.6",
+		"@storybook/sveltekit": "^10.4.6",
 		"@sveltejs/adapter-auto": "^7.0.1",
 		"@sveltejs/adapter-static": "^3.0.10",
 		"@sveltejs/kit": "^2.64.0",
@@ -55,7 +51,7 @@
 		"prettier": "^3.8.4",
 		"prettier-plugin-svelte": "^4.1.0",
 		"prettier-plugin-tailwindcss": "^0.8.0",
-		"storybook": "^10.4.3",
+		"storybook": "^10.4.6",
 		"svelte": "^5.56.3",
 		"svelte-check": "^4.4.6",
 		"svelte-preprocess": "^6.0.5",
@@ -69,16 +65,18 @@
 		"zod": "^4.4.3"
 	},
 	"dependencies": {
-		"@rollup/rollup-darwin-arm64": "^4.61.1",
 		"@tailwindcss/aspect-ratio": "^0.4.2",
 		"@tailwindcss/container-queries": "^0.1.1",
 		"@tailwindcss/forms": "^0.5.11",
-		"@tauri-apps/cli-darwin-arm64": "^2.10.1",
 		"@tauri-apps/plugin-http": "^2.5.8",
 		"@tauri-apps/plugin-os": "^2.3.2",
 		"iconify-icon": "^3.0.2",
 		"svelte-radix": "^3.0.2",
 		"tailwind-scrollbar": "^4.0.2"
+	},
+	"optionalDependencies": {
+		"@rollup/rollup-darwin-arm64": "^4.61.1",
+		"@tauri-apps/cli-darwin-arm64": "^2.10.1"
 	},
 	"overrides": {
 		"cookie": "0.7.0",
