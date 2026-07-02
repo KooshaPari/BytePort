@@ -99,7 +99,7 @@ jobs:
     name: Update release draft
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
     steps:
       - name: Update release draft
         uses: release-drafter/release-drafter@693d20e7c1ce1a81d3a41962f85914253b518449 # v6
