@@ -1,11 +1,10 @@
 # release.yml — BytePort release pipeline
 #
 # Consolidates:
-#   - Tag-driven GitHub release creation (was: release.yml)
-#   - Release-drafter draft updates on push to main (was: release-drafter.yml)
-#   - Monthly SBOM refresh via shared workflow (was: sbom-refresh.yml)
+#   - Tag-driven GitHub release creation
+#   - Release-drafter draft updates on push to main
 #
-# Triggers: tag push (v*), push to main (drafter), monthly cron (sbom), manual.
+# Triggers: tag push (v*), push to main (drafter), manual.
 # Concurrency: shared group; per-ref cancellation to avoid stale drafter runs.
 
 name: Release
@@ -14,8 +13,6 @@ on:
   push:
     branches: [main, master]
     tags: ['v*']
-  schedule:
-    - cron: '0 0 1 * *'  # 1st of each month — SBOM refresh
   workflow_dispatch:
 
 concurrency:
@@ -108,13 +105,3 @@ jobs:
         uses: release-drafter/release-drafter@693d20e7c1ce1a81d3a41962f85914253b518449 # v6
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  # ---------- Monthly: refresh SBOM ----------
-  sbom-refresh:
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    timeout-minutes: 20
-    name: Monthly SBOM refresh
-    uses: KooshaPari/phenotype-tooling/.github/workflows/sbom-monthly.yml@79dff2b798fb8a3bc64237e4b2d054a08d3a4601
-    with:
-      repo_path: '.'
-      build_system: 'rust'
