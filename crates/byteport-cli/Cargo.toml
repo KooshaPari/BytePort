@@ -2,12 +2,17 @@
 name = "byteport-cli"
 version = "0.1.0"
 edition = "2021"
-license = "MIT OR Apache-2.0"
-description = "BytePort tools CLI — transport, port, codec, and UI CLI bindings"
+license = "Apache-2.0"
+description = "BytePort CLI subset — compiles to wasm32-wasi for compute/infra automation"
 publish = false
 
 [dependencies]
-byteport-transport = { path = "../byteport-transport", features = ["otel"] }
-byteport-otel = { path = "../byteport-otel" }
-clap = { version = "4", features = ["derive"] }
-tracing = "0.1"
+byteport-transport = { path = "../byteport-transport" }
+clap = { version = "4.5", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "2"
+
+[[bin]]
+name = "byteport"
+path = "src/main.rs"
