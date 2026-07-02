@@ -28,9 +28,10 @@ mod tests {
     use opentelemetry::trace::{Tracer as _, TracerProvider as _};
     use opentelemetry_sdk::trace::SdkTracerProvider;
 
-    #[test]
-    fn telemetry_guard_flush_does_not_panic() {
+    #[tokio::test]
+    async fn telemetry_guard_flush_does_not_panic() {
         // Drop a TelemetryGuard that has no real OTLP exporter — should be a no-op.
+        // Requires a Tokio runtime: the OTLP batch exporter (hyper-util) needs a reactor.
         let guard = crate::init::init_default();
         drop(guard);
     }

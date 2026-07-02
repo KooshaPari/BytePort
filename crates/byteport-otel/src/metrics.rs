@@ -3,7 +3,6 @@
 use std::sync::OnceLock;
 
 use opentelemetry::{metrics::Meter, KeyValue};
-use opentelemetry_sdk::metrics::MetricResult;
 
 static METER: OnceLock<Meter> = OnceLock::new();
 
@@ -12,7 +11,7 @@ fn meter() -> &'static Meter {
 }
 
 /// Initialise globally-scoped metric instruments. Safe to call multiple times.
-pub fn init_metrics() -> MetricResult<()> {
+pub fn init_metrics() {
     let m = meter();
 
     // ── HTTP / API metrics ───────────────────────────────────
@@ -25,8 +24,6 @@ pub fn init_metrics() -> MetricResult<()> {
     // For now, we just ensure instruments are constructed without error.
     // Explicitly ignore unused variables to avoid clippy warnings.
     std::mem::drop(_http_requests);
-
-    Ok(())
 }
 
 /// Record a counter increment.

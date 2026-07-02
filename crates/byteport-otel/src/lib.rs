@@ -14,9 +14,9 @@
 //! ## Usage
 //!
 //! ```rust,no_run
-//! use byteport_otel::init;
+//! use byteport_otel::{config::TelemetryConfig, init};
 //!
-//! let guard = init::init_telemetry(init::TelemetryConfig::default());
+//! let guard = init::init_telemetry(TelemetryConfig::default());
 //! // application runs here
 //! drop(guard); // flushes all spans and metrics on shutdown
 //! ```
@@ -28,6 +28,7 @@
 pub mod config;
 pub mod init;
 pub mod metrics;
+pub mod propagation;
 pub mod tracing;
 
 // Re-export commonly used OTel types for convenience.
