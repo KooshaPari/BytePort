@@ -8,7 +8,7 @@ publish = false
 
 [dependencies]
 opentelemetry = { version = "0.28", features = ["metrics", "trace"] }
-opentelemetry_sdk = { version = "0.28", features = ["metrics", "trace", "rt-tokio"] }
+opentelemetry_sdk = { version = "0.32", features = ["metrics", "trace", "rt-tokio"] }
 opentelemetry-otlp = { version = "0.28", features = ["metrics", "trace", "grpc-tonic"] }
 opentelemetry-semantic-conventions = { version = "0.28", optional = true }
 tracing = "0.1"
