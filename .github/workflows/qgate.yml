@@ -1,10 +1,5 @@
 # qgate quality gate for BytePort.
 #
-# Replaces the placeholder .github/workflows/quality-gate.yml (which only
-# echoed a message) with a real invocation of the reusable quality gate
-# from KooshaPari/phenotype-tooling. The legacy file is renamed to
-# .github/workflows/_quality-gate.placeholder.yml to keep history.
-#
 # Per the "1 via 2" protocol, the gate runs in non-blocking mode today
 # and is flipped to blocking once per-module coverage ≥85%.
 
@@ -19,11 +14,11 @@ permissions:
   contents: read
 
 jobs:
-  qgate:
-    continue-on-error: true   # remove once per-module coverage ≥85%
-
-    runs-on: ubuntu-latest   # Linux standard only — no billed runners
-
+  coverage:
+    name: Generate coverage
+    runs-on: ubuntu-latest
+    outputs:
+      coverage-lcov: coverage/lcov.info
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
@@ -51,13 +46,16 @@ jobs:
           path: coverage/lcov.info
           retention-days: 14
 
-      # qgate reusable workflow — runs the gate, emits JSON report.
-      - name: qgate quality gate
-        uses: KooshaPari/phenotype-tooling/.github/workflows/reusable/quality-gate.yml@main
-        with:
-          coverage-report: coverage/lcov.info
-          coverage-format: lcov
-          threshold: 85
-          not-applicable: 'a11y,dast'
-          sast-config: 'auto'
-        secrets: inherit
+  qgate:
+    name: Quality Gate
+    needs: coverage
+    uses: KooshaPari/phenotype-tooling/.github/workflows/reusable/quality-gate.yml@main
+    permissions:
+      contents: read
+    with:
+      coverage-report: coverage/lcov.info
+      coverage-format: lcov
+      threshold: 85
+      not-applicable: 'a11y,dast'
+      sast-config: 'auto'
+    secrets: inherit
