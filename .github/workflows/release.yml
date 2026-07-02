@@ -33,17 +33,17 @@ jobs:
         working-directory: frontend/web
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v4
 
       - name: Install Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v4
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: frontend/web/package-lock.json
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@ffb18e4a4a47253c5f0bd7d526f2c6f1e7c5dd84 # stable
 
       - name: Install frontend dependencies
         run: npm ci
