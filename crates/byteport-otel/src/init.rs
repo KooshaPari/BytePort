@@ -8,11 +8,11 @@
 
 use std::time::Duration;
 
-use opentelemetry::trace::{TraceError, TracerProvider};
+use opentelemetry::trace::TracerProvider;
 use opentelemetry::KeyValue;
-use opentelemetry_otlp::WithExportConfig;
+use opentelemetry_otlp::{ExporterBuildError, WithExportConfig};
 use opentelemetry_sdk::{
-    metrics::{MeterProviderBuilder, MetricResult},
+    metrics::MeterProviderBuilder,
     trace::SdkTracerProvider,
     Resource,
 };
@@ -52,9 +52,14 @@ pub fn init_telemetry(config: TelemetryConfig) -> TelemetryGuard {
 
     // ── Trace provider ────────────────────────────────────────────────
     let tracer_provider = if config.enable_tracing {
+        // Register the W3C TraceContext propagator so that context
+        // injection (e.g. to spawned child processes) works correctly.
+        opentelemetry::global::set_text_map_propagator(
+            opentelemetry_sdk::propagation::TraceContextPropagator::new(),
+        );
         match build_tracer_provider(&config, resource.clone()) {
             Ok(tp) => {
-                let _ = opentelemetry::global::set_tracer_provider(tp.clone());
+                opentelemetry::global::set_tracer_provider(tp.clone());
                 Some(tp)
             }
             Err(e) => {
@@ -144,7 +149,10 @@ pub fn init_default() -> TelemetryGuard {
 
 // ── Internal helpers ─────────────────────────────────────────────────
 
-fn build_tracer_provider(config: &TelemetryConfig, resource: Resource) -> Result<SdkTracerProvider, TraceError> {
+fn build_tracer_provider(
+    config: &TelemetryConfig,
+    resource: Resource,
+) -> Result<SdkTracerProvider, ExporterBuildError> {
     let exporter = opentelemetry_otlp::SpanExporter::builder()
         .with_tonic()
         .with_endpoint(&config.otlp_endpoint)
@@ -160,7 +168,7 @@ fn build_tracer_provider(config: &TelemetryConfig, resource: Resource) -> Result
 fn build_meter_provider(
     config: &TelemetryConfig,
     resource: Resource,
-) -> MetricResult<opentelemetry_sdk::metrics::SdkMeterProvider> {
+) -> Result<opentelemetry_sdk::metrics::SdkMeterProvider, ExporterBuildError> {
     let exporter = opentelemetry_otlp::MetricExporter::builder()
         .with_tonic()
         .with_endpoint(&config.otlp_endpoint)

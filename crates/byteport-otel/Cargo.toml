@@ -7,16 +7,19 @@ description = "BytePort OpenTelemetry instrumentation: metrics, tracing, and OTL
 publish = false
 
 [dependencies]
-opentelemetry = { version = "0.28", features = ["metrics", "trace"] }
+opentelemetry = { version = "0.32", features = ["metrics", "trace"] }
 opentelemetry_sdk = { version = "0.32", features = ["metrics", "trace", "rt-tokio"] }
-opentelemetry-otlp = { version = "0.28", features = ["metrics", "trace", "grpc-tonic"] }
-opentelemetry-semantic-conventions = { version = "0.28", optional = true }
+opentelemetry-otlp = { version = "0.32", features = ["metrics", "trace", "grpc-tonic"] }
+opentelemetry-semantic-conventions = { version = "0.32", optional = true }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["json", "env-filter"] }
-tracing-opentelemetry = "0.29"
+tracing-opentelemetry = "0.33"
 thiserror = "2.0"
 serde = { version = "1.0", features = ["derive"] }
-tokio = { version = "1", features = ["sync"] }
+tokio = { version = "1", features = ["sync", "process"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 
 [features]
 default = ["semconv"]
