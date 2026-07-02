@@ -3,3 +3,12 @@
 .vscode/
 target/
 *.code-workspace
+*.pem
+*.key
+.env
+.env.local
+__pycache__/
+.pytest_cache/
+.venv/
+*.log
+Thumbs.db

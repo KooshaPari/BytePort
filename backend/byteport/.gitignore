@@ -1,0 +1,25 @@
+# Private keys and certificates — never commit
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build / logs
+*.log
+__pycache__/
+.venv/
+node_modules/
+target/

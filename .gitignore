@@ -2,6 +2,7 @@
 target/
 **/target/
 **/*.rs.bk
+Cargo.lock
 
 # Go (vendor, binaries, test artifacts)
 vendor/
@@ -12,6 +13,8 @@ vendor/
 # Node / TS / JS
 node_modules/
 .pnp/
+.pnp.js
+.npm/
 *.tsbuildinfo
 .svelte-kit/
 dist/
@@ -36,6 +39,11 @@ __pycache__/
 # Python runtime environments
 .venv/
 venv/
+
+# Grade / hygiene artifacts
+.grade-reports/
+grade.sh
+lefthook.yml
 
 # IDE
 .vscode/
