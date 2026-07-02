@@ -1,0 +1,23 @@
+# qgate configuration for BytePort.
+#
+# Adopted via the "1 via 2" protocol (gate-first-red-then-backfill).
+# The existing .github/workflows/quality-gate.yml is a placeholder
+# (echoes only); this file + the workflow in qgate.yml replace it.
+
+coverage_threshold = 85.0
+
+# BytePort's existing sbom.yml produces sbom.cdx.json. qgate's SBOM
+# category will detect it at the path below; no sbom_command needed
+# in CI (the artifact is produced by a sibling workflow).
+coverage_path = "coverage/lcov.info"
+coverage_format = "lcov"
+
+# BytePort is a Rust workspace with Tauri desktop + REST backend.
+# No UI in the sense qgate's a11y category expects (axe on browser);
+# no OpenAPI spec published (REST handlers are documented in code).
+# mutation/perf stay ON — nightly cargo-mutants + criterion benches
+# already run on this repo.
+not_applicable = [
+    "a11y",          # Tauri webview, not browser-testable via axe
+    "dast",          # no published OpenAPI spec
+]

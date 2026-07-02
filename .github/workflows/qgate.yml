@@ -1,0 +1,63 @@
+# qgate quality gate for BytePort.
+#
+# Replaces the placeholder .github/workflows/quality-gate.yml (which only
+# echoed a message) with a real invocation of the reusable quality gate
+# from KooshaPari/phenotype-tooling. The legacy file is renamed to
+# .github/workflows/_quality-gate.placeholder.yml to keep history.
+#
+# Per the "1 via 2" protocol, the gate runs in non-blocking mode today
+# and is flipped to blocking once per-module coverage ≥85%.
+
+name: qgate
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  qgate:
+    continue-on-error: true   # remove once per-module coverage ≥85%
+
+    runs-on: ubuntu-latest   # Linux standard only — no billed runners
+
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: dtolnay/rust-toolchain@4305c38b25d97ef04a54b3a52498a5f41e40895c # stable
+        with:
+          toolchain: stable
+          components: llvm-tools-preview, rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@9d47c6ad4b02e050fd481d890b2ea00a3571f6e0 # v2.7.8
+
+      - name: Install cargo-llvm-cov
+        run: cargo install cargo-llvm-cov --locked
+
+      # Workspace-wide coverage → lcov so qgate's lcov parser consumes it.
+      - name: Generate coverage (lcov)
+        run: |
+          mkdir -p coverage
+          cargo llvm-cov --workspace --all-targets --lcov --output-path coverage/lcov.info
+          echo "lcov size: $(wc -l < coverage/lcov.info) lines"
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: coverage-lcov
+          path: coverage/lcov.info
+          retention-days: 14
+
+      # qgate reusable workflow — runs the gate, emits JSON report.
+      - name: qgate quality gate
+        uses: KooshaPari/phenotype-tooling/.github/workflows/reusable/quality-gate.yml@main
+        with:
+          coverage-report: coverage/lcov.info
+          coverage-format: lcov
+          threshold: 85
+          not-applicable: 'a11y,dast'
+          sast-config: 'auto'
+        secrets: inherit
