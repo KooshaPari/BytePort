@@ -32,7 +32,7 @@
 //! ```
 
 pub mod dag;
+pub mod topo;
 pub mod scheduler;
 pub mod schema;
 pub mod serialize;
-pub mod topo;

@@ -215,26 +215,34 @@ mod tests {
                         regex: false,
                     },
                 ];
-                node.audit_hooks = vec![AuditHook::MetricEmit {
-                    name: "build_duration_ms".into(),
-                    value: 0.0,
-                    unit: Some("ms".into()),
-                    timing: HookTiming::Post,
-                }];
+                node.audit_hooks = vec![
+                    AuditHook::MetricEmit {
+                        name: "build_duration_ms".into(),
+                        value: 0.0,
+                        unit: Some("ms".into()),
+                        timing: HookTiming::Post,
+                    },
+                ];
             }
             if node.id == "deploy" {
-                node.prerequisites = vec![Prerequisite::ImageReady {
-                    image: "myapp:latest".into(),
-                }];
-                node.acceptance = vec![AcceptanceCriterion::HttpOk {
-                    url: "https://staging.example.com/health".into(),
-                    expected_status: Some(200),
-                }];
-                node.audit_hooks = vec![AuditHook::Notify {
-                    channel: "slack".into(),
-                    message: "Deploy completed".into(),
-                    timing: HookTiming::OnSuccess,
-                }];
+                node.prerequisites = vec![
+                    Prerequisite::ImageReady {
+                        image: "myapp:latest".into(),
+                    },
+                ];
+                node.acceptance = vec![
+                    AcceptanceCriterion::HttpOk {
+                        url: "https://staging.example.com/health".into(),
+                        expected_status: Some(200),
+                    },
+                ];
+                node.audit_hooks = vec![
+                    AuditHook::Notify {
+                        channel: "slack".into(),
+                        message: "Deploy completed".into(),
+                        timing: HookTiming::OnSuccess,
+                    },
+                ];
             }
         }
 
@@ -282,7 +290,10 @@ mod tests {
         let from_yaml = DagSchema::from_yaml(&yaml).unwrap();
         let json = from_yaml.to_json().unwrap();
         let from_json = DagSchema::from_json(&json).unwrap();
-        assert_eq!(schema, from_json, "YAML → JSON cross-format must be consistent");
+        assert_eq!(
+            schema, from_json,
+            "YAML → JSON cross-format must be consistent"
+        );
     }
 
     #[test]
