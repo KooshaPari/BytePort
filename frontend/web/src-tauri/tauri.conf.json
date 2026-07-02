@@ -65,17 +65,11 @@
     "longDescription": "Byteport is a desktop client for the BytePort mesh transport protocol. Provides S3-compatible upload, SOCKS5 proxy, and full-text search across the local mesh.",
     "publisher": "Byteport, Inc.",
     "homepage": "https://byteport.dev",
-    "createUpdaterArtifacts": true,
-    "updater": {
-      "active": true,
-      "endpoints": ["https://releases.byteport.dev/byteport/{{target}}/{{arch}}/{{current_version}}"],
-      "dialog": true,
-      "pubkey": "REPLACE_WITH_RELEASE_SIGNING_PUBKEY"
-    }
+    "createUpdaterArtifacts": false
   },
   "plugins": {
     "updater": {
-      "active": true,
+      "active": false,
       "endpoints": ["https://releases.byteport.dev/byteport/{{target}}/{{arch}}/{{current_version}}"],
       "pubkey": "REPLACE_WITH_RELEASE_SIGNING_PUBKEY"
     }
