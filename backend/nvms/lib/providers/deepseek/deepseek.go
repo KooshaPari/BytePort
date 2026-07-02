@@ -7,7 +7,7 @@ import (
 	"net/http"
 	lib "nvms/lib/providers"
 
-	spinhttp "github.com/fermyon/spin-go-sdk/http"
+	spinhttp "github.com/fermyon/spin/sdk/go/v2/http"
 )
 
 const deepseekEndpoint = "https://api.deepseek.ai/v1/chat/completions"

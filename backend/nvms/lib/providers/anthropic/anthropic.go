@@ -7,7 +7,7 @@ import (
 	"net/http"
 	lib "nvms/lib/providers"
 
-	spinhttp "github.com/fermyon/spin-go-sdk/http"
+	spinhttp "github.com/fermyon/spin/sdk/go/v2/http"
 )
 
 const anthroEndpoint = "https://api.anthropic.com/v1/chat/completions"

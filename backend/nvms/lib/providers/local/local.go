@@ -7,7 +7,7 @@ import (
 	"net/http"
 	lib "nvms/lib/providers"
 
-	spinhttp "github.com/fermyon/spin-go-sdk/http"
+	spinhttp "github.com/fermyon/spin/sdk/go/v2/http"
 )
 
 const localEndpoint = "http://localhost:11434/api/generate"

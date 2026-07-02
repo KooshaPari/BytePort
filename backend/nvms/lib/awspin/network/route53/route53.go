@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	spinhttp "github.com/fermyon/spin-go-sdk/http"
+	spinhttp "github.com/fermyon/spin/sdk/go/v2/http"
 )
 
 // NewRoute53 initializes a Route 53 client.
