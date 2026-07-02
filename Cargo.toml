@@ -7,5 +7,6 @@ members = [
     "crates/byteport-otel",
     "crates/byteport-registry-adapter",
     "crates/phenotype-types",
+    "crates/pheno-dag",
     "frontend/web/src-tauri",
 ]
