@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -180,6 +179,3 @@ func TestValidateTokenWithFallback(t *testing.T) {
 	require.Error(t, err)
 }
 
-func contains(s, substr string) bool {
-	return strings.Contains(s, substr)
-}

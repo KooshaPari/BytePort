@@ -289,24 +289,3 @@ func TestGetWorkOSPublicKeyComprehensive(t *testing.T) {
 		assert.IsType(t, funcType, service.getWorkOSPublicKey)
 	})
 }
-
-// Mock implementations for testing
-
-type mockSecretsManager struct {
-	err error
-}
-
-func (m *mockSecretsManager) GetWorkOSConfig(ctx context.Context) (string, string, string, error) {
-	if m.err != nil {
-		return "", "", "", m.err
-	}
-	return "client-id", "client-secret", "redirect-uri", nil
-}
-
-type mockTransport struct {
-	err error
-}
-
-func (m *mockTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	return nil, m.err
-}

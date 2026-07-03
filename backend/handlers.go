@@ -257,67 +257,6 @@ func handleGetMetrics(store *DeploymentStore) gin.HandlerFunc {
 	}
 }
 
-// handleCreateProject creates a new project
-func handleCreateProject(c *gin.Context) {
-	var req struct {
-		Name        string `json:"name" binding:"required"`
-		Description string `json:"description"`
-	}
-
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	project := gin.H{
-		"id":          uuid.New().String(),
-		"name":        req.Name,
-		"description": req.Description,
-		"created_at":  time.Now(),
-	}
-
-	c.JSON(http.StatusCreated, project)
-}
-
-// handleListProjects lists all projects
-func handleListProjects(c *gin.Context) {
-	projects := []gin.H{
-		{
-			"id":          "proj_001",
-			"name":        "my-app",
-			"deployments": 3,
-			"created_at":  time.Now().Add(-24 * time.Hour),
-		},
-	}
-
-	c.JSON(http.StatusOK, gin.H{"projects": projects})
-}
-
-// handleGetProject gets a specific project
-func handleGetProject(c *gin.Context) {
-	id := c.Param("id")
-
-	project := gin.H{
-		"id":          id,
-		"name":        "my-app",
-		"description": "My awesome app",
-		"deployments": 3,
-		"created_at":  time.Now().Add(-24 * time.Hour),
-	}
-
-	c.JSON(http.StatusOK, project)
-}
-
-// handleDeleteProject deletes a project
-func handleDeleteProject(c *gin.Context) {
-	id := c.Param("id")
-
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Project deleted successfully",
-		"id":      id,
-	})
-}
-
 // handleDetectApp detects application type
 func handleDetectApp(c *gin.Context) {
 	var req struct {
