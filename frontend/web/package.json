@@ -25,6 +25,7 @@
 	"devDependencies": {
 		"@chromatic-com/storybook": "^5.2.1",
 		"@iconify/svelte": "^5.2.1",
+		"@playwright/test": "^1.61.1",
 		"@storybook/addon-svelte-csf": "^5.1.2",
 		"@storybook/svelte": "^10.4.6",
 		"@storybook/sveltekit": "^10.4.6",
