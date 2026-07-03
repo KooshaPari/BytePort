@@ -199,10 +199,6 @@ func (p *VercelProvider) Deploy(ctx context.Context, config DeploymentConfig) (*
 		target = t
 	}
 
-	type deployFile struct {
-		File string `json:"file"`
-		Data string `json:"data"`
-	}
 	body := map[string]any{
 		"name":   config.ResourceID,
 		"target": target,
