@@ -113,6 +113,7 @@ pub fn run() {
                 .level(log::LevelFilter::Info)
                 .build(),
         )
+        .plugin(tauri_plugin_os::init())
         .setup(move |app| {
             // Register shared state for IPC handlers.
             app.manage(AppState {
