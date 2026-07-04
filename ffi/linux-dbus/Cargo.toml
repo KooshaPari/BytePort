@@ -1,0 +1,35 @@
+[package]
+name = "byteport-linux-dbus"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "BytePort Linux D-Bus bridge FFI: zbus 4 service skeleton + IPC scaffold for org.byteport.LinuxBridge1. Scaffold only."
+publish = false
+
+[lib]
+name = "byteport_linux_dbus"
+crate-type = ["cdylib", "staticlib", "rlib"]
+path = "src/lib.rs"
+
+# Linux-only deps. On every other target the crate resolves to no-op
+# stubs so `cargo check --workspace` stays green on macOS / Windows CI.
+#
+# zbus 4 is selected over 5 because 4 is the last release line that
+# pins `tokio` as an optional feature (rather than a hard default) and
+# pairs cleanly with our stable `tokio = 1` runtime elsewhere in the
+# workspace. zvariant 4 tracks the same release.
+[target.'cfg(target_os = "linux")'.dependencies]
+zbus = { version = "4", default-features = false, features = ["tokio"] }
+zvariant = "4"
+tokio = { version = "1", features = ["rt", "macros"] }
+
+[target.'cfg(not(target_os = "linux"))'.dependencies]
+# No-op stubs for non-Linux targets so `cargo check --workspace` works
+# on macOS / Windows CI before the cross-compile matrix is wired (see
+# docs/ffi/MOBILE.md § Cross-compile matrix).
+
+[dependencies]
+thiserror = "2.0"
+
+[features]
+default = []
