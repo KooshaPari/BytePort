@@ -9,4 +9,6 @@ members = [
     "crates/phenotype-types",
     "crates/pheno-dag",
     "frontend/web/src-tauri",
+    "ffi/macos-share",
+    "ffi/android-companion",
 ]
