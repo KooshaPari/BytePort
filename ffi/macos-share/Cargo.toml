@@ -11,17 +11,29 @@ name = "byteport_macos_share"
 crate-type = ["staticlib", "cdylib", "rlib"]
 path = "src/lib.rs"
 
-# swift-rs is intentionally NOT declared as a build-dependency in this
-# scaffold release. The Swift build invocation is deferred to v8.2 (see
-# build.rs comments). Declaring it would force swift-rs to resolve from
-# crates.io on every host, which is unnecessary for the cross-platform
-# compilation check.
+# swift-rs 0.1 is the Swift→Rust FFI compiler. The actual binding entry
+# points (used inside build.rs) live in `swift_rs::build_utils`:
+#   - `link_swift()` wires Swift runtime libraries.
+#   - `link_swift_package(name, root)` invokes `swift build -c <profile>`
+#     inside `root` (which must contain a `Package.swift`).
 #
-# [target.'cfg(target_os = "macos")'.build-dependencies]
-# swift-rs = "0.1"
+# Note: the OOP `SwiftLinker::new(...).with_package(...).link()` chain
+# seen in many blog posts is from a newer swift-rs line. swift-rs 0.1
+# (the line this scaffold pins to) uses the free-function API instead.
+# See docs/ffi/SWIFT-RS.md for the API mismatch write-up.
+#
+# The build-dependencies table is also macOS-only so `cargo check
+# --workspace` on Linux / Windows CI does not try to resolve the
+# swift-rs crate from the registry at all.
+[target.'cfg(target_os = "macos")'.build-dependencies]
+swift-rs = "0.1"
 
 [dependencies]
 thiserror = "2.0"
 
 [features]
+# Default: OFF. Scaffold compiles cross-platform without invoking
+# `swift build`. Use `cargo build --features link-swift` on macOS to
+# trigger the real Swift compile through swift-rs.
 default = []
+link-swift = []

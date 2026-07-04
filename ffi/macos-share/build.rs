@@ -1,29 +1,65 @@
-// swift-rs build script — compiles src/main.swift as a static library
-// and surfaces the generated C header for the Rust FFI bridge.
+// swift-rs build script — compiles src/ (a Swift Package Manager
+// package) into a static library that the Rust FFI bridge links
+// against.
 //
-// SCAFFOLD MODE: The Swift compilation step is intentionally skipped in
-// this scaffold release. Real swift-rs invocation is deferred to v8.2
-// once we resolve the swift-rs API surface (the SwiftLinker symbol
-// moved in a recent swift-rs release and is being tracked upstream).
+// v8.2: re-enables the real swift-rs 0.1 pipeline. The previous scaffold
+// release (v0.x) left this as a no-op because the API surface
+// (`SwiftLinker::new(...).with_package(...).link()` chain shown in many
+// blog posts) is from a NEWER swift-rs line. swift-rs 0.1 — the line
+// available on crates.io when this scaffold was first cut — actually
+// exposes:
 //
-// On a real macOS host the Swift code in src/main.swift is compiled by
-// the proper swift-rs pipeline via the parent crate's xtask:
+//     swift_rs::build_utils::link_swift;
+//     swift_rs::build_utils::link_swift_package("byteport-share", "src");
 //
-//     cargo run -p byteport-xtask -- share-ext build --target aarch64-apple-darwin
+// where `link_swift_package(name, root)` invokes `swift build -c <profile>`
+// in `root` (which must contain a `Package.swift`). The first call wires
+// the Swift runtime libraries; the second compiles the package.
 //
-// For this scaffold, this build script is a no-op on every target so
-// `cargo check --workspace` passes cleanly. The cdylib + staticlib
-// crate-types declared in Cargo.toml still resolve; they are linked by
-// the host process at runtime once the share-extension is wired up.
+// To keep `cargo check --workspace` (run on every PR + CI) fast and
+// free of a Swift toolchain round-trip, the real swift invocation is
+// gated behind the `link-swift` *feature* AND `cfg(target_os = "macos")`.
+// Default builds skip the Swift step:
 //
-// See docs/ffi/MOBILE.md § Cross-compile matrix for the full plan.
+//     cargo check --workspace                              ← fast, no swift
+//     cargo build -p byteport-macos-share --features link-swift
+//                                                        ← runs swift build
+//
+// Non-macOS targets never invoke swift.
+//
+// See docs/ffi/SWIFT-RS.md for the API mismatch write-up.
 
 fn main() {
-    // Scaffold-only: intentionally empty.
-    //
-    // When the swift-rs API surface is re-introduced, replace this with:
-    //
-    //   swift_rs::SwiftLinker::new("10.15")
-    //       .with_package("byteport-share", "src/main.swift")
-    //       .link();
+    // Re-emit the build script when the Swift sources + manifest move so
+    // cargo rebuilds the static library.
+    println!("cargo:rerun-if-changed=src/Package.swift");
+    println!("cargo:rerun-if-changed=src/Sources/byteport-share/main.swift");
+    println!("cargo:rerun-if-changed=src/lib.rs");
+    println!("cargo:rerun-if-changed=Cargo.toml");
+
+    // Only run `swift build` on macOS + when the `link-swift` feature
+    // is enabled. `cargo check --workspace` (no features) skips this
+    // block entirely so the PR / CI feedback loop stays fast.
+    #[cfg(all(target_os = "macos", feature = "link-swift"))]
+    {
+        use swift_rs::build_utils::{link_swift, link_swift_package};
+
+        // Wire the Swift runtime libraries (cargo:rustc-link-search=...).
+        link_swift();
+
+        // Compile the Swift package rooted at `src/` (which must contain
+        // a `Package.swift` with target `byteport-share`). Emits a static
+        // library named `libbyteport-share.a` for downstream `extern "C"`
+        // linking.
+        link_swift_package("byteport-share", "src");
+    }
+
+    // Default + non-macOS path: nothing to do. The crate compiles
+    // because the FFI surface is gated by `#[cfg(target_os = "macos")]`
+    // in `src/lib.rs`.
+    #[cfg(not(all(target_os = "macos", feature = "link-swift")))]
+    {
+        // Explicit no-op. The scaffolding is intentionally Swift-less
+        // for non-macOS CI + default `cargo check` runs.
+    }
 }
