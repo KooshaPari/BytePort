@@ -68,6 +68,22 @@
     "createUpdaterArtifacts": false
   },
   "plugins": {
+    "splashscreen": {
+      "active": true,
+      "windows": ["main"],
+      "image_path": "/brand/splash.svg",
+      "fullscreen": false,
+      "width": 1024,
+      "height": 1024,
+      "center": true,
+      "resizable": true,
+      "decorations": false,
+      "transparent": true,
+      "always_on_top": false,
+      "visible": true,
+      "close_window_on_click": true,
+      "version": 1
+    },
     "updater": {
       "active": false,
       "endpoints": ["https://releases.byteport.dev/byteport/{{target}}/{{arch}}/{{current_version}}"],

@@ -1,0 +1,98 @@
+name: visual-regression
+
+# Visual-regression suite for the BytePort UI surface (PILLAR-TAXONOMY-v2.md v2.2 §L60).
+#
+# Runs Playwright snapshot tests against the built app on 4 viewport/theme
+# combinations (desktop-light, desktop-dark, mobile-light, mobile-dark).
+# On failure, uploads the diff PNG + DOM snapshot to the GitHub Actions
+# run summary so reviewers can see exactly what regressed.
+#
+# Triggers:
+#   - pull_request touching frontend/web/src, frontend/web/static, frontend/web/tests/visual, or playwright.visual.config.ts
+#   - workflow_dispatch
+#
+# Anti-flake:
+#   - animations: 'disabled' in toHaveScreenshot config
+#   - retries: 2 on CI
+#   - pixel diff budget: 1%
+
+on:
+  pull_request:
+    paths:
+      - 'frontend/web/src/**'
+      - 'frontend/web/static/**'
+      - 'frontend/web/tests/visual/**'
+      - 'frontend/web/playwright.visual.config.ts'
+      - '.github/workflows/visual-regression.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: visual-regression-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  snapshots:
+    name: snapshots
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PLAYWRIGHT: '1'
+      NODE_VERSION: '22'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/web/package-lock.json
+
+      - name: Install frontend deps
+        working-directory: frontend/web
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: frontend/web
+        run: npx playwright install --with-deps chromium
+
+      - name: Build SvelteKit app
+        working-directory: frontend/web
+        run: npm run build
+
+      - name: Run visual-regression snapshots
+        working-directory: frontend/web
+        run: npx playwright test --config=playwright.visual.config.ts
+
+      - name: Upload diff artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-regression-diffs
+          path: |
+            frontend/web/test-results/
+            frontend/web/tests/visual/__snapshots__/*-actual.png
+            frontend/web/tests/visual/__snapshots__/*-diff.png
+          retention-days: 7
+
+      - name: Comment on PR with snapshot report
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = [
+              '## ❌ Visual regression detected',
+              '',
+              'Snapshots failed on this PR. Check the `visual-regression-diffs` artifact for',
+              'actual/diff PNGs, then either:',
+              '',
+              '1. Fix the visual change in the PR, or',
+              '2. Update snapshots: `cd frontend/web && npx playwright test --config=playwright.visual.config.ts --update-snapshots`',
+              '',
+              'See `frontend/web/tests/visual/README.md` for the snapshot policy.',
+            ].join('\n');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });
