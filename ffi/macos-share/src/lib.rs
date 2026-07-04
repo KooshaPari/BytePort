@@ -33,9 +33,7 @@ pub struct ShareHandle {
 /// On macOS only; on other targets this returns `ShareError::NotWired`.
 pub fn open_share_session(item_count: usize) -> Result<ShareHandle, ShareError> {
     if item_count == 0 {
-        return Err(ShareError::InvalidProvider(
-            "item_count must be > 0".to_string(),
-        ));
+        return Err(ShareError::InvalidProvider("item_count must be > 0".to_string()));
     }
 
     #[cfg(target_os = "macos")]
@@ -66,10 +64,7 @@ mod tests {
 
     #[test]
     fn rejects_zero_item_count() {
-        assert!(matches!(
-            open_share_session(0),
-            Err(ShareError::InvalidProvider(_))
-        ));
+        assert!(matches!(open_share_session(0), Err(ShareError::InvalidProvider(_))));
     }
 
     #[cfg(target_os = "macos")]
@@ -82,9 +77,6 @@ mod tests {
     #[cfg(not(target_os = "macos"))]
     #[test]
     fn refused_on_non_macos() {
-        assert!(matches!(
-            open_share_session(1),
-            Err(ShareError::NotWired)
-        ));
+        assert!(matches!(open_share_session(1), Err(ShareError::NotWired)));
     }
 }

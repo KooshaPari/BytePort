@@ -8,10 +8,7 @@
 //!
 //! Build target: `aarch64-linux-android`, `x86_64-linux-android`.
 
-#![cfg_attr(
-    all(target_os = "android", feature = "_no_real_impl"),
-    allow(dead_code)
-)]
+#![cfg_attr(all(target_os = "android", feature = "_no_real_impl"), allow(dead_code))]
 
 use thiserror::Error;
 
@@ -35,9 +32,7 @@ pub struct CompanionHandle {
 /// during cross-compile matrix setup.
 pub fn open_companion_session(item_count: usize) -> Result<CompanionHandle, CompanionError> {
     if item_count == 0 {
-        return Err(CompanionError::InvalidIntent(
-            "item_count must be > 0".to_string(),
-        ));
+        return Err(CompanionError::InvalidIntent("item_count must be > 0".to_string()));
     }
 
     #[cfg(target_os = "android")]
@@ -110,9 +105,6 @@ mod tests {
     #[cfg(not(target_os = "android"))]
     #[test]
     fn refused_off_android() {
-        assert!(matches!(
-            open_companion_session(1),
-            Err(CompanionError::NoJvm)
-        ));
+        assert!(matches!(open_companion_session(1), Err(CompanionError::NoJvm)));
     }
 }
