@@ -1,27 +1,35 @@
 name: visual-regression
 
-# Visual-regression suite for the BytePort UI surface (PILLAR-TAXONOMY-v2.md v2.2 §L60).
+# Visual-regression + a11y suite for the BytePort UI surface (PILLAR-TAXONOMY-v2.md v2.2 §L60 + §L76).
 #
-# Runs Playwright snapshot tests against the built app on 4 viewport/theme
-# combinations (desktop-light, desktop-dark, mobile-light, mobile-dark).
-# On failure, uploads the diff PNG + DOM snapshot to the GitHub Actions
-# run summary so reviewers can see exactly what regressed.
+# Two jobs:
+#   1. snapshots — Playwright snapshot tests against the built app on 4
+#      viewport/theme combinations (desktop-light, desktop-dark,
+#      mobile-light, mobile-dark). On failure, uploads the diff PNG +
+#      DOM snapshot to the GitHub Actions run summary.
+#   2. a11y — axe-core WCAG-AA audit against all canonical routes
+#      (desktop + mobile, light + dark). On failure, uploads the
+#      accessibility report and comments the PR with the failing
+#      selectors + remediation playbook.
 #
 # Triggers:
-#   - pull_request touching frontend/web/src, frontend/web/static, frontend/web/tests/visual, or playwright.visual.config.ts
+#   - pull_request touching frontend/web/src, frontend/web/static,
+#     frontend/web/tests, or any of the relevant workflow files
 #   - workflow_dispatch
 #
 # Anti-flake:
 #   - animations: 'disabled' in toHaveScreenshot config
 #   - retries: 2 on CI
 #   - pixel diff budget: 1%
+#   - a11y: 'minor' or 'moderate' tag failures only fail the job;
+#           'serious' + 'critical' are also blocking.
 
 on:
   pull_request:
     paths:
       - 'frontend/web/src/**'
       - 'frontend/web/static/**'
-      - 'frontend/web/tests/visual/**'
+      - 'frontend/web/tests/**'
       - 'frontend/web/playwright.visual.config.ts'
       - '.github/workflows/visual-regression.yml'
   workflow_dispatch:
@@ -89,6 +97,79 @@ jobs:
               '2. Update snapshots: `cd frontend/web && npx playwright test --config=playwright.visual.config.ts --update-snapshots`',
               '',
               'See `frontend/web/tests/visual/README.md` for the snapshot policy.',
+            ].join('\n');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });
+
+  a11y:
+    name: a11y (axe-core WCAG-AA)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PLAYWRIGHT: '1'
+      NODE_VERSION: '22'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/web/package-lock.json
+
+      - name: Install frontend deps
+        working-directory: frontend/web
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: frontend/web
+        run: npx playwright install --with-deps chromium
+
+      - name: Build SvelteKit app
+        working-directory: frontend/web
+        run: npm run build
+
+      - name: Run axe-core WCAG-AA audit
+        working-directory: frontend/web
+        run: npx playwright test tests/visual/axe.spec.ts --reporter=list,html
+
+      - name: Upload a11y report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: a11y-audit-report
+          path: |
+            frontend/web/playwright-report/
+            frontend/web/test-results/
+          retention-days: 7
+
+      - name: Comment on PR with a11y report
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = [
+              '## ♿ WCAG-AA audit failed',
+              '',
+              'axe-core detected WCAG-AA violations. Check the `a11y-audit-report`',
+              'artifact for the full HTML report with failing selectors, then either:',
+              '',
+              '1. Add the missing `aria-*` / `role` / `<label>` etc. in this PR, or',
+              '2. If the violation is a known false positive, add an exemption with',
+              '   `// a11y-exemption: <rule-id> — <justification>` adjacent to the element.',
+              '',
+              'See `frontend/web/tests/visual/axe.spec.ts` for the audit config +',
+              'tagged ruleset (wcag2a, wcag2aa, wcag21a, wcag21aa).',
+              '',
+              'Common fixes:',
+              '- missing form labels: add `<label for="id">` or `aria-label`',
+              '- low color contrast: bump to 4.5:1 (text) or 3:1 (large text)',
+              '- missing alt text: add `alt="..."` (or `alt=""` for decorative)',
+              '- missing landmark: wrap with `<main>`, `<nav>`, or `<header>`',
             ].join('\n');
             await github.rest.issues.createComment({
               owner: context.repo.owner,
