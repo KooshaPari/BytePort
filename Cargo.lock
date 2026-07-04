@@ -196,6 +196,12 @@ checksum = "f2032f911046de80f0a198e0901378627c33f59ea0ac00e363d481118bd70a53"
 
 [[package]]
 name = "base64"
+version = "0.13.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9e1b586273c5702936fe7b7d6896644d8be71e6314cfe09d3167c95f712589e8"
+
+[[package]]
+name = "base64"
 version = "0.21.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9d297deb1925b89f2ccc13d7635fa0714f12c87adce1c75356b39ca9b7178567"
@@ -399,6 +405,7 @@ dependencies = [
 name = "byteport-macos-share"
 version = "0.1.0"
 dependencies = [
+ "swift-rs 0.1.0",
  "thiserror 2.0.18",
 ]
 
@@ -3703,6 +3710,17 @@ checksum = "7da8b5736845d9f2fcb837ea5d9e2628564b3b043a70948a3f0b778838c5fb4f"
 
 [[package]]
 name = "swift-rs"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4e56047444883f07ced9a621d23c8af8c7a3bbdafc16e02e00f4799943002e20"
+dependencies = [
+ "base64 0.13.1",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "swift-rs"
 version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4057c98e2e852d51fdcfca832aac7b571f6b351ad159f9eda5db1655f8d0c4d7"
@@ -3875,7 +3893,7 @@ dependencies = [
  "serde_json",
  "serde_repr",
  "serialize-to-javascript",
- "swift-rs",
+ "swift-rs 1.0.7",
  "tauri-build",
  "tauri-macros",
  "tauri-runtime",
@@ -3984,7 +4002,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_repr",
- "swift-rs",
+ "swift-rs 1.0.7",
  "tauri",
  "tauri-plugin",
  "thiserror 2.0.18",
@@ -4089,7 +4107,7 @@ dependencies = [
  "serde-untagged",
  "serde_json",
  "serde_with",
- "swift-rs",
+ "swift-rs 1.0.7",
  "thiserror 2.0.18",
  "toml 1.0.7+spec-1.1.0",
  "url",
