@@ -20,7 +20,9 @@
 		"build:android": "tauri android build",
 		"build:ios": "tauri ios build",
 		"mobile:dev": "tauri mobile dev",
-		"mobile:build": "tauri mobile build"
+		"mobile:build": "tauri mobile build",
+		"test:visual": "playwright test --config=playwright.visual.config.ts",
+		"test:visual:update": "playwright test --config=playwright.visual.config.ts --update-snapshots"
 	},
 	"devDependencies": {
 		"@chromatic-com/storybook": "^5.2.1",
