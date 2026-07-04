@@ -11,4 +11,5 @@ members = [
     "frontend/web/src-tauri",
     "ffi/macos-share",
     "ffi/android-companion",
+    "ffi/linux-dbus",
 ]
