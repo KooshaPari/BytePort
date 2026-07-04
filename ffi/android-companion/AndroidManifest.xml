@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  BytePort Android Companion — AndroidManifest.xml scaffold.
+
+  Documents the manifest shape. The real APK is built via Gradle once
+  the cross-compile matrix is wired (see docs/ffi/MOBILE.md). Until then
+  this file is descriptive only.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+          package="io.byteport.android.companion"
+          android:versionCode="1"
+          android:versionName="0.1.0">
+
+    <!-- Targets Android 14 (API 34) for the cross-compile matrix -->
+    <uses-sdk
+        android:minSdkVersion="24"
+        android:targetSdkVersion="34" />
+
+    <!-- RECEIVE share intents from other apps -->
+    <application
+        android:label="BytePort Companion"
+        android:icon="@mipmap/ic_launcher">
+
+        <activity
+            android:name=".BytePortCompanionActivity"
+            android:exported="true"
+            android:label="Share to BytePort">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="*/*" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND_MULTIPLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="*/*" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

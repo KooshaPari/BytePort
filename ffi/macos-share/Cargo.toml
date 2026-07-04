@@ -1,0 +1,27 @@
+[package]
+name = "byteport-macos-share"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "BytePort macOS Share Extension FFI: NSItemProvider byte-routing via swift-rs. Scaffold only."
+publish = false
+
+[lib]
+name = "byteport_macos_share"
+crate-type = ["staticlib", "cdylib", "rlib"]
+path = "src/lib.rs"
+
+# swift-rs is intentionally NOT declared as a build-dependency in this
+# scaffold release. The Swift build invocation is deferred to v8.2 (see
+# build.rs comments). Declaring it would force swift-rs to resolve from
+# crates.io on every host, which is unnecessary for the cross-platform
+# compilation check.
+#
+# [target.'cfg(target_os = "macos")'.build-dependencies]
+# swift-rs = "0.1"
+
+[dependencies]
+thiserror = "2.0"
+
+[features]
+default = []
