@@ -1,0 +1,164 @@
+{
+  "nav": {
+    "home": "主页",
+    "instances": "实例",
+    "projects": "项目",
+    "monitor": "监控",
+    "settings": "设置",
+    "integrations": "集成",
+    "profile": "个人资料",
+    "search": "搜索",
+    "logout": "退出"
+  },
+  "common": {
+    "loading": "加载中…",
+    "save": "保存",
+    "cancel": "取消",
+    "delete": "删除",
+    "edit": "编辑",
+    "create": "创建",
+    "submit": "提交",
+    "search": "搜索",
+    "filter": "筛选",
+    "next": "下一步",
+    "previous": "返回",
+    "yes": "是",
+    "no": "否",
+    "open": "打开",
+    "close": "关闭",
+    "retry": "重试",
+    "copied": "已复制",
+    "copy": "复制",
+    "required": "必填",
+    "optional": "可选"
+  },
+  "auth": {
+    "loginTitle": "欢迎回来",
+    "loginSubtitle": "登录到您的 BytePort 账户",
+    "signupTitle": "创建账户",
+    "signupSubtitle": "一分钟内开始部署",
+    "email": "邮箱",
+    "password": "密码",
+    "emailPlaceholder": "you@example.com",
+    "passwordPlaceholder": "密码",
+    "name": "姓名",
+    "namePlaceholder": "Ada Lovelace",
+    "submitLogin": "登录",
+    "submitSignup": "创建账户",
+    "switchToSignup": "还没有账户？注册",
+    "switchToLogin": "已有账户？登录",
+    "forgotPassword": "忘记密码？",
+    "registerPrompt": "立即注册，开始部署",
+    "orContinueWith": "或使用以下方式继续"
+  },
+  "home": {
+    "welcome": "欢迎。",
+    "instances": "实例",
+    "projects": "项目",
+    "viewAll": "查看全部",
+    "noInstances": "还没有实例",
+    "noInstancesHint": "从项目选项卡创建您的第一个 VM。",
+    "noProjects": "还没有项目",
+    "noProjectsHint": "点击\"新建项目\"开始。"
+  },
+  "projects": {
+    "title": "项目",
+    "new": "新建项目",
+    "name": "项目名称",
+    "description": "描述",
+    "framework": "框架",
+    "create": "创建项目",
+    "deploy": "部署",
+    "lastDeployed": "上次部署: {when}",
+    "status": {
+      "running": "运行中",
+      "stopped": "已停止",
+      "building": "构建中",
+      "failed": "失败",
+      "deploying": "部署中"
+    }
+  },
+  "instances": {
+    "title": "实例",
+    "new": "新建实例",
+    "name": "实例名称",
+    "region": "区域",
+    "size": "规格",
+    "status": "状态",
+    "ip": "IP 地址",
+    "ssh": "SSH",
+    "console": "控制台",
+    "destroy": "销毁",
+    "confirmDestroy": "确定要销毁此实例吗？此操作不可撤销。"
+  },
+  "monitor": {
+    "title": "监控",
+    "cpu": "CPU",
+    "memory": "内存",
+    "disk": "磁盘",
+    "network": "网络",
+    "lastHour": "最近 1 小时",
+    "lastDay": "最近 1 天",
+    "lastWeek": "最近 1 周"
+  },
+  "settings": {
+    "title": "设置",
+    "language": "语言",
+    "theme": "主题",
+    "themeLight": "浅色",
+    "themeDark": "深色",
+    "themeSystem": "跟随系统",
+    "notifications": "通知",
+    "account": "账户",
+    "security": "安全",
+    "saved": "设置已保存",
+    "error": "无法保存设置"
+  },
+  "errors": {
+    "generic": "出现问题",
+    "network": "网络错误 — 请重试",
+    "unauthorized": "请登录后继续",
+    "forbidden": "无权访问",
+    "notFound": "未找到",
+    "validation": "请检查高亮的字段",
+    "serverError": "服务器出现意外错误"
+  },
+  "emptyStates": {
+    "noData": {
+      "title": "还没有数据",
+      "hint": "创建一些内容后，它会显示在这里。"
+    },
+    "noResults": {
+      "title": "未找到结果",
+      "hint": "请尝试其他搜索词。"
+    },
+    "error": {
+      "title": "出现问题",
+      "hint": "我们已记录此问题。请刷新重试。"
+    },
+    "mascot": {
+      "title": "欢迎使用 BytePort",
+      "hint": "您的自托管平台已准备就绪。"
+    }
+  },
+  "integrations": {
+    "awsAccessKeyId": "AWS 访问密钥 ID",
+    "awsSecretAccessKey": "AWS 秘密访问密钥",
+    "openaiApiKey": "OpenAI API 密钥",
+    "portfolioRoot": "Portfolio 根 URL",
+    "portfolioApiKey": "Portfolio API 密钥",
+    "save": "保存集成",
+    "saved": "集成已保存",
+    "test": "测试连接",
+    "testing": "测试中…",
+    "lastTested": "上次测试: {when}"
+  },
+  "splash": {
+    "loading": "正在加载 BytePort…",
+    "ready": "就绪"
+  },
+  "footer": {
+    "copyright": "© {year} BytePort",
+    "version": "版本 {version}"
+  }
+}

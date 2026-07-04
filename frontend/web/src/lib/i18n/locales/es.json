@@ -1,0 +1,164 @@
+{
+  "nav": {
+    "home": "Inicio",
+    "instances": "Instancias",
+    "projects": "Proyectos",
+    "monitor": "Monitor",
+    "settings": "Ajustes",
+    "integrations": "Integraciones",
+    "profile": "Perfil",
+    "search": "Buscar",
+    "logout": "Cerrar sesión"
+  },
+  "common": {
+    "loading": "Cargando…",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "create": "Crear",
+    "submit": "Enviar",
+    "search": "Buscar",
+    "filter": "Filtrar",
+    "next": "Siguiente",
+    "previous": "Atrás",
+    "yes": "Sí",
+    "no": "No",
+    "open": "Abrir",
+    "close": "Cerrar",
+    "retry": "Reintentar",
+    "copied": "Copiado",
+    "copy": "Copiar",
+    "required": "Obligatorio",
+    "optional": "Opcional"
+  },
+  "auth": {
+    "loginTitle": "Bienvenido de nuevo",
+    "loginSubtitle": "Inicia sesión en tu cuenta de BytePort",
+    "signupTitle": "Crea tu cuenta",
+    "signupSubtitle": "Empieza a desplegar en menos de un minuto",
+    "email": "Correo electrónico",
+    "password": "Contraseña",
+    "emailPlaceholder": "tu@ejemplo.com",
+    "passwordPlaceholder": "Tu contraseña",
+    "name": "Nombre",
+    "namePlaceholder": "Ada Lovelace",
+    "submitLogin": "Iniciar sesión",
+    "submitSignup": "Crear cuenta",
+    "switchToSignup": "¿No tienes cuenta? Regístrate",
+    "switchToLogin": "¿Ya tienes cuenta? Inicia sesión",
+    "forgotPassword": "¿Olvidaste tu contraseña?",
+    "registerPrompt": "Por favor, regístrate abajo para comenzar",
+    "orContinueWith": "O continúa con"
+  },
+  "home": {
+    "welcome": "Hola.",
+    "instances": "Instancias",
+    "projects": "Proyectos",
+    "viewAll": "Ver todo",
+    "noInstances": "Aún no hay instancias",
+    "noInstancesHint": "Crea tu primera VM desde la pestaña Proyectos.",
+    "noProjects": "Aún no hay proyectos",
+    "noProjectsHint": "Haz clic en 'Nuevo proyecto' para empezar."
+  },
+  "projects": {
+    "title": "Proyectos",
+    "new": "Nuevo proyecto",
+    "name": "Nombre del proyecto",
+    "description": "Descripción",
+    "framework": "Framework",
+    "create": "Crear proyecto",
+    "deploy": "Desplegar",
+    "lastDeployed": "Desplegado por última vez {when}",
+    "status": {
+      "running": "En ejecución",
+      "stopped": "Detenido",
+      "building": "Construyendo",
+      "failed": "Falló",
+      "deploying": "Desplegando"
+    }
+  },
+  "instances": {
+    "title": "Instancias",
+    "new": "Nueva instancia",
+    "name": "Nombre de la instancia",
+    "region": "Región",
+    "size": "Tamaño",
+    "status": "Estado",
+    "ip": "Dirección IP",
+    "ssh": "SSH",
+    "console": "Consola",
+    "destroy": "Destruir",
+    "confirmDestroy": "¿Destruir esta instancia? Esta acción no se puede deshacer."
+  },
+  "monitor": {
+    "title": "Monitor",
+    "cpu": "CPU",
+    "memory": "Memoria",
+    "disk": "Disco",
+    "network": "Red",
+    "lastHour": "Última hora",
+    "lastDay": "Último día",
+    "lastWeek": "Última semana"
+  },
+  "settings": {
+    "title": "Ajustes",
+    "language": "Idioma",
+    "theme": "Tema",
+    "themeLight": "Claro",
+    "themeDark": "Oscuro",
+    "themeSystem": "Sistema",
+    "notifications": "Notificaciones",
+    "account": "Cuenta",
+    "security": "Seguridad",
+    "saved": "Ajustes guardados",
+    "error": "No se pudieron guardar los ajustes"
+  },
+  "errors": {
+    "generic": "Algo salió mal",
+    "network": "Error de red — por favor reintenta",
+    "unauthorized": "Por favor inicia sesión para continuar",
+    "forbidden": "No tienes permiso",
+    "notFound": "No pudimos encontrar eso",
+    "validation": "Por favor revisa los campos resaltados",
+    "serverError": "El servidor tuvo un error inesperado"
+  },
+  "emptyStates": {
+    "noData": {
+      "title": "Aún no hay nada aquí",
+      "hint": "Cuando crees algo, aparecerá aquí."
+    },
+    "noResults": {
+      "title": "Sin resultados",
+      "hint": "Prueba con otro término de búsqueda."
+    },
+    "error": {
+      "title": "Algo se rompió",
+      "hint": "Registramos el problema. Intenta actualizar."
+    },
+    "mascot": {
+      "title": "Bienvenido a BytePort",
+      "hint": "Tu plataforma autoalojada vive aquí."
+    }
+  },
+  "integrations": {
+    "awsAccessKeyId": "ID de clave de acceso AWS",
+    "awsSecretAccessKey": "Clave de acceso secreta AWS",
+    "openaiApiKey": "Clave API de OpenAI",
+    "portfolioRoot": "URL del endpoint raíz de Portfolio",
+    "portfolioApiKey": "Clave API de Portfolio",
+    "save": "Guardar integración",
+    "saved": "Integración guardada",
+    "test": "Probar conexión",
+    "testing": "Probando…",
+    "lastTested": "Probado por última vez {when}"
+  },
+  "splash": {
+    "loading": "Cargando BytePort…",
+    "ready": "Listo"
+  },
+  "footer": {
+    "copyright": "© {year} BytePort",
+    "version": "Versión {version}"
+  }
+}
