@@ -10,6 +10,7 @@ thiserror = "2.0"
 
 [features]
 default = []
+otel = []
 
 [dependencies.serde]
 version = "1.0"
