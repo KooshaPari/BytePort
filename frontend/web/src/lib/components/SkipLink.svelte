@@ -1,7 +1,7 @@
 /**
  * WCAG-AA accessible `SkipLink` component.
  * Renders a focus-visible link at the top of the page that skips
- * directly to <main id="main"> — keyboard users (Tab once) jump past
+ * directly to `&lt;main id="main"&gt;` — keyboard users (Tab once) jump past
  * nav/header without 20+ Tabs.
  *
  * PILLAR-TAXONOMY-v2.md v2.2 §L76 (accessibility).
