@@ -6,7 +6,7 @@
  *
  * PILLAR-TAXONOMY-v2.md v2.2 §L76 (accessibility).
  *
- * Usage: <SkipLink /> inside +layout.svelte, immediately after <header>.
+ * Usage: `<SkipLink />` inside `+layout.svelte`, immediately after `&lt;header&gt;`.
  *
  * Design: link is offscreen until focused, then animates in with
  * prefers-reduced-motion respected (no transform when reduced).
