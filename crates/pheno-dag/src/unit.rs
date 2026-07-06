@@ -13,10 +13,11 @@ use uuid::Uuid;
 // ---------------------------------------------------------------------------
 
 /// Lifecycle status of a DagUnit.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum DagUnitStatus {
     /// Unit has been defined but not started.
+    #[default]
     Pending,
     /// Unit is currently executing.
     InProgress,
@@ -28,12 +29,6 @@ pub enum DagUnitStatus {
     Skipped,
     /// Unit has been cancelled.
     Cancelled,
-}
-
-impl Default for DagUnitStatus {
-    fn default() -> Self {
-        Self::Pending
-    }
 }
 
 // ---------------------------------------------------------------------------
