@@ -9,6 +9,9 @@
 //! Build target: `aarch64-linux-android`, `x86_64-linux-android`.
 
 #![cfg_attr(all(target_os = "android", feature = "_no_real_impl"), allow(dead_code))]
+// `_no_real_impl` is a docs-only/CI toggle, not a real Cargo feature. Suppress
+// the unexpected-cfgs lint that -D warnings would otherwise turn into an error.
+#![allow(unexpected_cfgs)]
 
 use thiserror::Error;
 
