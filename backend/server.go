@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/byteport/api/internal/container"
+	"github.com/byteport/api/internal/infrastructure/http/middleware"
 	"github.com/byteport/api/lib"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -57,6 +58,10 @@ func NewAPIServer(c *container.Container) *APIServer {
 
 			// NEW: Hexagonal architecture endpoints
 			c.DeploymentHandler.RegisterRoutes(protected)
+
+			// T2 UDS proxy: forward OpenAI-compatible chat traffic to the
+			// Rust omniroute data plane (plans/2026-07-04-byteport-evolution-v1.md).
+			protected.Any("/v1/chat/completions", middleware.UDSProxy())
 
 			// LEGACY: Old deployment endpoints (will be removed)
 			legacyDeployments := protected.Group("/legacy/deployments")
