@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
+	"time"
 )
 
 // Client provides an interface for interacting with the S3 API.
@@ -100,8 +102,24 @@ func (c *Client) GetObject(ctx context.Context, bucketName, objectName string) (
 
 	// Extract metadata from response headers
 	metadata := &ObjectMetadata{
-		ETag:         resp.Header.Get("ETag"),
-		LastModified: resp.Header.Get("Last-Modified"),
+		ETag: resp.Header.Get("ETag"),
+		LastModified: func() time.Time {
+			t, err := time.Parse(time.RFC1123, resp.Header.Get("Last-Modified"))
+			if err != nil {
+				// Try RFC1123Z (with numeric timezone) as fallback
+				t, err = time.Parse(time.RFC1123Z, resp.Header.Get("Last-Modified"))
+				if err != nil {
+					// Remove sub-second precision and try again
+					t, err = time.Parse(strings.Replace(time.RFC1123, "15:04:05", "15:04:05.000", 1), resp.Header.Get("Last-Modified"))
+					if err != nil {
+						return time.Time{}
+					}
+					return t
+				}
+				return t
+			}
+			return t
+		}(),
 		Size:         resp.ContentLength,
 		ContentType:  resp.Header.Get("Content-Type"),
 		StorageClass: resp.Header.Get("x-amz-storage-class"),
