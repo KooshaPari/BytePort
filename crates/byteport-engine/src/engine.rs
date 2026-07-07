@@ -57,7 +57,7 @@ impl std::fmt::Display for DeploymentId {
 // ---------------------------------------------------------------------------
 
 /// Resources allocated to a deployment.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Resources {
     /// CPU shares (1024 = 1 core).
     pub cpu_shares: u64,

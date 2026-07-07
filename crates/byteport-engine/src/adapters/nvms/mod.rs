@@ -27,4 +27,5 @@
 //! Legend: ✅ implemented, 🔄 stub, ⬜ planned.
 
 pub mod http;
+pub use http::NvmsHttpAdapter;
 // pub mod process;  // Phase 3C

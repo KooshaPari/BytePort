@@ -21,7 +21,7 @@
 use std::collections::HashMap;
 
 use crate::adapters::mock::MockEngine;
-use crate::adapters::nvms::{NvmsHttpAdapter, NvmsHttpConfig};
+use crate::adapters::nvms::NvmsHttpAdapter;
 use crate::engine::Engine;
 
 /// Thread-safe registry of named [`Engine`] implementations.
@@ -107,8 +107,7 @@ impl Default for EngineRegistry {
 impl EngineRegistry {
     pub fn register_defaults(&mut self) -> Result<&mut Self, RegistryError> {
         self.register("mock", Box::new(MockEngine::new()))?;
-        let cfg = NvmsHttpConfig::from_env();
-        self.register("nvms", Box::new(NvmsHttpAdapter::new(cfg)))?;
+        self.register("nvms", Box::new(NvmsHttpAdapter::from_env()))?;
         Ok(self)
     }
 }
@@ -168,6 +167,6 @@ mod tests {
 
         // NVMS adapter should be wired and report the expected name.
         let nvms = reg.get("nvms").unwrap();
-        assert_eq!(nvms.name(), "nvms-http");
+        assert_eq!(nvms.name(), "nvms");
     }
 }
