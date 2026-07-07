@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"nvms/lib"
 	"nvms/models"
+	"os"
 	"strings"
 
 	spinhttp "github.com/fermyon/spin/sdk/go/v2/http"
@@ -286,8 +287,16 @@ func addToDemo(project models.Project) error {
 	}
 	return nil
 }
+
+// DeployNVMSService launches an EC2 instance for `service` and returns the
+// resulting instance metadata.
+//
+// The IAM instance profile ARN is read from the IAM_INSTANCE_PROFILE env var
+// at deploy time. When this is unset, the build script falls back to static
+// credentials (LocalStack/dev only) and a warning is logged.
 func DeployNVMSService(AccessKey string, SecretKey string, Bucket lib.S3DeploymentInfo, service models.Service, fileMap []string) ([]lib.EC2InstanceInfo, error) {
-	instances, err := lib.DeployEC2(AccessKey, SecretKey, Bucket, service, fileMap)
+	iamInstanceProfile := os.Getenv("IAM_INSTANCE_PROFILE")
+	instances, err := lib.DeployEC2(AccessKey, SecretKey, Bucket, service, fileMap, iamInstanceProfile)
 	if err != nil {
 		fmt.Println("Error deploying EC2: ", err)
 		return nil, err

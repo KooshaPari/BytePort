@@ -46,6 +46,9 @@ func NewAPIServer(c *container.Container) *APIServer {
 		// Auth endpoints - WorkOS AuthKit only
 		v1.POST("/auth/workos/callback", handleWorkOSCallback)
 
+		// GitHub webhook — authenticated by HMAC-SHA256, not by user JWT.
+		c.WebhookHandler.RegisterRoutes(v1)
+
 		protected := v1.Group("/")
 		protected.Use(lib.AuthMiddleware())
 		{

@@ -3,10 +3,8 @@ package lib
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 
 	"gopkg.in/yaml.v2"
@@ -101,7 +99,7 @@ func (tm *TunnelManager) CreateProjectTunnel(projectName string, services []mode
 	}
 
 	configFile := filepath.Join(tm.configPath, fmt.Sprintf("%s.yml", projectName))
-	err = ioutil.WriteFile(configFile, configBytes, 0644)
+	err = os.WriteFile(configFile, configBytes, 0644)
 	if err != nil {
 		return "", fmt.Errorf("failed to write tunnel config: %w", err)
 	}

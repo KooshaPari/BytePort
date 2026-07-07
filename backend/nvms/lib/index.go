@@ -8,7 +8,7 @@
 // AWS Infrastructure Management:
 //
 //	PushToS3(zipBall []byte, AccessKey, SecretKey, ProjectName string) (S3DeploymentInfo, error)
-//	DeployEC2(AccessKey, SecretKey string, bucket S3DeploymentInfo, service models.Service, fileMap []string) ([]EC2InstanceInfo, error)
+//	DeployEC2(AccessKey, SecretKey string, bucket S3DeploymentInfo, service models.Service, fileMap []string, iamInstanceProfile string) ([]EC2InstanceInfo, error)
 //	ProvisionNetwork(AccessKey, SecretKey, projectName string) (*awsnet.CreateLoadBalancerResponse, string, string, error)
 //	CreateALBListener(AccessKey, SecretKey, projectName, loadBalancerArn, vpcId, instanceId string, port int) (string, string, error)
 //	SetListenerRules(AccessKey, SecretKey, ListenerArn, TargetArn, serviceName string, priority int) error

@@ -27,6 +27,19 @@ func getAWSRegion() string {
 	return "us-east-1"
 }
 
+// ShellQuote returns a POSIX-shell-safe single-quoted version of s. Values
+// supplied by users (env vars, service paths, names) flow into the EC2
+// user-data script, so any unescaped single-quote or backslash in user
+// input would be a shell-injection vector. Exported so it can be unit-tested
+// from aws_test.go.
+//
+// The algorithm is the standard "'foo' becomes '\”foo'\”" idiom: wrap the
+// entire string in single quotes, but exit and re-enter single quotes around
+// every embedded single quote (replacing each ' with `'\”`).
+func ShellQuote(s string) string {
+	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
+}
+
 var AWSEndpointBase string = "https://%s." + getAWSRegion() + ".amazonaws.com" /* "http://localhost.localstack.cloud:4566"*/
 func PushToS3(zipBall []byte, AccessKey string, SecretKey string, ProjectName string) (S3DeploymentInfo, error) {
 	log.Println("Uploading to S3...")
@@ -74,7 +87,15 @@ func PushToS3(zipBall []byte, AccessKey string, SecretKey string, ProjectName st
 
 }
 
-func DeployEC2(AccessKey string, SecretKey string, bucket S3DeploymentInfo, service models.Service, fileMap []string) ([]EC2InstanceInfo, error) {
+// DeployEC2 launches an EC2 instance running the build pipeline for `service`.
+//
+// Security: when `iamInstanceProfile` is non-empty the EC2 instance is launched
+// with an IAM instance profile attached, and the user-data script MUST NOT
+// embed any static AWS credentials. The build script will then read temporary
+// credentials from the EC2 instance metadata service (IMDSv2). Callers SHOULD
+// always pass an IAM instance profile ARN; the legacy `AccessKey`/`SecretKey`
+// path exists only for LocalStack development.
+func DeployEC2(AccessKey string, SecretKey string, bucket S3DeploymentInfo, service models.Service, fileMap []string, iamInstanceProfile string) ([]EC2InstanceInfo, error) {
 	client, err := ec2.NewEC2(aws.Config{
 		AccessKeyId:     AccessKey,
 		SecretAccessKey: SecretKey,
@@ -88,19 +109,24 @@ func DeployEC2(AccessKey string, SecretKey string, bucket S3DeploymentInfo, serv
 		return []EC2InstanceInfo{}, err
 	}
 
-	buildScript, err := generateBuildScript(bucket, service, AccessKey, SecretKey, fileMap)
+	buildScript, err := generateBuildScript(bucket, service, AccessKey, SecretKey, fileMap, iamInstanceProfile)
 	if err != nil {
 		log.Printf("Error generating build script: %v\n", err)
 		return []EC2InstanceInfo{}, err
 	}
 	log.Println("EC2 client created")
 	params := map[string]string{
-		"ImageId": "ami-01816d07b1128cd2d",
-		//"ImageId": "ami-024f768332f0",
+		"ImageId":      "ami-01816d07b1128cd2d",
 		"InstanceType": "t2.micro",
 		"UserData":     buildScript,
 		"MinCount":     "1",
 		"MaxCount":     "1",
+	}
+	// If we have an IAM instance profile, attach it. The build script will
+	// detect this case and NOT embed static credentials in user-data.
+	if iamInstanceProfile != "" {
+		params["IamInstanceProfile.Arn"] = iamInstanceProfile
+		log.Println("EC2 launch will use IAM instance profile (no static creds in user-data)")
 	}
 	log.Println("Creating EC2 instance")
 	resp, err := client.RunInstances(context.Background(), params)
@@ -118,7 +144,15 @@ func DeployEC2(AccessKey string, SecretKey string, bucket S3DeploymentInfo, serv
 	return instances, nil
 }
 
-func generateBuildScript(s3Info S3DeploymentInfo, service models.Service, accessKey, secretKey string, files []string) (string, error) {
+// generateBuildScript returns a base64-encoded shell script suitable for use
+// as EC2 user-data.
+//
+// Security: when `iamInstanceProfile` is non-empty the script does NOT embed
+// the `accessKey`/`secretKey` parameters; AWS credentials are obtained from
+// the EC2 instance metadata service (IMDSv2) via the attached IAM instance
+// profile. Static credentials are still supported for LocalStack development
+// but should never be used in production deployments.
+func generateBuildScript(s3Info S3DeploymentInfo, service models.Service, accessKey, secretKey string, files []string, iamInstanceProfile string) (string, error) {
 	log.Println("Getting Buildpack")
 	buildpack, err := DetectBuildPack(files, service)
 	if err != nil {
@@ -172,12 +206,24 @@ rm -rf aws/
 # Configure AWS credentials
 log "Configuring AWS credentials..."
 mkdir -p /root/.aws
-cat > /root/.aws/credentials << EOF
+if [ -n "${USE_IAM_INSTANCE_PROFILE:-}" ]; then
+    # Production: rely on the EC2 IAM instance profile. The CLI will fetch
+    # temporary credentials from IMDSv2. Do NOT write static credentials.
+    log "Using IAM instance profile credentials (IMDSv2)"
+    cat > /root/.aws/config << EOF
+[default]
+region = us-east-1
+EOF
+else
+    # LocalStack / dev fallback only. Never use in production.
+    log "WARNING: using static AWS credentials (LocalStack/dev only)"
+    cat > /root/.aws/credentials << EOF
 [default]
 aws_access_key_id = %s
 aws_secret_access_key = %s
 region = us-east-1
 EOF
+fi
 
 # Verify AWS configuration
 aws configure list
@@ -250,41 +296,70 @@ systemctl start %s
 log "Build and deployment complete!"
 `
 	log.Println("Building script...")
+
 	envVarsList := make([]string, 0, len(buildpack.EnvVars))
 	for k, v := range buildpack.EnvVars {
-		envVarsList = append(envVarsList, fmt.Sprintf("export %s=%s", k, v))
+		envVarsList = append(envVarsList, fmt.Sprintf("export %s=%s", ShellQuote(k), ShellQuote(v)))
 	}
 	environmentVars := strings.Join(envVarsList, "\n")
-	// Format script with actual values
-	formattedScript := heading + fmt.Sprintf(script,
-		buildpack.Name,    // %s for application type
-		accessKey,         // %s for AWS access key
-		secretKey,         // %s for AWS secret key
-		s3Info.BucketName, // %s for bucket name
-		s3Info.ObjectKey,  // %s for object key
-		filepath.Base(strings.Trim(service.Path, "/")),
-		service.Path,                           // %s for service path (logging)
-		service.Path,                           // %s for service path (cd)
-		strings.Join(buildpack.Packages, " "),  // %s for packages
-		environmentVars,                        // %s for env vars
-		strings.Join(buildpack.PreBuild, "\n"), // %s for prebuild
-		strings.Join(buildpack.Build, " && "),  // %s for build commands
-		service.Name,                           // %s for service name
-		service.Name,                           // %s for service name in Description
-		buildpack.Name,                         // %s for buildpack name
-		service.Path,                           // %s for WorkingDirectory
-		buildpack.Start,                        // %s for ExecStart
-		service.Port,                           // %d for PORT
-		strings.Join(func() []string { // %s for systemd env vars
-			var envs []string
-			for k, v := range buildpack.EnvVars {
-				envs = append(envs, fmt.Sprintf("Environment=%s=%s", k, v))
-			}
-			return envs
-		}(), "\n"),
-		service.Name, // %s for enable
-		service.Name, // %s for start
-	)
+
+	// Pre-quote all user-supplied values that flow into the shell script.
+	// service.Name / service.Path / s3Info.BucketName / s3Info.ObjectKey are
+	// supplied by end users via the NVMS manifest, so they must always be
+	// passed through ShellQuote.
+	quotedServiceName := ShellQuote(service.Name)
+	quotedServicePath := ShellQuote(service.Path)
+	quotedBucket := ShellQuote(s3Info.BucketName)
+	quotedObjectKey := ShellQuote(s3Info.ObjectKey)
+
+	systemdEnvVars := strings.Join(func() []string {
+		var envs []string
+		for k, v := range buildpack.EnvVars {
+			envs = append(envs, fmt.Sprintf("Environment=%s=%s", k, ShellQuote(v)))
+		}
+		return envs
+	}(), "\n")
+
+	buildScriptFmt := func(accessKeyPlaceholder, secretKeyPlaceholder string) string {
+		return fmt.Sprintf(script,
+			ShellQuote(buildpack.Name), // %s for application type (quoted)
+			accessKeyPlaceholder,       // %s for AWS access key
+			secretKeyPlaceholder,       // %s for AWS secret key
+			quotedBucket,               // %s for bucket name (quoted)
+			quotedObjectKey,            // %s for object key (quoted)
+			ShellQuote(filepath.Base(strings.Trim(service.Path, "/"))), // %s for service path basename (quoted)
+			quotedServicePath,                      // %s for service path (logging, quoted)
+			quotedServicePath,                      // %s for service path (cd, quoted)
+			strings.Join(buildpack.Packages, " "),  // %s for packages
+			environmentVars,                        // %s for env vars (already shell-escaped)
+			strings.Join(buildpack.PreBuild, "\n"), // %s for prebuild
+			strings.Join(buildpack.Build, " && "),  // %s for build commands
+			quotedServiceName,                      // %s for service name (quoted)
+			quotedServiceName,                      // %s for service name in Description (quoted)
+			ShellQuote(buildpack.Name),             // %s for buildpack name (quoted)
+			quotedServicePath,                      // %s for WorkingDirectory (quoted)
+			ShellQuote(buildpack.Start),            // %s for ExecStart (quoted)
+			service.Port,                           // %d for PORT
+			systemdEnvVars,                         // %s for systemd env vars (already shell-escaped)
+			quotedServiceName,                      // %s for enable (quoted)
+			quotedServiceName,                      // %s for start (quoted)
+		)
+	}
+
+	// Build script body. When an IAM instance profile is in use, the
+	// credential placeholders in the script template are NOT substituted, so
+	// the corresponding %s slots are filled with empty strings. The conditional
+	// block in the script then takes the IMDSv2 path.
+	var formattedScript string
+	if iamInstanceProfile != "" {
+		// Production path: no static credentials. The %s slots that would have
+		// received accessKey/secretKey are filled with "" (ignored at runtime).
+		formattedScript = heading + "export USE_IAM_INSTANCE_PROFILE=1\n" + buildScriptFmt("", "")
+	} else {
+		// Legacy / LocalStack path: embed static credentials. Will print a
+		// runtime warning to /var/log/user-data-build.log when used.
+		formattedScript = heading + buildScriptFmt(ShellQuote(accessKey), ShellQuote(secretKey))
+	}
 	// Debug: log service and buildpack info
 	log.Printf("Service: %+v\n", service)
 	log.Printf("Build Pack: %s\n", buildpack)
@@ -405,6 +480,7 @@ func RegisterService(AccessKey string, SecretKey string, loadBalancerArn string,
 		return "", err
 	}
 	log.Printf("Service registered: %s\n", targetArn)
+	return targetArn, nil
 }
 func AddNewRecord(AccessKey string, SecretKey string, domainName string, zoneID string, projectName string, value string) (string, error) {
 	c, err := r53.NewRoute53(aws.Config{

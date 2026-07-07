@@ -28,6 +28,7 @@ type Container struct {
 
 	// HTTP Handlers
 	DeploymentHandler *handlers.DeploymentHandler
+	WebhookHandler    *handlers.GitHubWebhookHandler
 }
 
 // NewContainer creates a new dependency injection container
@@ -91,4 +92,6 @@ func (c *Container) initHandlers() {
 		c.TerminateDeploymentUseCase,
 		c.UpdateStatusUseCase,
 	)
+
+	c.WebhookHandler = handlers.NewGitHubWebhookHandler(c.CreateDeploymentUseCase)
 }

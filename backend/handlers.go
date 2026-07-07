@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -77,8 +79,13 @@ func handleDeploy(store *DeploymentStore) gin.HandlerFunc {
 		// Store deployment
 		store.Add(deployment)
 
-		// Simulate async deployment (in production, this would be a background job)
-		go simulateDeployment(store, deployment.ID)
+		// Trigger deployment: real provisioning for AWS, simulated for
+		// third-party providers (vercel/netlify/etc) until their adapters land.
+		if deployment.Provider == "aws" {
+			go provisionEC2Instance(store, deployment.ID, req)
+		} else {
+			go simulateDeployment(store, deployment.ID)
+		}
 
 		// Return response
 		c.JSON(http.StatusCreated, DeployResponse{
@@ -433,4 +440,61 @@ func simulateDeployment(store *DeploymentStore, id string) {
 		deployment.UpdatedAt = time.Now()
 		store.Update(deployment)
 	}
+}
+
+// provisionEC2Instance drives a real EC2 RunInstances call against AWS (or
+// LocalStack when AWS_ENDPOINT_URL is set). The AWS provider path is gated
+// behind BuildEC2Input validation so a malformed payload fails fast at the
+// HTTP boundary instead of triggering a downstream AWS call.
+//
+// On any non-validation failure the deployment is marked "failed" so the
+// caller can poll and react, rather than silently staying at "deploying".
+func provisionEC2Instance(store *DeploymentStore, id string, req DeployRequest) {
+	deployment := store.Get(id)
+	if deployment == nil {
+		return
+	}
+
+	// Construction of RunInstancesInput has no external side effects, so build
+	// it synchronously to fail fast on bad input.
+	input := buildEC2InputFromDeploy(req)
+
+	cfg, err := loadAWSConfigFromEnv()
+	if err != nil {
+		markDeployFailed(store, deployment, "aws-config: "+err.Error())
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	if _, runErr := runEC2Instance(ctx, cfg, input); runErr != nil {
+		markDeployFailed(store, deployment, "run-instances: "+runErr.Error())
+		return
+	}
+
+	deployment.Status = "deployed"
+	deployment.UpdatedAt = time.Now()
+	store.Update(deployment)
+}
+
+// markDeployFailed sets the deployment to a terminal failed state. Exposed so
+// provisionEC2Instance and future real-deploy paths can reuse it.
+func markDeployFailed(store *DeploymentStore, d *Deployment, reason string) {
+	d.Status = "failed"
+	d.UpdatedAt = time.Now()
+	if d.EnvVars == nil {
+		d.EnvVars = map[string]string{}
+	}
+	d.EnvVars["__failure_reason"] = reason
+	store.Update(d)
+}
+
+// envOr returns os.Getenv(key) or fallback if empty. Centralised so tests and
+// the production code agree on default behaviour for unset AWS_* vars.
+func envOr(key, fallback string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return fallback
 }
