@@ -18,16 +18,17 @@
 //! | [`engine`]             | Core [`engine::Engine`] trait + value types         |
 //! | [`adapters::mock`]     | In-memory `MockEngine` for tests                    |
 //! | [`adapters::docker`]   | Stub `DockerEngine` (real bollard integration TBD)  |
+//! | [`adapters::nvms`]     | `NvmsHttpAdapter` — talks to NVMS Spin daemon       |
 //! | [`registry`]           | `EngineRegistry` dispatcher keyed by engine name    |
 //!
 //! ## Status
 //!
-//! - Engine trait + value types: implemented (309 lines).
+//! - Engine trait + value types: implemented (307 lines).
 //! - Mock adapter: implemented with `tokio::sync::RwLock` + `uuid::Uuid`.
 //! - Docker adapter: stub (returns `EngineError::NotImplemented`).
+//! - NVMS HTTP adapter: implemented under default `nvms` feature gate (reqwest).
 //! - Registry: implemented with registration, lookup, and duplicate-protection.
 //! - Wire-up into Go backend: **not started** (T1 HTTP sidecar — next task).
-//! - NanoVMS adapter: **not started** (Phase 3B).
 
 pub mod adapters;
 pub mod engine;

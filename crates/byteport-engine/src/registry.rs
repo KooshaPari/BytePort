@@ -20,6 +20,8 @@
 
 use std::collections::HashMap;
 
+use crate::adapters::mock::MockEngine;
+use crate::adapters::nvms::{NvmsHttpAdapter, NvmsHttpConfig};
 use crate::engine::Engine;
 
 /// Thread-safe registry of named [`Engine`] implementations.
@@ -93,6 +95,24 @@ impl Default for EngineRegistry {
     }
 }
 
+/// Register the well-known engine set against an existing registry.
+///
+/// Includes:
+/// - `"mock"` — [`MockEngine`] (always registered, safe for tests).
+/// - `"nvms"` — [`NvmsHttpAdapter`], configured from `NVMS_DAEMON_URL`
+///   (default `http://127.0.0.1:9700`).
+///
+/// Caller-chosen engines (e.g. `"docker"`) are not registered here — the
+/// operator decides whether to register them after construction.
+impl EngineRegistry {
+    pub fn register_defaults(&mut self) -> Result<&mut Self, RegistryError> {
+        self.register("mock", Box::new(MockEngine::new()))?;
+        let cfg = NvmsHttpConfig::from_env();
+        self.register("nvms", Box::new(NvmsHttpAdapter::new(cfg)))?;
+        Ok(self)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -130,5 +150,24 @@ mod tests {
         let mut names = reg.names();
         names.sort();
         assert_eq!(names, vec!["docker", "mock"]);
+    }
+
+    #[test]
+    fn register_defaults_includes_mock_and_nvms() {
+        // Ensure no NVMS_DAEMON_URL leaks from the env into the test.
+        // SAFETY: tests run on a single thread for this case; clearing an env var
+        // is safe given the surrounding test harness. Use std::env::remove_var
+        // for portability.
+        std::env::remove_var("NVMS_DAEMON_URL");
+
+        let mut reg = EngineRegistry::new();
+        reg.register_defaults().unwrap();
+        let mut names = reg.names();
+        names.sort();
+        assert_eq!(names, vec!["mock", "nvms"]);
+
+        // NVMS adapter should be wired and report the expected name.
+        let nvms = reg.get("nvms").unwrap();
+        assert_eq!(nvms.name(), "nvms-http");
     }
 }
