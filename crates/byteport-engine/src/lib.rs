@@ -35,7 +35,7 @@ pub mod engine;
 pub mod registry;
 
 pub use engine::{
-    DeploymentId, DeploymentState, DeploymentStatus, Engine, EngineError, EngineManifest, LogLine,
-    LogOptions, LogStream, PortMapping, ServiceSpec,
+    DeploymentId, DeploymentState, DeploymentStatus, Engine, EngineError, EngineManifest, EnvVar,
+    LogLine, LogOptions, LogStream, PortMapping, PortProtocol, ServiceSpec,
 };
 pub use registry::EngineRegistry;
