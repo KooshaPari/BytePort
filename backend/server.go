@@ -56,6 +56,16 @@ func NewAPIServer(c *container.Container) *APIServer {
 			// Protected endpoints - require AuthKit authentication
 			protected.GET("/user/:id", handleGetUser)
 
+			// Org-scoped deployment routes with RBAC
+			orgScoped := protected.Group("/orgs/:org_id")
+			orgScoped.Use(middleware.RBACMiddleware("owner", "admin"))
+			{
+				orgScoped.GET("", handleGetOrg)
+				orgScoped.PUT("", handleUpdateOrg)
+				orgScoped.GET("/members", handleListMembers)
+				orgScoped.DELETE("/members/:user_id", handleRemoveMember)
+			}
+
 			// NEW: Hexagonal architecture endpoints
 			c.DeploymentHandler.RegisterRoutes(protected)
 
