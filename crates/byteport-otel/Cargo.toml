@@ -12,6 +12,9 @@ tracing-opentelemetry = "0.33"
 [features]
 default = [ "semconv",]
 semconv = [ "opentelemetry-semantic-conventions",]
+rt-tokio = []
+# ^^^ byteport-cli activates this feature. It's a no-op here because
+# opentelemetry_sdk's rt-tokio is already enabled unconditionally.
 
 [dependencies.opentelemetry]
 version = "0.32"

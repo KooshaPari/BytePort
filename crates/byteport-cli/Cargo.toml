@@ -3,11 +3,22 @@ name = "byteport-cli"
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
-description = "CLI for Phenotype compute/infra — DAG execution and orchestration"
+description = "BytePort CLI — self-hosted IaC + portfolio platform command-line interface"
 publish = false
+
+[[bin]]
+name = "byteport"
+path = "src/main.rs"
+
+[features]
+default = ["otel", "rustls-tls"]
+otel = ["byteport-otel/rt-tokio"]
+rustls-tls = ["byteport-transport/rustls-tls"]
+native-tls = ["byteport-transport/native-tls"]
 
 [dependencies]
 tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 [dependencies.byteport-dag]
 path = "../byteport-dag"
@@ -20,12 +31,64 @@ path = "../byteport-transport"
 
 [dependencies.clap]
 version = "4"
-features = [ "derive",]
+features = ["derive", "cargo"]
+
+[dependencies.clap_complete]
+version = "4"
+
+[dependencies.clap_mangen]
+version = "0.2"
+
+[dependencies.indicatif]
+version = "0.17"
+
+[dependencies.colored]
+version = "2"
+
+[dependencies.serde]
+version = "1"
+features = ["derive"]
+
+[dependencies.serde_json]
+version = "1"
+
+[dependencies.toml]
+version = "0.8"
+
+[dependencies.chrono]
+version = "0.4"
+features = ["serde"]
+
+[dependencies.anyhow]
+version = "1"
+
+[dependencies.thiserror]
+version = "1"
+
+[dependencies.directories]
+version = "5"
+
+[dependencies.update-checker]
+version = "0.2"
+default-features = false
+
+[dependencies.tokio]
+version = "1"
+features = ["full"]
 
 [dependencies.opentelemetry]
 version = "0.32"
-features = [ "trace",]
+features = ["trace"]
+
+[dev-dependencies.assert_cmd]
+version = "2"
+
+[dev-dependencies.predicates]
+version = "3"
+
+[dev-dependencies.tempfile]
+version = "3"
 
 [dev-dependencies.opentelemetry_sdk]
 version = "0.32"
-features = [ "trace", "testing",]
+features = ["trace", "testing"]

@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+# BytePort debhelper rules file.
+#
+# Drives cargo → deb builds. Kept minimal; debhelper >= 12 gives us
+# dh-cargo's auto-detection via `rules` steps but we override the
+# build/install steps to point at crates/byteport-cli/.
+#
+# Reference: https://manpages.debian.org/unstable/dh/dh.1.en.html
+#            https://github.com/KooshaPari/BytePort/blob/main/CONTRIBUTING.md
+
+# Strict mode — fail on errors, unset variables, and pipe failures.
+set -euo pipefail
+
+# Verbose build output for CI logs (sbuild / pbuilder expectations).
+export DH_VERBOSE=1
+export CARGO_TERM_COLOR=always
+
+# Compile in release mode by default; CI overrides via DEB_BUILD_OPTIONS.
+ifeq (,$(filter terse noopt,$(DEB_BUILD_OPTIONS)))
+  export CARGO_PROFILE_RELEASE_LTO=thin
+  export CARGO_PROFILE_RELEASE_CODEGEN_UNITS=1
+  export CARGO_PROFILE_RELEASE_DEBUG=0
+endif
+
+%:
+	dh $@
+
+# Override the auto-detected build step so we only build the cli binary.
+# Path-aware: cargo can't run from inside debian/, so we hop back to the
+# workspace root before invoking cargo.
+override_dh_auto_build:
+	cargo build \
+	  --release \
+	  --manifest-path crates/byteport-cli/Cargo.toml \
+	  --locked \
+	  --target-dir=$(CURDIR)/target
+
+# Stage the cli binary into debian/byteport/usr/bin/. Debhelper will
+# later assemble this into the final package via dh_install.
+override_dh_auto_install:
+	dh_install
+	install -Dm 0755 \
+	  $(CURDIR)/target/release/byteport \
+	  debian/byteport/usr/bin/byteport
+	# gzip the changelog per Debian Policy 4.6.2 § 4.4 (optional).
+	dh_installchangelogs -k --no-trim
+	dh_installdocs
+	dh_installman
+	dh_strip --no-automatic-dbgsym
+	dh_compress
+	dh_fixperms
+	dh_installdebconf
+	dh_gencontrol
+	dh_md5sums
+	dh_builddeb
+
+# We have a single binary; no tests in this minimal recipe (the upstream
+# test suite is invoked by `cargo test` from CI workflows, not from .deb
+# builds, because Cargo.toml depends on GOPATH-rooted fixture paths).
+override_dh_auto_test:
+
+# Skip the cargo-specific `executable` step since we override auto_install.
+override_dh_dwz:
+
+# Clean target dir between builds so pbuilder caches stay lean.
+override_dh_auto_clean:
+	rm -rf target
+	dh_auto_clean

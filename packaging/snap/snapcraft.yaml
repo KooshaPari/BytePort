@@ -1,0 +1,137 @@
+# Snap packaging for BytePort (Snapcraft, https://snapcraft.io)
+#
+# Snap store auto-updates from the edge/stable channels declared in
+# `.github/workflows/release-snap.yml` (added separately). CI must substitute
+# `version` from the latest git tag; this file ships with `0.1.0` as a
+# literal that the snapcraft action overrides at build time via the
+# `--version` flag (or `snapcraft set-version`).
+#
+# base: core22 = Ubuntu 22.04 LTS (Jammy). Migration plan below.
+# TODO(2026-Q4): bump to core24 (Ubuntu 24.04 LTS, Noble). Blockers to track:
+#   - linux-dbus FFI crate needs glib >= 2.80 (shipped in core24)
+#   - rustc 1.75 in core24 vs 1.71 in core22 — once MSRV moves to 1.78, switch.
+#   - Verify systemd-user-session plug availability on core24 (still strict).
+name: byteport
+base: core22  # Ubuntu 22.04 LTS — see TODO above for core24 migration
+adopt-info: byteport  # snapcraft action sets version/release from git tag
+license: Apache-2.0
+grade: stable
+confinement: strict
+
+compression: lzo
+
+# Slot mappings — placeholder until we publish a byteport daemon socket.
+# slots:
+#   byteport:
+#     interface: content
+#     read: [$SNAP_DATA/daemon.sock]
+
+apps:
+  byteport:
+    command: usr/bin/byteport
+    # Common CLI surface: --help, --version, --config <path>
+    completer: usr/share/bash-completion/completions/byteport
+    # Strict confinement plugs — see interface list at
+    # https://snapcraft.io/docs/network-interface. We do NOT need
+    # `system-files` because $HOME is accessible via the `home` plug.
+    plugs:
+      - network           # outbound HTTPS to api.byteport.dev, OTLP, etc.
+      - home              # ~/.config/byteport, ~/.local/share/byteport
+      - removable-media   # USB / external drives for `byteport upload`
+      - network-bind      # local http servers (--bind 127.0.0.1:8081)
+      - desktop           # X11/Wayland via desktop-launch wrapper
+      - desktop-legacy    # legacy X11 if XWayland is in use
+      - wayland           # native wayland screencopy / clipboard
+      - x11               # X11 forwarding fallback
+      - opengl            # Tauri webview GPU acceleration
+      - browser-support   # Tauri webview feature gating
+      - gsettings         # GTK theme/font discovery
+      - snapd-control     # auto-update notifications (refresh-control)
+      - ssh-keys          # reading ~/.ssh/* for git deploys
+      - dot-config-toml   # direct access to user TOML config (no recompile)
+      - mount-observe     # read-only /proc/mounts for disk-space checks
+    daemon: simple          # `byteport serve` keeps the user agent alive
+    restart-condition: on-failure
+    restart-delay: 5s
+    common-id: dev.kooshapari.byteport
+    # Pass through LANG so the CLI picks up locale
+    environment:
+      LANG: "${LANG:-C.UTF-8}"
+    # Read-only aliasing of common env vars
+    passthrough:
+      # Templated by snapcraft during build — see overrides section below.
+      template: TEMPLATE-DO-NOT-USE
+
+parts:
+  byteport:
+    plugin: rust
+    source: https://github.com/KooshaPari/BytePort.git
+    source-type: git
+    source-depth: 1
+    build-packages:
+      - libssl-dev
+      - pkg-config
+      - build-essential
+      - git
+      - ca-certificates
+    rust-features:
+      - clap/derive
+    # Build the cli binary only — desktop shell is shipped separately
+    # via the Tauri AppImage / deb in frontend/web/src-tauri/.
+    build-commands:
+      - cargo build --release --manifest-path crates/byteport-cli/Cargo.toml --features byteport-dag/default,byteport-transport/ssl
+      - install -Dm 0755 target/release/byteport ${CRAFT_PART_INSTALL}/usr/bin/byteport
+      - install -Dm 0644 packaging/snap/completions/byteport ${CRAFT_PART_INSTALL}/usr/share/bash-completion/completions/byteport
+    stage-packages:
+      - ca-certificates
+      - libssl3
+      - libgcc-s1
+    override-build: |
+      set -euo pipefail
+      cargo --version
+      rustc --version
+      cargo build --release --manifest-path crates/byteport-cli/Cargo.toml
+      mkdir -p ${CRAFT_PART_INSTALL}/usr/bin
+      install -Dm 0755 target/release/byteport ${CRAFT_PART_INSTALL}/usr/bin/byteport
+      mkdir -p ${CRAFT_PART_INSTALL}/usr/share/bash-completion/completions
+      install -Dm 0644 packaging/snap/completions/byteport \
+        ${CRAFT_PART_INSTALL}/usr/share/bash-completion/completions/byteport
+    # Build-environment hints — keep reproducible across CI runners
+    build-environment:
+      - CARGO_HOME: ${CRAFT_PROJECT_DIR}/.cargo
+      - CARGO_TARGET_DIR: ${CRAFT_PROJECT_DIR}/target
+      - RUST_BACKTRACE: "1"
+      - RUSTFLAGS: "-C strip=symbols"
+      - SNAPCRAFT_PROJECT_VERSION: "0.1.0"
+
+# Layout that lands in /snap/byteport/x86_64/...
+layout:
+  /usr/bin/byteport:
+    symlink: $SNAP/usr/bin/byteport
+
+# Maintainer & metadata for the Snap Store listing
+issues: https://github.com/KooshaPari/BytePort/issues
+source-code: https://github.com/KooshaPari/BytePort
+contact: https://github.com/KooshaPari/BytePort/discussions
+website: https://byteport.dev
+summary: Self-hosted IaC + portfolio platform
+description: |
+  BytePort is a self-hosted Infrastructure-as-Code deployment + portfolio
+  platform for developer projects. Define one manifest (`odin.nvms`) at your
+  repo root and BytePort provisions a MicroVM-backed deployment, registers
+  the resulting endpoints with a portfolio site, and uses an LLM to generate
+  showcase metadata for each project.
+  .
+  The CLI (`byteport`) drives the manifest engine, manages local deploys,
+  and surfaces diagnostics — all on top of `odin.nvms` as the single source
+  of truth. Production deploys go through the Tauri desktop shell (separate
+  AppImage / deb targets under `frontend/web/src-tauri/`) which signs and
+  notarizes the GUI for Windows / macOS, and renders a CSP-locked webview.
+  .
+  BytePort uses OpenTelemetry for traces, Argon2id for password hashing,
+  AES-256-CFB for secrets at rest, PASETO v2 for session tokens, and a
+  custom SSRF-safe HTTP client for any user-supplied URL.
+  .
+  License: Apache-2.0.
+  Homepage: https://byteport.dev
+  Source: https://github.com/KooshaPari/BytePort

@@ -62,7 +62,7 @@ func NewRailwayProvider(credentials Credentials) (CloudProvider, error) {
 }
 
 func (p *RailwayProvider) GetMetadata() ProviderMetadata { return p.metadata }
-func (p *RailwayProvider) GetCapabilities() []Capability  { return p.metadata.Capabilities }
+func (p *RailwayProvider) GetCapabilities() []Capability { return p.metadata.Capabilities }
 
 func (p *RailwayProvider) SupportsResource(resourceType ResourceType) bool {
 	for _, t := range p.metadata.SupportedResources {
@@ -287,11 +287,11 @@ mutation ServiceInstanceDeploy($serviceId: String!, $environmentId: String!) {
 	}
 
 	return &Deployment{
-		ID:        config.ResourceID + "-" + environmentID,
+		ID:         config.ResourceID + "-" + environmentID,
 		ResourceID: config.ResourceID,
-		State:     DeploymentStateDeploying,
-		StartedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		State:      DeploymentStateDeploying,
+		StartedAt:  time.Now(),
+		UpdatedAt:  time.Now(),
 	}, nil
 }
 

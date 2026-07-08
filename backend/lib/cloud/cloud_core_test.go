@@ -159,14 +159,14 @@ func TestResource_Creation(t *testing.T) {
 	deployedAt := now.Add(-time.Hour)
 
 	resource := Resource{
-		ID:             "resource-123",
-		Name:           "test-app",
-		Type:           ResourceTypeComputeFunction,
-		Provider:       "vercel",
-		Region:         "us-east-1",
-		Status:         DeploymentStateActive,
-		HealthStatus:   HealthStatusHealthy,
-		Tags:           map[string]string{"env": "prod"},
+		ID:           "resource-123",
+		Name:         "test-app",
+		Type:         ResourceTypeComputeFunction,
+		Provider:     "vercel",
+		Region:       "us-east-1",
+		Status:       DeploymentStateActive,
+		HealthStatus: HealthStatusHealthy,
+		Tags:         map[string]string{"env": "prod"},
 		Endpoints: []Endpoint{
 			{
 				Type:    "https",
@@ -291,7 +291,7 @@ func TestDeployment_WithError(t *testing.T) {
 	require.NotNil(t, deployment.Error)
 	assert.Equal(t, "HEALTH_CHECK_FAILED", deployment.Error.Code)
 	assert.Equal(t, "Service failed to respond within timeout", deployment.Error.Message)
-	
+
 	details := deployment.Error.Details.(map[string]any)
 	assert.Equal(t, "30s", details["timeout"])
 	assert.Equal(t, "/health", details["endpoint"])

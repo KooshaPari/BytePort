@@ -125,12 +125,12 @@ func TestValidateDeployment_InvalidDeployment(t *testing.T) {
 
 	// Create deployment with invalid data that will fail deployment.Validate()
 	deployment := &Deployment{
-		uuid:  "", // Empty UUID will cause validation to fail
-		name:  "test-name",
-		owner: "owner-123",
+		uuid:   "", // Empty UUID will cause validation to fail
+		name:   "test-name",
+		owner:  "owner-123",
 		status: StatusPending,
 	}
-	
+
 	err := service.ValidateDeployment(context.Background(), deployment)
 	if err == nil {
 		t.Error("Expected validation error for invalid deployment, got nil")
@@ -244,7 +244,7 @@ func TestEstimateServiceCost_AllCases(t *testing.T) {
 		},
 		{
 			name:         "valid backend render",
-			serviceType:  "backend", 
+			serviceType:  "backend",
 			provider:     "render",
 			expectedCost: 7.0,
 		},
@@ -443,7 +443,7 @@ func TestCalculateEstimatedCost_MultipleProviders(t *testing.T) {
 	if err != nil {
 		t.Errorf("Expected no error, got: %v", err)
 	}
-	
+
 	// render $7 + railway $5 = $12
 	expectedTotal := 12.0
 	if costInfo.Monthly != expectedTotal {

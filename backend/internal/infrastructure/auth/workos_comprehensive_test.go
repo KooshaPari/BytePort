@@ -154,7 +154,7 @@ func TestExchangeCodeForTokenComprehensive(t *testing.T) {
 
 		// Test that the function exists and can be called
 		assert.NotNil(t, service.ExchangeCodeForToken)
-		
+
 		// Test that it's a function type
 		funcType := func(context.Context, string) (*TokenResponse, error) { return nil, nil }
 		assert.IsType(t, funcType, service.ExchangeCodeForToken)
@@ -165,7 +165,7 @@ func TestExchangeCodeForTokenComprehensive(t *testing.T) {
 
 		// Test that the function exists and can be called
 		assert.NotNil(t, service.ExchangeCodeForToken)
-		
+
 		// Test that it's a function type
 		funcType := func(context.Context, string) (*TokenResponse, error) { return nil, nil }
 		assert.IsType(t, funcType, service.ExchangeCodeForToken)
@@ -176,7 +176,7 @@ func TestExchangeCodeForTokenComprehensive(t *testing.T) {
 
 		// Test that the function exists and can be called
 		assert.NotNil(t, service.ExchangeCodeForToken)
-		
+
 		// Test that it's a function type
 		funcType := func(context.Context, string) (*TokenResponse, error) { return nil, nil }
 		assert.IsType(t, funcType, service.ExchangeCodeForToken)
@@ -269,7 +269,7 @@ func TestExchangeWithWorkOSComprehensive(t *testing.T) {
 
 		// Test that the function exists and can be called
 		assert.NotNil(t, service.exchangeWithWorkOS)
-		
+
 		// Test that it's a function type
 		funcType := func(context.Context, string, string, string) (*TokenResponse, error) { return nil, nil }
 		assert.IsType(t, funcType, service.exchangeWithWorkOS)
@@ -283,7 +283,7 @@ func TestGetWorkOSPublicKeyComprehensive(t *testing.T) {
 
 		// Test that the function exists and can be called
 		assert.NotNil(t, service.getWorkOSPublicKey)
-		
+
 		// Test that it's a function type
 		funcType := func(context.Context, string) (*rsa.PublicKey, error) { return nil, nil }
 		assert.IsType(t, funcType, service.getWorkOSPublicKey)

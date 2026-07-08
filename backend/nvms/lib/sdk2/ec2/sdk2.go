@@ -1,7 +1,7 @@
 // Package ec2 — aws-sdk-go-v2 backed RunInstances wrapper (PoC).
 //
 // This file is a proof-of-concept showing how to swap the hand-rolled
-// `awspin/ec2.RunInstances` HTTP+SigV4 client for the official
+// HTTP+SigV4 client for the official
 // `aws-sdk-go-v2/service/ec2`. It deliberately does NOT depend on the
 // Fermyon Spin SDK (`spinhttp.Send`) so it can be unit-tested with the
 // standard Go toolchain (the Spin SDK currently breaks on Go ≥1.25 due

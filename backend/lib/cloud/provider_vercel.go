@@ -299,11 +299,11 @@ func (p *VercelProvider) GetActualCost(ctx context.Context, resource *Resource, 
 // ---------------------------------------------------------------------------
 
 type vercelProject struct {
-	ID        string    `json:"id"`
-	Name      string    `json:"name"`
-	Framework string    `json:"framework"`
-	CreatedAt int64     `json:"createdAt"`
-	UpdatedAt int64     `json:"updatedAt"`
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	Framework string `json:"framework"`
+	CreatedAt int64  `json:"createdAt"`
+	UpdatedAt int64  `json:"updatedAt"`
 }
 
 type vercelDeployment struct {

@@ -6,6 +6,7 @@ import (
 
 	"github.com/byteport/api/internal/container"
 	"github.com/byteport/api/internal/infrastructure/http/middleware"
+	"github.com/byteport/api/internal/infrastructure/otel"
 	"github.com/byteport/api/lib"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -26,6 +27,10 @@ func NewAPIServer(c *container.Container) *APIServer {
 	store := NewDeploymentStore()
 
 	allowedOrigins := parseAllowedOrigins()
+
+	// OTel middleware (gated by OTEL_ENDPOINT env)
+	otelMiddleware := otel.NewOTelMiddleware()
+	r.Use(otelMiddleware)
 
 	// CORS middleware
 	r.Use(cors.New(cors.Config{

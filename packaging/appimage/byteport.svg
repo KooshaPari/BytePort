@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!--
+  BytePort brand icon — 512x512 SVG.
+
+  Concept: A stylized "Byte" cube with a portal-glow interior. Eight cubes
+  arranged in a 2x2x2 lattice, the front-bottom cell illuminated with
+  portal-glow gradients to suggest data ingress/egress. The outer cube
+  uses the brand color (#FF6B35 BytePort orange) at full saturation;
+  the inner glow transitions #FF6B35 → #FFB088 → #FFE6D9 → transparent.
+
+  Rendered for: AppImage, Flatpak, Snap, Snap-store icon, social cards
+  under assets/. Do not edit without also regenerating assets/icons/* PNGs.
+-->
+<svg xmlns="http://www.w3.org/2000/svg"
+     xmlns:xlink="http://www.w3.org/1999/xlink"
+     width="512" height="512" viewBox="0 0 512 512"
+     role="img" aria-label="BytePort mascot">
+  <title>BytePort</title>
+  <defs>
+    <!-- Brand gradient: orange → warm white → transparent -->
+    <radialGradient id="portalGlow" cx="50%" cy="50%" r="65%">
+      <stop offset="0%" stop-color="#FFE6D9" stop-opacity="1"/>
+      <stop offset="35%" stop-color="#FFB088" stop-opacity="0.9"/>
+      <stop offset="70%" stop-color="#FF6B35" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#FF6B35" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Cube edge highlight: subtle 3D bevel -->
+    <linearGradient id="cubeFace" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF8A5C"/>
+      <stop offset="100%" stop-color="#E84F1A"/>
+    </linearGradient>
+
+    <!-- Soft outer shadow filter -->
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="6"/>
+      <feOffset dx="0" dy="6" result="off"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.35"/></feComponentTransfer>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Transparent background — let the host compositor handle it. -->
+  <g filter="url(#softShadow)">
+    <!-- Cube body: isometric projection -->
+    <g transform="translate(96, 80)">
+      <!-- Top face -->
+      <polygon points="160,0 320,80 160,160 0,80" fill="#FFB088"/>
+      <!-- Right face -->
+      <polygon points="320,80 320,240 160,320 160,160" fill="url(#cubeFace)"/>
+      <!-- Left face (where the portal lives) -->
+      <polygon points="0,80 160,160 160,320 0,240" fill="#FF6B35"/>
+
+      <!-- Portal: a hexagonal aperture on the front-left face. -->
+      <ellipse cx="80" cy="200" rx="80" ry="100" fill="url(#portalGlow)"/>
+      <ellipse cx="80" cy="200" rx="42" ry="60" fill="#FFFFFF" opacity="0.85"/>
+      <circle  cx="80" cy="200" r="14" fill="#FF6B35"/>
+
+      <!-- Cube edges — outline stroke for crisp silhouette. -->
+      <polygon points="160,0 320,80 160,160 0,80"     fill="none" stroke="#1A1A1A" stroke-width="3" stroke-linejoin="round"/>
+      <polygon points="320,80 320,240 160,320 160,160" fill="none" stroke="#1A1A1A" stroke-width="3" stroke-linejoin="round"/>
+      <polygon points="0,80 160,160 160,320 0,240"    fill="none" stroke="#1A1A1A" stroke-width="3" stroke-linejoin="round"/>
+    </g>
+  </g>
+
+  <!-- Wordmark — uses system serif fallback to avoid webfont dependency. -->
+  <g transform="translate(0, 432)">
+    <text x="256" y="44" text-anchor="middle"
+          font-family="'Helvetica Neue', Arial, sans-serif"
+          font-size="56" font-weight="800" letter-spacing="-1"
+          fill="#1A1A1A">BytePort</text>
+  </g>
+</svg>

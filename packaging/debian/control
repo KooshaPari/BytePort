@@ -1,0 +1,53 @@
+Source: byteport
+Section: utils
+Priority: optional
+Maintainer: KooshaPari <hi@kooshapari.dev>
+Uploaders: KooshaPari <hi@kooshapari.dev>
+Build-Depends:
+ debhelper (>= 12),
+ cargo (>= 1.75),
+ rustc (>= 1.75),
+ libssl-dev,
+ pkg-config,
+ build-essential,
+Standards-Version: 4.6.2
+Homepage: https://byteport.dev
+Vcs-Browser: https://github.com/KooshaPari/BytePort
+Vcs-Git: https://github.com/KooshaPari/BytePort.git
+Rules-Requires-Root: no
+
+Package: byteport
+Architecture: any
+Depends:
+ ${shlibs:Depends},
+ ${misc:Depends},
+ libc6 (>= 2.31),
+ libssl3 (>= 3.0),
+ ca-certificates,
+Recommends:
+ bash-completion,
+Suggests:
+ systemd,
+Conflicts: byteport-cli (<< 0.1.0)
+Replaces: byteport-cli (<< 0.1.0)
+Provides: byteport-cli (= ${binary:Version})
+Description: Self-hosted IaC + portfolio platform CLI
+ BytePort is a self-hosted Infrastructure-as-Code deployment + portfolio
+ platform for developer projects. Define one manifest (`odin.nvms`) at your
+ repo root and BytePort provisions a MicroVM-backed deployment (via the
+ `nvms` Spin runtime), registers the resulting endpoints with a portfolio
+ site, and uses an LLM to generate showcase metadata for each project.
+ .
+ This package ships the `byteport` command-line client which drives the
+ manifest engine, manages local deploys, and surfaces diagnostics — all on
+ top of `odin.nvms` as the single source of truth. The graphical desktop
+ shell is shipped separately via the Tauri `.deb` / `.AppImage` under
+ `frontend/web/src-tauri/`.
+ .
+ Security highlights: AES-256-CFB for secrets at rest, Argon2id for
+ password hashing, PASETO v2 for session tokens, SSRF-safe HTTP client for
+ user-supplied URLs. Traces exportable via OpenTelemetry.
+ .
+ License: Apache-2.0.
+ Homepage: https://byteport.dev
+ Source: https://github.com/KooshaPari/BytePort

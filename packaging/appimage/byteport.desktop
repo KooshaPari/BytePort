@@ -1,0 +1,16 @@
+[Desktop Entry]
+Type=Application
+Name=BytePort
+GenericName=IaC Deployment Platform
+Comment=Self-hosted Infrastructure-as-Code deployment + portfolio platform
+Exec=byteport %u
+Icon=byteport
+Terminal=true
+Categories=Development;System;Engineering;
+Keywords=iac;infrastructure;portfolio;deployment;docker;nvms;
+StartupNotify=true
+StartupWMClass=byteport
+MimeType=application/x-yaml;application/x-odin-nvms;
+URL=https://byteport.dev
+PrefersNonDefaultGPU=true
+SingleMainWindow=false

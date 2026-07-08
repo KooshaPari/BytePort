@@ -16,7 +16,7 @@ func TestDomainError_Error_WithWrappedError(t *testing.T) {
 	}
 
 	errorString := domainErr.Error()
-	
+
 	if !strings.Contains(errorString, "TEST_CODE") {
 		t.Errorf("Expected error to contain code 'TEST_CODE', got: %s", errorString)
 	}
@@ -38,7 +38,7 @@ func TestDomainError_Error_WithoutWrappedError(t *testing.T) {
 
 	errorString := domainErr.Error()
 	expected := "TEST_CODE: test message"
-	
+
 	if errorString != expected {
 		t.Errorf("Expected error '%s', got: %s", expected, errorString)
 	}
@@ -76,7 +76,7 @@ func TestDomainError_Unwrap_Nil(t *testing.T) {
 // TestNewInvalidStatusTransitionError tests status transition error constructor
 func TestNewInvalidStatusTransitionError(t *testing.T) {
 	err := NewInvalidStatusTransitionError(StatusPending, StatusDeployed)
-	
+
 	if err == nil {
 		t.Fatal("Expected error to be created, got nil")
 	}
@@ -103,7 +103,7 @@ func TestNewInvalidStatusTransitionError(t *testing.T) {
 func TestNewDeploymentNotFoundError(t *testing.T) {
 	testUUID := "deploy-123"
 	err := NewDeploymentNotFoundError(testUUID)
-	
+
 	if err == nil {
 		t.Fatal("Expected error to be created, got nil")
 	}
@@ -127,7 +127,7 @@ func TestNewDeploymentNotFoundError(t *testing.T) {
 func TestNewInvalidDeploymentError(t *testing.T) {
 	testMessage := "deployment name is required"
 	err := NewInvalidDeploymentError(testMessage)
-	
+
 	if err == nil {
 		t.Fatal("Expected error to be created, got nil")
 	}
@@ -156,7 +156,7 @@ func TestNewPermissionDeniedError(t *testing.T) {
 	action := "delete"
 	resource := "deployment-123"
 	err := NewPermissionDeniedError(action, resource)
-	
+
 	if err == nil {
 		t.Fatal("Expected error to be created, got nil")
 	}
@@ -206,7 +206,7 @@ func TestErrorUnwrapping(t *testing.T) {
 // TestDomainErrorAs tests error casting with errors.As
 func TestDomainErrorAs(t *testing.T) {
 	err := NewInvalidDeploymentError("test error")
-	
+
 	var domainErr *DomainError
 	if !errors.As(err, &domainErr) {
 		t.Error("Expected error to be DomainError")
@@ -219,7 +219,7 @@ func TestDomainErrorAs(t *testing.T) {
 // TestDeploymentNotFoundErrorAs tests error casting for not found errors
 func TestDeploymentNotFoundErrorAs(t *testing.T) {
 	err := NewDeploymentNotFoundError("test-uuid")
-	
+
 	var domainErr *DomainError
 	if !errors.As(err, &domainErr) {
 		t.Error("Expected error to be DomainError")

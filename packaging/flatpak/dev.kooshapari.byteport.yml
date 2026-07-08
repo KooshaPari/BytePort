@@ -1,0 +1,99 @@
+# Flatpak manifest for BytePort CLI.
+#
+# Build locally:
+#   flatpak-builder --user --install build/dev.kooshapari.byteport.yml \
+#     dev.kooshapari.byteport
+#
+# Build on CI:
+#   flatpak-builder --repo=repo --force-clean build \
+#     dev.kooshapari.byteport.yml
+#
+# Flatpak Builder documentation: https://docs.flatpak.org/en/latest/flatpak-builder-command-reference.html
+app-id: dev.kooshapari.byteport
+runtime: org.freedesktop.Platform
+runtime-version: '23.08'
+sdk: org.freedesktop.Sdk
+
+# Clock skew required by Source / Git modules
+# (https://docs.flatpak.org/en/latest/flatpak-builder.html#checkout)
+#
+# The version is bumped by the CI workflow (release-flatpak.yml) from the
+# git tag. For local builds, leave at 0.1.0 — the .flatpak version is
+# tracked separately via `--require-version` flags.
+branch: stable
+version: '0.1.0'
+build-extension: false
+
+# Build options — keep reproducible across CI runners.
+# Reference: https://docs.flatpak.org/en/latest/flatpak-builder-command-reference.html#global-options
+build-options:
+  append-path: /usr/lib/sdk/rust/bin:/usr/lib/sdk/cargo/bin
+  build-args:
+    - --share=network
+  env:
+    CARGO_HOME: /run/host/cargo-home
+    RUST_BACKTRACE: '1'
+
+command: byteport
+
+# Sub-sandboxes for fs access — read-write on ~/Projects for `byteport deploy`
+# and read-only ~/.ssh so git deploys can authenticate. Mirrors the snap
+# plugs in snapcraft.yaml.
+finish-args:
+  - --filesystem=home                # ~/.config/byteport, ~/.local/share/byteport
+  - --filesystem=projects:rw         # bindable subtree for deploys
+  - --filesystem=ssh-keys:ro         # ~.ssh read-only
+  - --filesystem=removable:rw        # USB / external drives for upload
+  - --share=network                  # outbound HTTPS, OTLP, github api
+  - --share=ipc                      # required for wayland/x11
+  - --socket=x11                     # X11 fallback
+  - --socket=wayland                 # native Wayland
+  - --socket=session-bus             # D-Bus session (libnotify, screencopy)
+  - --socket=system-bus              # D-Bus system (NetworkManager, logind)
+  - --socket=fallback-x11            # XWayland
+  - --own-name=dev.kooshapari.byteport
+  - --talk-name=org.freedesktop.Notifications
+  - --talk-name=org.kde.StatusNotifierWatcher
+  - --talk-name=org.gnome.Shell.Extensions
+  - --env=GDK_BACKEND=x11            # overridden to wayland when available
+
+# Modules — order matters. `byteport` clones the upstream repo and
+# builds the cli binary; everything else is freedesktop runtime.
+modules:
+  - name: byteport
+    buildsystem: simple
+    build-commands:
+      - cargo install --path crates/byteport-cli --locked --root /app
+        --features byteport-transport/ssl
+      - install -Dm 0755 /app/bin/byteport /app/bin/byteport
+      - install -Dm 0644 /app/share/man/man1/byteport.1 /app/share/man/man1/byteport.1
+      - install -Dm 0644 /app/share/bash-completion/byteport
+        /app/share/bash-completion/completions/byteport
+      - install -Dm 0644 packaging/flatpak/dev.kooshapari.byteport.appdata.xml
+        /app/share/appdata/dev.kooshapari.byteport.appdata.xml
+      - install -Dm 0644 packaging/flatpak/dev.kooshapari.byteport.desktop
+        /app/share/applications/dev.kooshapari.byteport.desktop
+      - install -Dm 0644 assets/icons/byteport.svg
+        /app/share/icons/hicolor/scalable/apps/dev.kooshapari.byteport.svg
+      # Strip symbols to keep the build small.
+      - strip /app/bin/byteport
+    sources:
+      - type: archive
+        url: https://github.com/KooshaPari/BytePort/archive/refs/tags/v0.1.0.tar.gz
+        sha256: REPLACE_WITH_SHA256_FROM_RELEASE
+        dest: .
+      - type: file
+        path: ../../assets/icons/byteport.svg
+      - type: file
+        path: packaging/flatpak/dev.kooshapari.byteport.appdata.xml
+      - type: file
+        path: packaging/flatpak/dev.kooshapari.byteport.desktop
+
+  - name: byteport-manpages
+    buildsystem: simple
+    build-commands:
+      - install -Dm 0644 packaging/man/byteport.1 /app/share/man/man1/byteport.1
+      - gzip -9 /app/share/man/man1/byteport.1
+    sources:
+      - type: file
+        path: packaging/man/byteport.1
