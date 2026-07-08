@@ -1,7 +1,3 @@
-[workspace]
-resolver = "2"
-members = ["."]
-
 [package]
 name = "byteport-engine"
 version = "0.1.0"
@@ -39,3 +35,6 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 [dev-dependencies]
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync", "time", "test-util"] }
 wiremock = "0.6"
+
+[lints]
+workspace = true

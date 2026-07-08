@@ -2,6 +2,7 @@
 resolver = "3"
 members = [
     "crates/byteport-transport",
+    "crates/byteport-engine",
     "crates/byteport-cli",
     "crates/byteport-dag",
     "crates/byteport-otel",
@@ -13,3 +14,13 @@ members = [
     "ffi/android-companion",
     "ffi/linux-dbus",
 ]
+
+[workspace.package]
+edition = "2021"
+rust-version = "1.75"
+
+[workspace.lints]
+workspace = true
+
+[workspace.metadata.lints]
+clippy.pedantic = { level = "warn", priority = -1 }
