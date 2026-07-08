@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"net"
 	"net/http"
@@ -12,7 +13,19 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// UDSProxy forwards /v1/chat/completions requests to the Rust data plane via Unix Domain Socket.
+// DefaultSocketPath exposes the default UDS path so tests can reference it.
+const DefaultSocketPath = "/tmp/omniroute/routed.sock"
+
+// UDSClient is an http.Client that speaks HTTP/1.1 over a Unix Domain Socket.
+// Package-level singleton so the transport is reused (connection pooling).
+var UDSClient = &http.Client{
+	Timeout: 60 * time.Second,
+}
+
+// UDSProxy forwards /v1/chat/completions requests to the Rust data plane via
+// Unix Domain Socket.  The proxy dials the UDS once per request, writes the
+// raw HTTP/1.1 request, and reads the response — no client-side pool needed
+// because the data plane reuses connections natively.
 //
 // Socket path resolution order:
 //  1. OMNIROUTE_DATA_PLANE_SOCKET env var (explicit override).
@@ -28,11 +41,23 @@ import (
 // Response is passed through (status + body + Content-Type) verbatim so the
 // downstream client sees an identical contract to the direct Rust client.
 func UDSProxy() gin.HandlerFunc {
+	socketPath := resolveSocket()
+
+	// Build a transport that always dials the UDS socket.
+	transport := &http.Transport{
+		DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
+			return net.DialTimeout("unix", socketPath, 2*time.Second)
+		},
+	}
+	client := &http.Client{
+		Transport: transport,
+		Timeout:   60 * time.Second,
+	}
+
 	return func(c *gin.Context) {
 		// Proxy any path that ends in /chat/completions — the Gin server
-		// mounts at /api/v1/* and the Rust data plane lives at /v1/*; either
-		// prefix works for the proxy target because we re-prefix the URL
-		// before dialing the UDS.
+		// mounts at /api/v1/* and the Rust data plane lives at /v1/*; the
+		// target URL is always /v1/chat/completions regardless of prefix.
 		if !strings.HasSuffix(c.Request.URL.Path, "/chat/completions") {
 			c.Next()
 			return
@@ -47,19 +72,6 @@ func UDSProxy() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-
-		socketPath := resolveSocket()
-
-		conn, err := net.DialTimeout("unix", socketPath, 2*time.Second)
-		if err != nil {
-			c.JSON(http.StatusServiceUnavailable, gin.H{
-				"error":   "data plane unavailable",
-				"details": err.Error(),
-			})
-			c.Abort()
-			return
-		}
-		defer conn.Close()
 
 		req, err := http.NewRequestWithContext(
 			c.Request.Context(),
@@ -79,7 +91,6 @@ func UDSProxy() gin.HandlerFunc {
 		req.Header.Set("X-OmniRoute-Provider", c.GetHeader("X-OmniRoute-Provider"))
 		req.Header.Set("Authorization", c.GetHeader("Authorization"))
 
-		client := &http.Client{Timeout: 60 * time.Second}
 		resp, err := client.Do(req)
 		if err != nil {
 			c.JSON(http.StatusBadGateway, gin.H{
@@ -107,10 +118,6 @@ func UDSProxy() gin.HandlerFunc {
 
 // resolveSocket returns the UDS path for the Rust data plane. Override order:
 // env > XDG_RUNTIME_DIR > /tmp.
-//
-// Exposed (not just inline in the closure above) so tests can swap the path
-// at runtime via os.Setenv — Go doesn't let us inject this dependency
-// without Fx or Wire, both of which are out of scope for this middleware.
 func resolveSocket() string {
 	if path := os.Getenv("OMNIROUTE_DATA_PLANE_SOCKET"); path != "" {
 		return path
