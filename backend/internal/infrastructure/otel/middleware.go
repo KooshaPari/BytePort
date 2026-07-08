@@ -17,6 +17,8 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.opentelemetry.io/otel/trace"
+
+	"github.com/gin-gonic/gin"
 )
 
 // Tracer is the package-level tracer for the BytePort service.
@@ -107,4 +109,33 @@ func HTTPMiddleware(next http.Handler) http.Handler {
 		r = r.WithContext(ctx)
 		next.ServeHTTP(w, r)
 	})
+}
+
+// GinMiddleware returns a Gin-compatible OTel tracing middleware.
+// It wraps each request in an OTel span with HTTP semantic attributes.
+func GinMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if Tracer == nil {
+			c.Next()
+			return
+		}
+
+		ctx := otel.GetTextMapPropagator().Extract(c.Request.Context(), propagation.HeaderCarrier(c.Request.Header))
+		spanName := fmt.Sprintf("%s %s", c.Request.Method, c.Request.URL.Path)
+
+		ctx, span := Tracer.Start(ctx, spanName,
+			trace.WithSpanKind(trace.SpanKindServer),
+			trace.WithAttributes(
+				semconv.HTTPMethod(c.Request.Method),
+				semconv.HTTPURL(c.Request.URL.String()),
+				semconv.NetHostName(c.Request.Host),
+				attribute.String("http.target", c.Request.URL.Path),
+				attribute.String("http.user_agent", c.Request.UserAgent()),
+			),
+		)
+		defer span.End()
+
+		c.Request = c.Request.WithContext(ctx)
+		c.Next()
+	}
 }

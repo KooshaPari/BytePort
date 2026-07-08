@@ -29,8 +29,7 @@ func NewAPIServer(c *container.Container) *APIServer {
 	allowedOrigins := parseAllowedOrigins()
 
 	// OTel middleware (gated by OTEL_ENDPOINT env)
-	otelMiddleware := otel.NewOTelMiddleware()
-	r.Use(otelMiddleware)
+	r.Use(otel.GinMiddleware())
 
 	// CORS middleware
 	r.Use(cors.New(cors.Config{
@@ -46,6 +45,7 @@ func NewAPIServer(c *container.Container) *APIServer {
 	{
 		// Health check
 		v1.GET("/health", handleHealth)
+		v1.GET("/health/readiness", handleReadiness)
 		v1.GET("/", handleAPIInfo)
 
 		// Public auth endpoints
@@ -144,12 +144,38 @@ func handleAPIInfo(c *gin.Context) {
 	})
 }
 
-// Health check handler
+// Liveness probe — always returns ok with no dependency checks.
 func handleHealth(c *gin.Context) {
 	c.JSON(200, gin.H{
-		"status":  "healthy",
+		"status":  "ok",
 		"service": "byteport-api",
 		"version": "2.0.0",
+	})
+}
+
+// Readiness probe — checks dependencies before declaring ready.
+func handleReadiness(c *gin.Context) {
+	dbReady := os.Getenv("DATABASE_URL") != ""
+	otelReady := os.Getenv("OTEL_ENDPOINT") != ""
+
+	checks := gin.H{
+		"database": dbReady,
+		"otel":     otelReady,
+	}
+
+	allReady := dbReady && otelReady
+	status := "ready"
+	code := 200
+	if !allReady {
+		status = "not_ready"
+		code = 503
+	}
+
+	c.JSON(code, gin.H{
+		"status":  status,
+		"service": "byteport-api",
+		"version": "2.0.0",
+		"checks":  checks,
 	})
 }
 
