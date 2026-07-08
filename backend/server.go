@@ -180,6 +180,12 @@ func handleReadiness(c *gin.Context) {
 }
 
 // Documentation handler
+// Placeholder stubs for org management endpoints (sibling-session route declaration).
+func handleGetOrg(c *gin.Context)    { c.JSON(501, gin.H{"error": "not implemented"}) }
+func handleUpdateOrg(c *gin.Context) { c.JSON(501, gin.H{"error": "not implemented"}) }
+func handleListMembers(c *gin.Context) { c.JSON(501, gin.H{"error": "not implemented"}) }
+func handleRemoveMember(c *gin.Context) { c.JSON(501, gin.H{"error": "not implemented"}) }
+
 func handleDocs(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"title":       "BytePort API Documentation",
