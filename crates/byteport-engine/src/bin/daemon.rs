@@ -1,16 +1,16 @@
 //! byteport-engine-daemon — HTTP sidecar for the Engine trait.
 //!
-//! Listens on a configurable TCP port and exposes the Engine trait over REST.
-//! The Go backend's UDSProxy middleware forwards `/v1/chat/completions` to a
-//! Unix socket — this daemon provides the control-plane endpoints that the
-//! Go backend calls to manage deployments.
+//! Listens on a Unix Domain Socket and exposes the Engine trait over REST.
+//! The Go backend's `EngineDaemonClient` (HTTP over UDS) connects to this
+//! socket at the path resolved from `BYTEPORT_ENGINE_SOCKET`
+//! (default `/tmp/byteport-engine.sock`).
 //!
 //! # Configuration
 //!
-//! | Env var                 | Default                    | Description                  |
-//! |-------------------------|----------------------------|------------------------------|
-//! | `BYTEPORT_ENGINE_PORT`  | `9703`                     | TCP listen port              |
-//! | `NVMS_DAEMON_URL`       | *(not set)*                | If set, registers nvms engine|
+//! | Env var                  | Default                       | Description                      |
+//! |--------------------------|-------------------------------|----------------------------------|
+//! | `BYTEPORT_ENGINE_SOCKET` | `/tmp/byteport-engine.sock`   | UDS path the daemon binds to     |
+//! | `NVMS_DAEMON_URL`        | *(not set)*                   | If set, registers nvms engine    |
 //!
 //! # Endpoints
 //!
@@ -18,6 +18,12 @@
 //! - `GET  /deployments/{id}`               — get deployment status
 //! - `POST /deployments/{id}/stop`          — stop / destroy a deployment
 //! - `GET  /deployments/{id}/logs`          — fetch recent log lines
+//!
+//! # Cleanup
+//!
+//! On startup the daemon removes any stale socket file left behind by a
+//! previous crash. On shutdown the socket file is removed cleanly so the
+//! next launch does not see a `EADDRINUSE` from the leftover inode.
 
 use std::sync::Arc;
 
@@ -352,11 +358,12 @@ fn main() {
         )
         .init();
 
-    // Read configuration from the environment.
-    let port: u16 = std::env::var("BYTEPORT_ENGINE_PORT")
+    // Read UDS socket path from the environment. The Go client uses the same
+    // env var so a single env var drives both sides of the wire.
+    let socket_path: String = std::env::var("BYTEPORT_ENGINE_SOCKET")
         .ok()
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(9703);
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| "/tmp/byteport-engine.sock".to_string());
 
     // Build the engine registry.
     let mut registry = EngineRegistry::new();
@@ -402,22 +409,43 @@ fn main() {
         .layer(CorsLayer::permissive())
         .with_state(state);
 
-    // Determine the listen address.
-    let addr = format!("0.0.0.0:{port}");
-    tracing::info!("byteport-engine-daemon listening on {addr}");
-
     // Create a single runtime for the whole program.
     let rt = tokio::runtime::Runtime::new().expect("tokio runtime");
 
-    // Bind the TCP listener.
-    let listener = rt
-        .block_on(async { tokio::net::TcpListener::bind(&addr).await })
-        .expect("bind TCP listener");
+    // Bind the Unix Domain Socket listener. We remove any stale socket file
+    // first so a previous crash does not leave the path in `EADDRINUSE`.
+    let listener = rt.block_on(async {
+        if let Err(e) = std::fs::remove_file(&socket_path) {
+            // ENOENT (file already gone) is the expected happy path; any
+            // other error is worth surfacing before we attempt to bind.
+            if e.kind() != std::io::ErrorKind::NotFound {
+                tracing::warn!(error = %e, path = %socket_path, "could not remove stale socket file");
+            }
+        }
+        tokio::net::UnixListener::bind(&socket_path)
+    })
+    .expect("bind UDS listener");
 
-    // Serve requests.
+    tracing::info!("byteport-engine-daemon listening on unix://{socket_path}");
+
+    // On shutdown, clean up the socket file so the next launch starts from
+    // a clean slate. Use a guard so we run the cleanup even if axum panics.
+    let socket_path_for_cleanup = socket_path.clone();
+    let cleanup = move || {
+        if let Err(e) = std::fs::remove_file(&socket_path_for_cleanup) {
+            if e.kind() != std::io::ErrorKind::NotFound {
+                tracing::warn!(error = %e, "failed to remove socket on shutdown");
+            }
+        }
+    };
+
+    // Serve requests. `axum::serve` accepts any `tokio::net::Listener`-like
+    // type via the `IntoMakeService` adapter, but the `UnixListener` we hold
+    // here satisfies the trait bound directly.
+    let server = axum::serve(listener, app);
     rt.block_on(async {
-        axum::serve(listener, app)
-            .await
-            .expect("axum server error");
+        let result = server.await;
+        cleanup();
+        result.expect("axum server error");
     });
 }

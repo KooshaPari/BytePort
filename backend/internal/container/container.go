@@ -1,8 +1,11 @@
 package container
 
 import (
+	"os"
+
 	"github.com/byteport/api/internal/application/deployment"
 	domaindep "github.com/byteport/api/internal/domain/deployment"
+	"github.com/byteport/api/internal/infrastructure/clients"
 	"github.com/byteport/api/internal/infrastructure/http/handlers"
 	"github.com/byteport/api/internal/infrastructure/persistence/postgres"
 	"gorm.io/gorm"
@@ -26,9 +29,13 @@ type Container struct {
 	TerminateDeploymentUseCase *deployment.TerminateDeploymentUseCase
 	UpdateStatusUseCase        *deployment.UpdateStatusUseCase
 
+	// Engine daemon client (nil when BYTEPORT_ENGINE_SOCKET is not set)
+	EngineDaemonClient *clients.EngineDaemonClient
+
 	// HTTP Handlers
-	DeploymentHandler *handlers.DeploymentHandler
-	WebhookHandler    *handlers.GitHubWebhookHandler
+	DeploymentHandler    *handlers.DeploymentHandler
+	EngineDeployHandler  *handlers.EngineDeploymentHandler
+	WebhookHandler       *handlers.GitHubWebhookHandler
 }
 
 // NewContainer creates a new dependency injection container
@@ -41,6 +48,7 @@ func NewContainer(db *gorm.DB) *Container {
 	c.initRepositories()
 	c.initDomainServices()
 	c.initUseCases()
+	c.initEngineClient()
 	c.initHandlers()
 
 	return c
@@ -83,6 +91,14 @@ func (c *Container) initUseCases() {
 	)
 }
 
+// initEngineClient initializes the engine daemon client when the socket
+// env var is set.  Should be called before initHandlers.
+func (c *Container) initEngineClient() {
+	if os.Getenv("BYTEPORT_ENGINE_SOCKET") != "" {
+		c.EngineDaemonClient = clients.NewEngineDaemonClient()
+	}
+}
+
 // initHandlers initializes HTTP handlers
 func (c *Container) initHandlers() {
 	c.DeploymentHandler = handlers.NewDeploymentHandler(
@@ -91,7 +107,12 @@ func (c *Container) initHandlers() {
 		c.ListDeploymentsUseCase,
 		c.TerminateDeploymentUseCase,
 		c.UpdateStatusUseCase,
+		c.EngineDaemonClient,
 	)
 
 	c.WebhookHandler = handlers.NewGitHubWebhookHandler(c.CreateDeploymentUseCase)
+
+	if c.EngineDaemonClient != nil {
+		c.EngineDeployHandler = handlers.NewEngineDeploymentHandler(c.EngineDaemonClient)
+	}
 }

@@ -78,10 +78,14 @@ func NewAPIServer(c *container.Container) *APIServer {
 			// Rust omniroute data plane (plans/2026-07-04-byteport-evolution-v1.md).
 			protected.Any("/v1/chat/completions", middleware.UDSProxy())
 
-			// LEGACY: Old deployment endpoints (will be removed)
+			// LEGACY: Old deployment endpoints (will be removed). The
+			// handleDeploy shim forwards to the Rust engine daemon when
+			// the caller asks for provider=engine AND the engine client
+			// is wired (BYTEPORT_ENGINE_SOCKET set at boot). Otherwise
+			// the in-process simulated path handles the request.
 			legacyDeployments := protected.Group("/legacy/deployments")
 			{
-				legacyDeployments.POST("", handleDeploy(store))
+				legacyDeployments.POST("", handleDeploy(store, c.EngineDaemonClient))
 				legacyDeployments.GET("", handleListDeployments(store))
 				legacyDeployments.GET("/:id", handleGetDeployment(store))
 				legacyDeployments.DELETE("/:id", handleTerminateDeployment(store))

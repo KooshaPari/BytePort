@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/byteport/api/internal/infrastructure/clients"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -33,8 +34,17 @@ type DeployResponse struct {
 	Message   string    `json:"message"`
 }
 
-// handleDeploy handles deployment requests
-func handleDeploy(store *DeploymentStore) gin.HandlerFunc {
+// handleDeploy handles deployment requests.
+//
+// When the request selects provider "engine" AND an engine daemon client is
+// available, the request is forwarded to the Rust byteport-engine daemon
+// over UDS. Otherwise we fall through to the existing in-process simulated
+// deploy path so the legacy /legacy/deployments contract is preserved.
+//
+// The engine client is optional — callers in tests or dev environments that
+// never set BYTEPORT_ENGINE_SOCKET pass nil and the simulated path is used
+// for every request.
+func handleDeploy(store *DeploymentStore, engineClient *clients.EngineDaemonClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req DeployRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
@@ -42,6 +52,21 @@ func handleDeploy(store *DeploymentStore) gin.HandlerFunc {
 				"error":   "Invalid request format",
 				"details": err.Error(),
 			})
+			return
+		}
+
+		// Engine-provider short-circuit: forward to the Rust daemon when
+		// the caller asked for it AND the daemon client was wired up at
+		// startup. Without a client we fall back to the simulation so
+		// the legacy route still responds.
+		if req.Provider == "engine" {
+			if engineClient == nil {
+				c.JSON(http.StatusServiceUnavailable, gin.H{
+					"error": "engine provider requested but BYTEPORT_ENGINE_SOCKET is not configured",
+				})
+				return
+			}
+			handleEngineDeploy(c, store, engineClient, req)
 			return
 		}
 
@@ -54,7 +79,7 @@ func handleDeploy(store *DeploymentStore) gin.HandlerFunc {
 		if !isValidProvider(req.Provider) {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error":           "Invalid provider",
-				"valid_providers": []string{"vercel", "netlify", "render", "railway", "supabase", "cloudflare-pages"},
+				"valid_providers": []string{"vercel", "netlify", "render", "railway", "supabase", "cloudflare-pages", "engine"},
 			})
 			return
 		}
@@ -98,6 +123,102 @@ func handleDeploy(store *DeploymentStore) gin.HandlerFunc {
 			Message:   "Deployment started successfully",
 		})
 	}
+}
+
+// handleEngineDeploy forwards a legacy /legacy/deployments request whose
+// provider is "engine" to the Rust byteport-engine daemon over UDS. The
+// returned deployment is also recorded in the in-memory store so the
+// subsequent /legacy/deployments/:id GET, /stop, etc. continue to work.
+//
+// Wire-format conversion: the legacy DeployRequest does not have a
+// ServiceEntry; we synthesise a single-service manifest from the legacy
+// fields. GitURL becomes the service `path` (used as the image reference
+// by the Rust adapter), the chosen Type becomes the service name, and
+// the legacy EnvVars map is converted to the daemon's []EnvEntry shape.
+func handleEngineDeploy(
+	c *gin.Context,
+	store *DeploymentStore,
+	engineClient *clients.EngineDaemonClient,
+	req DeployRequest,
+) {
+	// Synthesise a single-service payload from the legacy request.
+	services := []clients.ServiceEntry{}
+	env := make([]clients.EnvEntry, 0, len(req.EnvVars))
+	for k, v := range req.EnvVars {
+		env = append(env, clients.EnvEntry{Key: k, Value: v})
+	}
+	// Service name falls back to the deployment name when Type is unset.
+	svcName := req.Type
+	if svcName == "" {
+		svcName = req.Name
+	}
+	services = append(services, clients.ServiceEntry{
+		Name: svcName,
+		Path: req.GitURL,
+		Port: 80,
+		Env:  env,
+	})
+
+	// Best-effort user identity — auth middleware sets user_id / user_email
+	// on the gin.Context; fall back to "anonymous" when the legacy path is
+	// reached without auth (e.g. during a test).
+	userID, _ := c.Get("user_id")
+	userEmail, _ := c.Get("user_email")
+	uidStr, _ := userID.(string)
+	if uidStr == "" {
+		uidStr = "anonymous"
+	}
+	emailStr, _ := userEmail.(string)
+
+	daemonReq := &clients.DeployRequest{
+		Name:       req.Name,
+		User:       clients.DeployUser{ID: uidStr, Email: emailStr},
+		Repository: req.GitURL,
+		Services:   services,
+	}
+
+	result, err := engineClient.Deploy(c.Request.Context(), daemonReq)
+	if err != nil {
+		if err == clients.ErrDaemonUnavailable {
+			c.JSON(http.StatusServiceUnavailable, gin.H{
+				"error": "engine daemon unavailable",
+			})
+			return
+		}
+		c.JSON(http.StatusBadGateway, gin.H{
+			"error":   "engine daemon returned an error",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	// Record the deployment in the in-memory store so legacy read endpoints
+	// (/legacy/deployments/:id, /:id/status, /:id/logs, /:id/metrics) keep
+	// working with the same in-process contract.
+	deployment := &Deployment{
+		ID:        result.DeploymentID,
+		Name:      req.Name,
+		Type:      req.Type,
+		Provider:  "engine",
+		Status:    "deploying",
+		GitURL:    req.GitURL,
+		Branch:    req.Branch,
+		EnvVars:   req.EnvVars,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+	deployment.URL = generateDeploymentURL(req.Name, "engine")
+	store.Add(deployment)
+
+	c.JSON(http.StatusCreated, DeployResponse{
+		ID:        deployment.ID,
+		Name:      deployment.Name,
+		Status:    deployment.Status,
+		URL:       deployment.URL,
+		Provider:  deployment.Provider,
+		CreatedAt: deployment.CreatedAt,
+		Message:   "Engine deployment started",
+	})
 }
 
 // handleListDeployments lists all deployments
@@ -389,7 +510,7 @@ func selectOptimalProvider(appType string) string {
 }
 
 func isValidProvider(provider string) bool {
-	valid := []string{"vercel", "netlify", "render", "railway", "supabase", "cloudflare-pages"}
+	valid := []string{"vercel", "netlify", "render", "railway", "supabase", "cloudflare-pages", "engine"}
 	for _, p := range valid {
 		if p == provider {
 			return true

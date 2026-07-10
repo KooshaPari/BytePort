@@ -124,6 +124,6 @@ func setupTestHandler() (*DeploymentHandler, *mockRepository, *mockService) {
 	terminateUC := deployment.NewTerminateDeploymentUseCase(repo, svc)
 	updateStatusUC := deployment.NewUpdateStatusUseCase(repo, svc)
 
-	handler := NewDeploymentHandler(createUC, getUC, listUC, terminateUC, updateStatusUC)
+	handler := NewDeploymentHandler(createUC, getUC, listUC, terminateUC, updateStatusUC, nil)
 	return handler, repo, svc
 }

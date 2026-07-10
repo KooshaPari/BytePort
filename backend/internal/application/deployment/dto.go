@@ -6,6 +6,7 @@ import "time"
 type CreateDeploymentRequest struct {
 	Name        string                 `json:"name" binding:"required"`
 	Owner       string                 `json:"owner" binding:"required"`
+	Provider    string                 `json:"provider,omitempty"` // optional: "engine" routes to Rust daemon
 	ProjectUUID *string                `json:"project_uuid,omitempty"`
 	EnvVars     map[string]string      `json:"env_vars,omitempty"`
 	Config      map[string]interface{} `json:"config,omitempty"`
