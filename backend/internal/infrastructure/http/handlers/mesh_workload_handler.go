@@ -22,6 +22,23 @@ func NewMeshWorkloadHandler(useCase *meshworkload.SubmitDesiredStateUseCase) *Me
 // RegisterRoutes registers the owner-scoped mesh workload endpoint.
 func (h *MeshWorkloadHandler) RegisterRoutes(router *gin.RouterGroup) {
 	router.POST("/mesh/workloads", h.Submit)
+	router.GET("/mesh/workloads", h.List)
+}
+
+// List returns persisted desired state for the authenticated owner.
+func (h *MeshWorkloadHandler) List(c *gin.Context) {
+	owner := getUserUUID(c)
+	responses, err := h.useCase.List(c.Request.Context(), owner)
+	if err != nil {
+		var validationErr *meshworkload.ValidationError
+		if errors.As(err, &validationErr) {
+			c.JSON(http.StatusBadRequest, ErrorResponse{Error: validationErr.Error(), Code: "VALIDATION_ERROR"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "internal server error", Code: "INTERNAL_ERROR"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"workloads": responses})
 }
 
 // Submit validates and acknowledges desired state. The authenticated owner is
