@@ -50,6 +50,9 @@ func (uc *CreateDeploymentUseCase) Execute(
 	for key, value := range req.EnvVars {
 		dep.SetEnvVar(key, value)
 	}
+	if req.CompositionDigest != "" || req.ArtifactRef != "" {
+		dep.SetCompositionMetadata(deployment.CompositionMetadata{Digest: req.CompositionDigest, ArtifactRef: req.ArtifactRef})
+	}
 
 	// Validate with domain service
 	if err := uc.service.ValidateDeployment(ctx, dep); err != nil {
