@@ -363,8 +363,7 @@ func (p *NetlifyProvider) doRequest(ctx context.Context, method, path string, bo
 		return fmt.Errorf("netlify: 404 Not Found — resource does not exist")
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		raw, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("netlify: %s %s returned %d: %s", method, path, resp.StatusCode, string(raw))
+		return fmt.Errorf("netlify: %s %s returned %d: %s", method, path, resp.StatusCode, readProviderErrorBody(resp.Body))
 	}
 	if dest == nil {
 		return nil
