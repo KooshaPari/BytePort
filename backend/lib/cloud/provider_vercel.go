@@ -443,8 +443,7 @@ func (p *VercelProvider) doRequest(ctx context.Context, method, path string, bod
 		return fmt.Errorf("vercel: 404 Not Found — resource does not exist")
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		raw, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("vercel: %s %s returned %d: %s", method, path, resp.StatusCode, string(raw))
+		return fmt.Errorf("vercel: %s %s returned %d: %s", method, path, resp.StatusCode, readProviderErrorBody(resp.Body))
 	}
 	if dest == nil {
 		return nil

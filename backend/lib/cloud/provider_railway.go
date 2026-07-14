@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"time"
 )
@@ -397,8 +396,7 @@ func (p *RailwayProvider) graphQL(ctx context.Context, query string, variables m
 		return fmt.Errorf("railway: 401 Unauthorized — check your API token at https://railway.app/account/tokens")
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		raw, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("railway: GraphQL endpoint returned %d: %s", resp.StatusCode, string(raw))
+		return fmt.Errorf("railway: GraphQL endpoint returned %d: %s", resp.StatusCode, readProviderErrorBody(resp.Body))
 	}
 
 	return json.NewDecoder(resp.Body).Decode(dest)
