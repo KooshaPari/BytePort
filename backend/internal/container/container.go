@@ -94,6 +94,6 @@ func (c *Container) initHandlers() {
 		c.UpdateStatusUseCase,
 	)
 	c.MeshWorkloadHandler = handlers.NewMeshWorkloadHandler(
-		meshworkload.NewSubmitDesiredStateUseCase(),
+		meshworkload.NewSubmitDesiredStateUseCase(meshworkload.NewDeploymentStore(c.DeploymentRepository)),
 	)
 }
