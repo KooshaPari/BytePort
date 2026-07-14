@@ -36,6 +36,9 @@ func (uc *CreateDeploymentUseCase) Execute(
 	if req.Owner == "" {
 		return nil, NewValidationError("owner is required")
 	}
+	if err := validateCompositionMetadata(req.CompositionDigest, req.ArtifactRef); err != nil {
+		return nil, NewValidationError(err.Error())
+	}
 
 	// Create domain entity
 	dep, err := deployment.NewDeployment(req.Name, req.Owner, req.ProjectUUID)
@@ -61,12 +64,14 @@ func (uc *CreateDeploymentUseCase) Execute(
 
 	// Map to response DTO
 	response := &CreateDeploymentResponse{
-		UUID:      dep.UUID(),
-		Name:      dep.Name(),
-		Owner:     dep.Owner(),
-		Status:    dep.Status().String(),
-		CreatedAt: dep.CreatedAt(),
-		Message:   "Deployment created successfully",
+		UUID:              dep.UUID(),
+		Name:              dep.Name(),
+		Owner:             dep.Owner(),
+		Status:            dep.Status().String(),
+		CreatedAt:         dep.CreatedAt(),
+		Message:           "Deployment created successfully",
+		CompositionDigest: req.CompositionDigest,
+		ArtifactRef:       req.ArtifactRef,
 	}
 
 	return response, nil
