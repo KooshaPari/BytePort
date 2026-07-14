@@ -2,6 +2,7 @@ package meshworkload
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	domain "github.com/byteport/api/internal/domain/deployment"
@@ -10,6 +11,11 @@ import (
 // DesiredStateStore persists owner-scoped mesh intent in the BytePort control plane.
 type DesiredStateStore interface {
 	Save(ctx context.Context, owner string, req DesiredStateRequest) error
+}
+
+// DesiredStateReader reads owner-scoped desired state for reconciliation.
+type DesiredStateReader interface {
+	List(ctx context.Context, owner string) ([]DesiredStateResponse, error)
 }
 
 // DeploymentStore adapts the existing deployment repository to mesh desired state.
@@ -33,6 +39,24 @@ func (s *DeploymentStore) Save(ctx context.Context, owner string, req DesiredSta
 		dep.SetProvider("placement", req.Placement)
 	}
 	return s.repository.Create(ctx, dep)
+}
+
+// List returns persisted mesh intents owned by the authenticated principal.
+func (s *DeploymentStore) List(ctx context.Context, owner string) ([]DesiredStateResponse, error) {
+	deployments, err := s.repository.FindByOwner(ctx, owner)
+	if err != nil {
+		return nil, err
+	}
+	responses := make([]DesiredStateResponse, 0, len(deployments))
+	for _, dep := range deployments {
+		metadata := dep.CompositionMetadata()
+		if metadata == nil {
+			continue
+		}
+		backend, _ := dep.Providers()["execution_backend"].(string)
+		responses = append(responses, DesiredStateResponse{Name: dep.Name(), Owner: dep.Owner(), CompositionDigest: metadata.Digest, ArtifactRef: metadata.ArtifactRef, ExecutionBackend: backend, Status: dep.Status().String(), AcceptedAt: dep.CreatedAt()})
+	}
+	return responses, nil
 }
 
 // SubmitDesiredStateUseCase validates mesh intent and returns an acknowledgement.
@@ -73,4 +97,16 @@ func (uc *SubmitDesiredStateUseCase) Execute(ctx context.Context, owner string, 
 		Status:            "accepted",
 		AcceptedAt:        time.Now().UTC(),
 	}, nil
+}
+
+// List returns persisted desired state for an authenticated owner.
+func (uc *SubmitDesiredStateUseCase) List(ctx context.Context, owner string) ([]DesiredStateResponse, error) {
+	reader, ok := uc.store.(DesiredStateReader)
+	if !ok {
+		return nil, &ValidationError{Message: "mesh desired-state reader is not configured"}
+	}
+	if strings.TrimSpace(owner) == "" {
+		return nil, &ValidationError{Message: "authenticated owner is required"}
+	}
+	return reader.List(ctx, owner)
 }
