@@ -683,8 +683,15 @@ func TestListDeploymentsUseCase_Execute_FilterByValidStatus(t *testing.T) {
 	ctx := context.Background()
 
 	dep1, _ := deployment.NewDeployment("deployment-1", "user-123", nil)
-	if err := dep1.SetStatus(deployment.StatusDeployed); err != nil {
-		t.Fatalf("failed to set deployment status: %v", err)
+	for _, status := range []deployment.Status{
+		deployment.StatusDetecting,
+		deployment.StatusProvisioning,
+		deployment.StatusDeploying,
+		deployment.StatusDeployed,
+	} {
+		if err := dep1.SetStatus(status); err != nil {
+			t.Fatalf("failed to set deployment status to %s: %v", status, err)
+		}
 	}
 
 	var requestedStatus deployment.Status
