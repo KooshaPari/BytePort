@@ -1,0 +1,52 @@
+# BytePort mutation testing configuration (cargo-mutants)
+#
+# Run: cargo mutants --in-place
+# Verify: cargo mutants --test-all
+#
+# This file controls which crates are subjected to mutation testing,
+# which source paths are excluded, and the concurrency / timeout settings.
+#
+# Reference: https://github.com/sourcefrog/cargo-mutants
+
+[mutants]
+# Maximum parallel build jobs (default: number of CPUs)
+# jobs = 8
+
+# Timeout per test (seconds) before the test is assumed to have hung
+# test_timeout = 60
+
+# Include only these source tree subtrees for mutation
+include = [
+    "crates/byteport-dag/src",
+    "crates/byteport-transport/src",
+    "crates/byteport-cli/src",
+    "crates/byteport-otel/src",
+]
+
+# Exclude generated or vendored code
+exclude = [
+    "**/vendor/**",
+    "**/generated/**",
+    "**/*.pb.rs",
+    "**/*.pb.go",
+]
+
+# Minimum mutation coverage threshold (fraction 0.0–1.0)
+# Uncomment once baseline established:
+# coverage_threshold = 0.40
+
+# Directories to ignore entirely
+ignore = [
+    "target",
+    ".claude",
+]
+
+# Source files / patterns that should never be mutated
+# (e.g. CLI arg parsing, panic hooks, FFI bindings)
+unchanged = [
+    "**/main.rs",
+    "**/ffi/**",
+]
+
+# Timeout for the entire mutation run (seconds)
+# timeout = 600

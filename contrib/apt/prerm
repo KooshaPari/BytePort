@@ -1,0 +1,20 @@
+#!/bin/sh
+set -e
+
+case "$1" in
+  remove|purge)
+    if [ -d /run/systemd/system ]; then
+      systemctl stop byteport.service 2>/dev/null || true
+      systemctl disable byteport.service 2>/dev/null || true
+      systemctl daemon-reload 2>/dev/null || true
+    fi
+    ;;
+  upgrade|failed-upgrade)
+    exit 0
+    ;;
+  *)
+    exit 0
+    ;;
+esac
+
+exit 0

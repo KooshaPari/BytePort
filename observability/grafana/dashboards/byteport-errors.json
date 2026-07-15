@@ -1,0 +1,29 @@
+{
+  "title": "BytePort Errors & Rate Limiting",
+  "uid": "byteport-errors",
+  "version": "1.0.0",
+  "editable": true,
+  "time": { "from": "now-15m", "to": "now" },
+  "refresh": "10s",
+  "tags": ["byteport", "errors"],
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "5xx Errors / min",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "sum by (route) (rate(byteport_http_requests_total{status=~\"5..\"}[1m]))", "refId": "A", "legendFormat": "{{route}}" }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Rate Limited Requests / min",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "sum by (route) (rate(byteport_rate_limited_total[1m]))", "refId": "A", "legendFormat": "{{route}}" }
+      ]
+    }
+  ]
+}

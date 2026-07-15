@@ -1,0 +1,1822 @@
+openapi: "3.0.3"
+info:
+  title: BytePort API
+  description: |
+    Zero-cost deployment platform API. BytePort enables users to deploy
+    frontend, backend, and database applications across multiple cloud providers
+    with a unified interface.
+
+    ## Authentication
+
+    Most endpoints require a Bearer JWT in the `Authorization` header,
+    obtained via WorkOS AuthKit OAuth flow.
+
+      Authorization: Bearer <token>
+
+    Org-scoped endpoints additionally enforce RBAC — only users with the
+    `owner` or `admin` role on the target org may access them.
+
+    ## Webhook Authentication
+
+    The GitHub webhook (`POST /api/v1/webhooks/github`) is authenticated via
+    HMAC-SHA256 signature in the `X-Hub-Signature-256` header, **not** via
+    bearer token.
+  version: "2.0.0"
+  contact:
+    name: BytePort
+    url: https://byte.kooshapari.com
+servers:
+  - url: https://byte.kooshapari.com
+    description: Production server
+  - url: http://localhost:8002
+    description: Local development
+tags:
+  - name: Health
+    description: Health check and readiness probe endpoints
+  - name: Auth
+    description: Authentication and authorization endpoints
+  - name: Users
+    description: User profile endpoints
+  - name: Organizations
+    description: Organization management with RBAC
+  - name: Deployments
+    description: Deployment lifecycle management (hexagonal architecture)
+  - name: Legacy Deployments
+    description: Legacy deployment endpoints (to be removed)
+  - name: Chat Completions
+    description: OpenAI-compatible chat completions proxied to Rust data plane
+  - name: Webhooks
+    description: GitHub webhook for CI/CD pipeline triggers
+  - name: Utilities
+    description: Utilities for application detection, cost estimation, and config validation
+  - name: Documentation
+    description: API documentation endpoint
+
+paths:
+  # ─────────────────────── Health ───────────────────────
+
+  /api/v1/health:
+    get:
+      operationId: healthCheck
+      summary: Liveness probe
+      description: Returns a simple ok status with no dependency checks.
+      tags: [Health]
+      responses:
+        "200":
+          description: Service is alive
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  service:
+                    type: string
+                    example: byteport-api
+                  version:
+                    type: string
+                    example: 2.0.0
+                required: [status, service, version]
+
+  /api/v1/health/readiness:
+    get:
+      operationId: readinessCheck
+      summary: Readiness probe
+      description: Checks dependencies (database, OpenTelemetry) before declaring ready.
+      tags: [Health]
+      responses:
+        "200":
+          description: All dependencies are healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ready
+                  service:
+                    type: string
+                    example: byteport-api
+                  version:
+                    type: string
+                    example: 2.0.0
+                  checks:
+                    type: object
+                    properties:
+                      database:
+                        type: boolean
+                        description: Whether DATABASE_URL is configured
+                      otel:
+                        type: boolean
+                        description: Whether OTEL_ENDPOINT is configured
+                    required: [database, otel]
+                required: [status, service, version, checks]
+        "503":
+          description: One or more dependencies are unhealthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: not_ready
+                  service:
+                    type: string
+                    example: byteport-api
+                  version:
+                    type: string
+                    example: 2.0.0
+                  checks:
+                    type: object
+                    additionalProperties:
+                      type: boolean
+                required: [status, service, version, checks]
+
+  /api/v1/:
+    get:
+      operationId: getAPIInfo
+      summary: API information
+      description: Returns basic information about the API and its available endpoints.
+      tags: [Documentation]
+      responses:
+        "200":
+          description: API metadata
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
+                    example: BytePort API
+                  version:
+                    type: string
+                    example: 2.0.0
+                  description:
+                    type: string
+                    example: Zero-cost deployment platform API
+                  endpoints:
+                    type: object
+                    properties:
+                      health:
+                        type: string
+                        example: /api/v1/health
+                      deployments:
+                        type: string
+                        example: /api/v1/deployments
+                      projects:
+                        type: string
+                        example: /api/v1/projects
+                      docs:
+                        type: string
+                        example: /api/v1/docs
+                required: [name, version, description, endpoints]
+
+  # ─────────────────────── Auth ───────────────────────
+
+  /api/v1/auth/workos/callback:
+    post:
+      operationId: workOSAuthCallback
+      summary: WorkOS AuthKit OAuth callback
+      description: |
+        Exchanges an authorization code from WorkOS AuthKit for access tokens.
+        The response includes a Bearer token that must be sent in subsequent
+        authenticated requests.
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+                  description: Authorization code from WorkOS
+                  example: wh_abc123...
+                state:
+                  type: string
+                  description: OAuth state parameter (optional, used for CSRF)
+                  example: state_xyz789
+              required: [code]
+      responses:
+        "200":
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                    description: Bearer access token for subsequent requests
+                    example: wh_abc123...
+                  token_type:
+                    type: string
+                    example: Bearer
+                  state:
+                    type: string
+                    description: Echoed state parameter
+                required: [access_token, token_type]
+        "400":
+          description: Bad request (missing or invalid code)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  # ─────────────────────── Webhooks ───────────────────────
+
+  /api/v1/webhooks/github:
+    post:
+      operationId: gitHubWebhook
+      summary: GitHub webhook receiver
+      description: |
+        Receives GitHub `push` event deliveries and triggers a deployment
+        pipeline. Authenticated via HMAC-SHA256 signature — the
+        `X-Hub-Signature-256` header is validated against
+        `$GITHUB_WEBHOOK_SECRET`. Only `push` events on the configured
+        deploy branch trigger deployments.
+      tags: [Webhooks]
+      parameters:
+        - name: X-Hub-Signature-256
+          in: header
+          required: true
+          schema:
+            type: string
+          description: HMAC-SHA256 signature of the raw request body
+        - name: X-GitHub-Event
+          in: header
+          required: true
+          schema:
+            type: string
+            enum: [push, ping]
+          description: GitHub webhook event type
+        - name: X-GitHub-Delivery
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Unique delivery identifier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: GitHub push event payload (subset)
+              properties:
+                ref:
+                  type: string
+                  example: refs/heads/main
+                after:
+                  type: string
+                  example: abc123def456
+                repository:
+                  type: object
+                  properties:
+                    full_name:
+                      type: string
+                      example: myorg/myapp
+                    html_url:
+                      type: string
+                      format: uri
+                      example: https://github.com/myorg/myapp
+                    clone_url:
+                      type: string
+                      format: uri
+                      example: https://github.com/myorg/myapp.git
+                pusher:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                head_commit:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    message:
+                      type: string
+                    timestamp:
+                      type: string
+              required: [ref, after, repository]
+      responses:
+        "202":
+          description: Webhook accepted — deployment triggered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateDeploymentResponse"
+        "400":
+          description: Invalid payload or missing fields
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: Invalid HMAC signature
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  # ─────────────────────── Users ───────────────────────
+
+  /api/v1/user/{id}:
+    get:
+      operationId: getUser
+      summary: Get user
+      description: Returns the authenticated user's profile information.
+      tags: [Users]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: User UUID (use "current" as alias for the authenticated user)
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: "#/components/schemas/User"
+        "401":
+          description: Missing or invalid authentication
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  # ─────────────────────── Organizations ───────────────────────
+
+  /api/v1/orgs/{org_id}:
+    get:
+      operationId: getOrg
+      summary: Get organization
+      description: |
+        Returns organization details. Requires the authenticated user to be
+        an `owner` or `admin` of the organization.
+      tags: [Organizations]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: org_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Organization UUID
+      responses:
+        "200":
+          description: Organization details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Org"
+        "401":
+          description: Missing or invalid authentication
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Organization not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    put:
+      operationId: updateOrg
+      summary: Update organization
+      description: |
+        Updates organization metadata. Requires `owner` or `admin` role.
+      tags: [Organizations]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: org_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Organization UUID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: Organization display name
+                description:
+                  type: string
+                  description: Organization description
+      responses:
+        "200":
+          description: Organization updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Org"
+        "400":
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: Missing or invalid authentication
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Organization not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/orgs/{org_id}/members:
+    get:
+      operationId: listOrgMembers
+      summary: List organization members
+      description: |
+        Returns all members of an organization. Requires `owner` or `admin`
+        role.
+      tags: [Organizations]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: org_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Organization UUID
+      responses:
+        "200":
+          description: List of organization members
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  members:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Member"
+                  total:
+                    type: integer
+                    example: 5
+                required: [members, total]
+        "401":
+          description: Missing or invalid authentication
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/orgs/{org_id}/members/{user_id}:
+    delete:
+      operationId: removeOrgMember
+      summary: Remove organization member
+      description: |
+        Removes a user from an organization. Requires `owner` or `admin`
+        role.
+      tags: [Organizations]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: org_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Organization UUID
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: User UUID to remove
+      responses:
+        "204":
+          description: Member removed successfully
+        "401":
+          description: Missing or invalid authentication
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Member not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  # ─────────────────────── Deployments (Hexagonal) ───────────────────────
+
+  /api/v1/deployments:
+    post:
+      operationId: createDeployment
+      summary: Create a deployment
+      description: |
+        Creates a new deployment. The deployment transitions through
+        lifecycle states: `pending` → `detecting` → `provisioning` →
+        `deploying` → `deployed`.
+      tags: [Deployments]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDeploymentRequest"
+      responses:
+        "201":
+          description: Deployment created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateDeploymentResponse"
+        "400":
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: Missing or invalid authentication
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "409":
+          description: Conflict (e.g. name already exists)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    get:
+      operationId: listDeployments
+      summary: List deployments
+      description: |
+        Lists deployments with optional filtering by owner, status, and
+        pagination.
+      tags: [Deployments]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: owner
+          in: query
+          schema:
+            type: string
+          description: Filter by owner UUID
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, detecting, provisioning, deploying, deployed, failed, terminated]
+          description: Filter by deployment status
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          description: Pagination offset
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+          description: Maximum items per page
+      responses:
+        "200":
+          description: Paginated list of deployments
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListDeploymentsResponse"
+        "400":
+          description: Invalid query parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: Missing or invalid authentication
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/deployments/{uuid}:
+    get:
+      operationId: getDeployment
+      summary: Get deployment
+      description: Returns detailed information about a deployment by UUID.
+      tags: [Deployments]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Deployment UUID
+      responses:
+        "200":
+          description: Deployment details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetDeploymentResponse"
+        "401":
+          description: Missing or invalid authentication
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Access denied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Deployment not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    delete:
+      operationId: terminateDeployment
+      summary: Terminate deployment
+      description: |
+        Terminates a deployment. Sets status to `terminated`, which is a
+        terminal state.
+      tags: [Deployments]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Deployment UUID
+      responses:
+        "200":
+          description: Deployment terminated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TerminateDeploymentResponse"
+        "401":
+          description: Missing or invalid authentication
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Access denied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Deployment not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "409":
+          description: Deployment already terminated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/deployments/{uuid}/status:
+    patch:
+      operationId: updateDeploymentStatus
+      summary: Update deployment status
+      description: |
+        Updates the status of a deployment. The status transition must be
+        valid (e.g., `pending` → `deploying`). Invalid transitions are
+        rejected with a 409 Conflict.
+      tags: [Deployments]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Deployment UUID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateStatusRequest"
+      responses:
+        "204":
+          description: Status updated successfully
+        "400":
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: Missing or invalid authentication
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Deployment not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "409":
+          description: Invalid status transition
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  # ─────────────────────── Chat Completions (UDS Proxy) ───────────────────────
+
+  /api/v1/v1/chat/completions:
+    post:
+      operationId: chatCompletions
+      summary: OpenAI-compatible chat completions
+      description: |
+        Proxies OpenAI-compatible chat completion requests to the Rust
+        omniroute data plane via Unix Domain Socket. Supports provider
+        selection via the `X-OmniRoute-Provider` header.
+      tags: [Chat Completions]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: X-OmniRoute-Provider
+          in: header
+          schema:
+            type: string
+            example: openai
+          description: |
+            Provider identifier (e.g. `openai`, `anthropic`). Omit to use
+            the platform default.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Standard OpenAI chat completions request body
+      responses:
+        "200":
+          description: Chat completion response (passthrough from upstream)
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Standard OpenAI chat completions response
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: Missing or invalid authentication
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "502":
+          description: Upstream data plane unreachable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  # ─────────────────────── Legacy Deployments ───────────────────────
+
+  /api/v1/legacy/deployments:
+    post:
+      operationId: legacyCreateDeployment
+      summary: "[Legacy] Create deployment"
+      description: |
+        **Deprecated** — use `POST /api/v1/deployments` instead.
+        Creates a deployment using the legacy in-memory store.
+      tags: [Legacy Deployments]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeployRequest"
+      responses:
+        "201":
+          description: Deployment created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeployResponse"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: Missing or invalid authentication
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    get:
+      operationId: legacyListDeployments
+      summary: "[Legacy] List deployments"
+      description: |
+        **Deprecated** — use `GET /api/v1/deployments` instead.
+        Lists all deployments from the legacy in-memory store.
+      tags: [Legacy Deployments]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of deployments
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deployments:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/DeployResponse"
+                  total:
+                    type: integer
+                required: [deployments, total]
+        "401":
+          description: Missing or invalid authentication
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/legacy/deployments/{id}:
+    get:
+      operationId: legacyGetDeployment
+      summary: "[Legacy] Get deployment"
+      description: |
+        **Deprecated** — use `GET /api/v1/deployments/{uuid}` instead.
+        Returns a deployment from the legacy in-memory store.
+      tags: [Legacy Deployments]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Deployment ID
+      responses:
+        "200":
+          description: Deployment details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Deployment"
+        "401":
+          description: Missing or invalid authentication
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Deployment not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    delete:
+      operationId: legacyTerminateDeployment
+      summary: "[Legacy] Terminate deployment"
+      description: |
+        **Deprecated** — use `DELETE /api/v1/deployments/{uuid}` instead.
+        Terminates a deployment in the legacy in-memory store.
+      tags: [Legacy Deployments]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Deployment ID
+      responses:
+        "200":
+          description: Deployment terminated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Deployment terminated successfully
+                  id:
+                    type: string
+                required: [message, id]
+        "401":
+          description: Missing or invalid authentication
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Deployment not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/legacy/deployments/{id}/status:
+    get:
+      operationId: legacyGetDeploymentStatus
+      summary: "[Legacy] Get deployment status"
+      description: |
+        **Deprecated** — check deployment status via
+        `GET /api/v1/deployments/{uuid}` instead.
+      tags: [Legacy Deployments]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Deployment ID
+      responses:
+        "200":
+          description: Deployment status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  status:
+                    type: string
+                  progress:
+                    type: integer
+                    description: Progress percentage (0–100)
+                    example: 50
+                  updated_at:
+                    type: string
+                    format: date-time
+                required: [id, status, progress, updated_at]
+        "401":
+          description: Missing or invalid authentication
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Deployment not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/legacy/deployments/{id}/logs:
+    get:
+      operationId: legacyGetDeploymentLogs
+      summary: "[Legacy] Get deployment logs"
+      description: |
+        **Deprecated** — replaced by the hexagonal deployment architecture.
+        Returns mock deployment logs.
+      tags: [Legacy Deployments]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Deployment ID
+      responses:
+        "200":
+          description: Deployment logs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deployment_id:
+                    type: string
+                  logs:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        timestamp:
+                          type: string
+                          format: date-time
+                        level:
+                          type: string
+                          example: info
+                        message:
+                          type: string
+                required: [deployment_id, logs]
+        "401":
+          description: Missing or invalid authentication
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Deployment not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/legacy/deployments/{id}/metrics:
+    get:
+      operationId: legacyGetDeploymentMetrics
+      summary: "[Legacy] Get deployment metrics"
+      description: |
+        **Deprecated** — replaced by the hexagonal deployment architecture.
+        Returns mock deployment metrics.
+      tags: [Legacy Deployments]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Deployment ID
+      responses:
+        "200":
+          description: Deployment metrics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deployment_id:
+                    type: string
+                  uptime:
+                    type: string
+                    example: "99.9%"
+                  requests:
+                    type: integer
+                    example: 1234
+                  bandwidth:
+                    type: string
+                    example: "1.2 GB"
+                  response_time:
+                    type: string
+                    example: "45ms"
+                  cost:
+                    type: object
+                    properties:
+                      monthly:
+                        type: number
+                        example: 0.0
+                      currency:
+                        type: string
+                        example: USD
+                required: [deployment_id, uptime, requests, bandwidth, response_time, cost]
+        "401":
+          description: Missing or invalid authentication
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Deployment not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  # ─────────────────────── Utilities ───────────────────────
+
+  /api/v1/detect:
+    post:
+      operationId: detectAppType
+      summary: Auto-detect application type
+      description: |
+        Analyzes project files and auto-detects the application type,
+        framework, and recommended deployment provider.
+      tags: [Utilities]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                files:
+                  type: array
+                  description: List of file paths in the project
+                  items:
+                    type: string
+                    example: package.json
+              required: [files]
+      responses:
+        "200":
+          description: Detection result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DetectionResult"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/estimate-cost:
+    post:
+      operationId: estimateCost
+      summary: Estimate deployment cost
+      description: |
+        Provides a cost estimate for deploying a given application type
+        on a specific provider.
+      tags: [Utilities]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type:
+                  type: string
+                  description: Application type
+                  example: frontend
+                provider:
+                  type: string
+                  description: Deployment provider
+                  example: vercel
+              required: [type, provider]
+      responses:
+        "200":
+          description: Cost estimate
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CostEstimate"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/validate-config:
+    post:
+      operationId: validateConfig
+      summary: Validate deployment configuration
+      description: |
+        Validates a deployment configuration and returns any errors or
+        warnings.
+      tags: [Utilities]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Arbitrary configuration object to validate
+      responses:
+        "200":
+          description: Validation result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                    example: true
+                  errors:
+                    type: array
+                    items:
+                      type: string
+                  warnings:
+                    type: array
+                    items:
+                      type: string
+                required: [valid, errors, warnings]
+        "400":
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  # ─────────────────────── Documentation ───────────────────────
+
+  /api/v1/docs:
+    get:
+      operationId: getDocs
+      summary: API documentation
+      description: Returns inline API documentation as JSON.
+      tags: [Documentation]
+      responses:
+        "200":
+          description: API documentation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  title:
+                    type: string
+                    example: BytePort API Documentation
+                  version:
+                    type: string
+                    example: 2.0.0
+                  description:
+                    type: string
+                    example: REST API for zero-cost deployments
+                  endpoints:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        method:
+                          type: string
+                          example: POST
+                        path:
+                          type: string
+                          example: /api/v1/deployments
+                        description:
+                          type: string
+                required: [title, version, description, endpoints]
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT Bearer token obtained from WorkOS AuthKit OAuth flow.
+        Pass as `Authorization: Bearer <token>`.
+
+  schemas:
+    # ── Error ────────────────────────────────────────────────
+    ApiError:
+      type: object
+      description: Standard API error response
+      properties:
+        error:
+          type: string
+          description: Human-readable error message
+          example: Deployment not found
+        code:
+          type: string
+          description: Machine-readable error code
+          example: NOT_FOUND
+      required: [error, code]
+
+    # ── User ─────────────────────────────────────────────────
+    User:
+      type: object
+      description: User account with cloud provider credentials
+      properties:
+        uuid:
+          type: string
+          format: uuid
+          description: Unique user identifier
+        name:
+          type: string
+          description: User's display name
+        email:
+          type: string
+          format: email
+          description: User's email address
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required: [uuid, name, email]
+
+    # ── Org ──────────────────────────────────────────────────
+    Org:
+      type: object
+      description: Multi-tenant organization
+      properties:
+        uuid:
+          type: string
+          format: uuid
+          description: Unique organization identifier
+        name:
+          type: string
+          description: Organization display name
+        slug:
+          type: string
+          description: URL-friendly organization slug
+        description:
+          type: string
+          description: Organization description
+        owner_id:
+          type: string
+          format: uuid
+          description: UUID of the organization owner
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required: [uuid, name, slug, owner_id]
+
+    # ── Member ───────────────────────────────────────────────
+    Member:
+      type: object
+      description: Organization membership with role assignment
+      properties:
+        uuid:
+          type: string
+          format: uuid
+          description: Membership record UUID
+        org_id:
+          type: string
+          format: uuid
+          description: Organization UUID
+        user_id:
+          type: string
+          format: uuid
+          description: User UUID
+        role:
+          type: string
+          enum: [owner, admin, member]
+          description: Assigned role within the organization
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required: [uuid, org_id, user_id, role]
+
+    # ── Legacy Deployment ────────────────────────────────────
+    Deployment:
+      type: object
+      description: Legacy deployment record (in-memory store)
+      properties:
+        id:
+          type: string
+          description: Deployment ID
+        name:
+          type: string
+          description: Deployment name
+        type:
+          type: string
+          description: Application type (frontend, backend, database)
+          example: frontend
+        provider:
+          type: string
+          description: Cloud provider
+          example: vercel
+        status:
+          type: string
+          example: deploying
+        url:
+          type: string
+          format: uri
+          description: Deployed application URL
+        git_url:
+          type: string
+          format: uri
+          description: Source repository URL
+        branch:
+          type: string
+          description: Git branch
+        env_vars:
+          type: object
+          additionalProperties:
+            type: string
+          description: Environment variables
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required: [id, name, type, provider, status, url, created_at, updated_at]
+
+    DeployRequest:
+      type: object
+      description: Legacy deployment creation request
+      properties:
+        name:
+          type: string
+          description: Deployment name
+        type:
+          type: string
+          description: Application type (frontend, backend, database)
+          example: frontend
+        provider:
+          type: string
+          description: Target provider (auto-selected if empty)
+          example: vercel
+        git_url:
+          type: string
+          format: uri
+          description: Source repository URL
+        branch:
+          type: string
+          description: Git branch
+        env_vars:
+          type: object
+          additionalProperties:
+            type: string
+          description: Environment variables
+        config:
+          type: object
+          description: Additional configuration
+      required: [name, type]
+
+    DeployResponse:
+      type: object
+      description: Legacy deployment response
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        status:
+          type: string
+          example: deploying
+        url:
+          type: string
+          format: uri
+        provider:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        message:
+          type: string
+          example: Deployment started successfully
+      required: [id, name, status, url, provider, created_at, message]
+
+    # ── Hexagonal Deployment DTOs ────────────────────────────
+    CreateDeploymentRequest:
+      type: object
+      description: Request to create a new deployment (hexagonal architecture)
+      properties:
+        name:
+          type: string
+          description: Deployment name
+          example: my-app
+        owner:
+          type: string
+          format: uuid
+          description: Owner user UUID
+        project_uuid:
+          type: string
+          format: uuid
+          description: Associated project UUID (optional)
+        env_vars:
+          type: object
+          additionalProperties:
+            type: string
+          description: Environment variables for the deployment
+          example:
+            NODE_ENV: production
+            API_KEY: ${secret}
+        config:
+          type: object
+          description: Arbitrary deployment configuration
+      required: [name, owner]
+
+    CreateDeploymentResponse:
+      type: object
+      description: Response after creating a deployment
+      properties:
+        uuid:
+          type: string
+          format: uuid
+          description: Deployment UUID
+        name:
+          type: string
+        owner:
+          type: string
+          format: uuid
+        status:
+          type: string
+          example: pending
+        created_at:
+          type: string
+          format: date-time
+        message:
+          type: string
+          example: Deployment created successfully
+      required: [uuid, name, owner, status, created_at, message]
+
+    GetDeploymentResponse:
+      type: object
+      description: Full deployment details
+      properties:
+        uuid:
+          type: string
+          format: uuid
+        name:
+          type: string
+        owner:
+          type: string
+          format: uuid
+        project_uuid:
+          type: string
+          format: uuid
+          nullable: true
+        status:
+          type: string
+          example: deployed
+        providers:
+          type: object
+          description: Provider configuration map
+          example:
+            aws: {}
+        services:
+          type: array
+          items:
+            $ref: "#/components/schemas/ServiceDTO"
+        cost_info:
+          $ref: "#/components/schemas/CostInfoDTO"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        deployed_at:
+          type: string
+          format: date-time
+          nullable: true
+        terminated_at:
+          type: string
+          format: date-time
+          nullable: true
+      required: [uuid, name, owner, status, providers, services, created_at, updated_at]
+
+    ListDeploymentsResponse:
+      type: object
+      description: Paginated deployment list
+      properties:
+        deployments:
+          type: array
+          items:
+            $ref: "#/components/schemas/DeploymentSummaryDTO"
+        total:
+          type: integer
+          example: 42
+        offset:
+          type: integer
+          example: 0
+        limit:
+          type: integer
+          example: 50
+      required: [deployments, total, offset, limit]
+
+    DeploymentSummaryDTO:
+      type: object
+      description: Lightweight deployment summary for list views
+      properties:
+        uuid:
+          type: string
+          format: uuid
+        name:
+          type: string
+        owner:
+          type: string
+          format: uuid
+        status:
+          type: string
+          example: deployed
+        service_count:
+          type: integer
+          example: 2
+        monthly_cost:
+          type: number
+          example: 0.0
+        created_at:
+          type: string
+          format: date-time
+        deployed_at:
+          type: string
+          format: date-time
+          nullable: true
+      required: [uuid, name, owner, status, service_count, monthly_cost, created_at]
+
+    UpdateStatusRequest:
+      type: object
+      description: Request to update deployment status
+      properties:
+        status:
+          type: string
+          enum: [pending, detecting, provisioning, deploying, deployed, failed, terminated]
+          description: Target deployment status
+      required: [status]
+
+    TerminateDeploymentResponse:
+      type: object
+      description: Response after terminating a deployment
+      properties:
+        uuid:
+          type: string
+          format: uuid
+        status:
+          type: string
+          example: terminated
+        message:
+          type: string
+          example: Deployment terminated successfully
+        terminated_at:
+          type: string
+          format: date-time
+      required: [uuid, status, message, terminated_at]
+
+    ServiceDTO:
+      type: object
+      description: Service within a deployment
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          description: Service type (frontend, backend, database)
+          example: frontend
+        provider:
+          type: string
+          example: vercel
+        status:
+          type: string
+        url:
+          type: string
+          format: uri
+      required: [name, type, provider, status]
+
+    CostInfoDTO:
+      type: object
+      description: Cost information for a deployment
+      properties:
+        monthly:
+          type: number
+          example: 0.0
+        breakdown:
+          type: object
+          additionalProperties:
+            type: number
+          description: Cost breakdown by service
+          example:
+            frontend: 0.0
+            database: 0.0
+      required: [monthly, breakdown]
+
+    # ── Detection & Estimation ──────────────────────────────
+    DetectionResult:
+      type: object
+      description: Result of automatic application type detection
+      properties:
+        type:
+          type: string
+          description: Detected application type
+          example: frontend
+        framework:
+          type: string
+          description: Detected framework
+          example: react
+        confidence:
+          type: number
+          format: float
+          description: Detection confidence score (0.0–1.0)
+          example: 0.9
+        suggested_provider:
+          type: string
+          description: Recommended deployment provider
+          example: vercel
+      required: [type, framework, confidence, suggested_provider]
+
+    CostEstimate:
+      type: object
+      description: Estimated deployment cost
+      properties:
+        monthly:
+          type: number
+          description: Estimated monthly cost
+          example: 0.0
+        currency:
+          type: string
+          description: Currency code
+          example: USD
+        breakdown:
+          type: array
+          description: Line-item cost breakdown
+          items:
+            type: object
+            properties:
+              service:
+                type: string
+                example: frontend
+              provider:
+                type: string
+                example: vercel
+              cost:
+                type: number
+                example: 0.0
+              plan:
+                type: string
+                example: Free Tier
+        message:
+          type: string
+          example: This deployment uses 100% free tiers
+      required: [monthly, currency, breakdown, message]

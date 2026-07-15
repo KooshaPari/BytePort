@@ -68,9 +68,9 @@ version = "1"
 [dependencies.directories]
 version = "5"
 
-[dependencies.update-checker]
-version = "0.2"
-default-features = false
+
+[dependencies.ureq]
+version = "3"
 
 [dependencies.tokio]
 version = "1"

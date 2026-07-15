@@ -29,6 +29,8 @@ use opentelemetry::trace::{Span, Tracer};
 use byteport_dag::dag::Dag;
 use byteport_dag::scheduler;
 use byteport_dag::serialize::DagSchema;
+use byteport_otel::config::TelemetryConfig;
+use byteport_otel::init;
 use byteport_otel::propagation;
 use byteport_transport::{S3UploadTransport, UploadRequest, UploadTransport};
 
@@ -94,6 +96,15 @@ enum DagCommand {
 // ---------------------------------------------------------------------------
 
 fn main() {
+    // Initialise OTel telemetry (traces + structured logging).
+    let otlp_endpoint = std::env::var("OTLP_ENDPOINT")
+        .unwrap_or_else(|_| "http://localhost:4317".into());
+    let cfg = TelemetryConfig::builder()
+        .service_name("byteport-cli")
+        .otlp_endpoint(otlp_endpoint)
+        .build();
+    let _telemetry = init::init_telemetry(cfg);
+
     let cli = Cli::parse();
     dispatch(&cli.command);
 }

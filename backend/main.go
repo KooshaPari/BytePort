@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/byteport/api/internal/container"
+	"github.com/byteport/api/internal/infrastructure/otel"
 	"github.com/byteport/api/lib"
 	"github.com/byteport/api/models"
 	"github.com/gin-gonic/gin"
@@ -39,6 +40,9 @@ func main() {
 	}
 
 	models.ConnectDatabase()
+
+	shutdownOTel := otel.InitOpenTelemetry()
+	defer shutdownOTel()
 
 	if err := lib.InitAuthSystem(); err != nil {
 		log.Fatalf("failed to initialise auth system: %v", err)

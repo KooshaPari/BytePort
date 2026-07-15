@@ -14,7 +14,7 @@
 //! The remote endpoint is `https://api.github.com/repos/KooshaPari/BytePort/releases/latest`.
 
 use chrono::Utc;
-use update_checker::{Check, Update};
+use serde::Deserialize;
 
 use crate::config::Config;
 use crate::errors::{CliError, Result};
@@ -27,6 +27,12 @@ const ENV_NO_UPDATE_CHECK: &str = "BYTEPORT_NO_UPDATE_CHECK";
 
 /// `BYTEPORT_CI` env var — signal that we're running in CI.
 const ENV_CI_FLAG: &str = "BYTEPORT_CI";
+
+/// GitHub API response shape for the latest release.
+#[derive(Debug, Deserialize)]
+struct GithubRelease {
+    tag_name: String,
+}
 
 /// Check whether the user has opted out of the update check.
 ///
@@ -59,7 +65,7 @@ pub fn is_disabled() -> bool {
     false
 }
 
-/// Synchronous wrapper around `update_checker::Check`.
+/// Synchronous update check against the GitHub releases API.
 ///
 /// Returns the newer version string if one is available, `None` otherwise.
 /// Network failures and parse errors are swallowed (logged at debug) so
@@ -69,14 +75,34 @@ pub fn check_blocking() -> Option<String> {
         return None;
     }
     let current = env!("CARGO_PKG_VERSION");
-    let check = Check::builder()
-        .with_owner("KooshaPari")
-        .with_repository("BytePort")
-        .with_current_version(current)
-        .build()
-        .ok()?;
-    let update = check.check().ok()?;
-    update.is_newer().then(|| update.version.to_string())
+    let url = format!("https://api.github.com/repos/{REPO}/releases/latest");
+
+    let response: GithubRelease = match ureq::get(&url)
+        .set("Accept", "application/vnd.github+json")
+        .set("User-Agent", "byteport-cli")
+        .call()
+    {
+        Ok(r) => match r.into_body().read_json() {
+            Ok(release) => release,
+            Err(e) => {
+                tracing::debug!("update_check: parse error: {e}");
+                return None;
+            }
+        },
+        Err(e) => {
+            tracing::debug!("update_check: request error: {e}");
+            return None;
+        }
+    };
+
+    // Strip leading 'v' if present (GitHub tags often look like "v0.1.0").
+    let latest = response.tag_name.trim_start_matches('v');
+
+    if latest > current {
+        Some(latest.to_string())
+    } else {
+        None
+    }
 }
 
 /// Async version — runs the blocking check on a blocking thread.
@@ -111,7 +137,7 @@ pub fn run_with_cache(cfg: &mut Config) -> Result<Option<String>> {
 /// Convenience: convert the result into a printable one-line notice.
 pub fn format_notice(newer: &str) -> String {
     format!(
-        "📦 BytePort {newer} is available — run `byteport update` to learn more (or visit https://github.com/{REPO}/releases)."
+        "BytePort {newer} is available \u{2014} run `byteport update` to learn more (or visit https://github.com/{REPO}/releases)."
     )
 }
 
@@ -123,7 +149,7 @@ pub fn run_startup_check() -> Result<()> {
     let mut cfg = match Config::load() {
         Ok(c) => c,
         Err(e) => {
-            tracing::debug!("update_check: skipping — config load failed: {e}");
+            tracing::debug!("update_check: skipping \u{2014} config load failed: {e}");
             return Ok(());
         }
     };

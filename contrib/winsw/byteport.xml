@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+
+  BytePort Windows Service — WinSW Configuration
+  ===============================================
+  Install:  winsw install byteport.xml
+  Start:    winsw start byteport.xml
+  Stop:     winsw stop byteport.xml
+  Status:   winsw status byteport.xml
+  Uninstall: winsw uninstall byteport.xml
+
+  Requires:
+    - WinSW v3.x (https://github.com/winsw/winsw/releases)
+    - Go 1.22+ compiled binary (backend/cmd/api-server/main.go)
+    - Postgres connection string environment variable
+
+  Hardening:
+    - Runs as NetworkService (lowest built-in account for network services)
+    - Logs rotated at 10 MB (max 4 files)
+    - Failure actions: restart after 10s, restart after 30s, stop
+    - Priority set to IDLE_BELOW_NORMAL (balanced)
+    - Environment variables loaded from .env file
+-->
+<service>
+
+  <!-- Unique ID for the service -->
+  <id>BytePortAPI</id>
+
+  <!-- Display name shown in Windows Services console -->
+  <name>BytePort API Server</name>
+
+  <!-- Human-readable description -->
+  <description>
+    BytePort deployment and compute management API server.
+    Manages deployments, monitoring, telemetry, and agent operations.
+  </description>
+
+  <!-- Path to the compiled Go binary -->
+  <executable>C:\byteport\bin\api-server.exe</executable>
+
+  <!-- Working directory -->
+  <workingdirectory>C:\byteport</workingdirectory>
+
+  <!-- Startup arguments (port, log level, etc.) -->
+  <arguments>--port 8443 --log-level info</arguments>
+
+  <!-- Stop arguments (SIGINT-equivalent for Go) -->
+  <stoparguments>--shutdown</stoparguments>
+
+  <!-- Logging -->
+  <log mode="roll-by-size">
+    <sizeThreshold>10485760</sizeThreshold>     <!-- 10 MB -->
+    <keepFiles>4</keepFiles>
+  </log>
+
+  <!-- Environment variables -->
+  <env name="BYTEPORT_ENV" value="production"/>
+  <env name="BYTEPORT_LOG_FORMAT" value="json"/>
+  <env name="BYTEPORT_PORT" value="8443"/>
+  <env name="BYTEPORT_DB_MAX_CONNS" value="25"/>
+
+  <!-- Load additional environment from .env file -->
+  <env name="BYTEPORT_ENV_FILE" value="%BASE%\conf\.env"/>
+
+  <!-- Service account -->
+  <serviceaccount>
+    <user>NT AUTHORITY\NetworkService</user>
+  </serviceaccount>
+
+  <!-- Failure recovery -->
+  <onfailure action="restart" delay="10 sec"/>
+  <onfailure action="restart" delay="30 sec"/>
+  <onfailure action="none"/>
+
+  <!-- Reset failure counter after 1 day -->
+  <resetfailure>1 day</resetfailure>
+
+  <!-- Process priority (options: IDLE, BELOW_NORMAL, NORMAL, ABOVE_NORMAL, HIGH, REALTIME) -->
+  <priority>BELOW_NORMAL</priority>
+
+  <!-- Service trigger events (auto-start on boot) -->
+  <startmode>Automatic</startmode>
+
+  <!-- Delayed auto-start (30s after boot for dependent services) -->
+  <delayedAutoStart>true</delayedAutoStart>
+
+  <!-- Service dependencies (must start Postgres before BytePort) -->
+  <depend>postgresql-x64-16</depend>
+
+  <!-- Security: prevent service from interacting with desktop -->
+  <interactive>false</interactive>
+
+</service>

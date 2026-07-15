@@ -1,0 +1,99 @@
+# SBOM + Supply Chain Provenance
+# Generates a CycloneDX SBOM on every build and uploads it to the release
+# alongside SLSA provenance signed by cosign-keyless.
+name: SBOM & Supply Chain
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write       # required for cosign keyless signing
+  security-events: write
+
+jobs:
+  sbom-go:
+    name: SBOM (Go backend)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+        working-directory: backend
+      - uses: anchore/sbom-action@v0
+        with:
+          artifact-name: byteport-backend-sbom.cdx.json
+          format: cyclonedx-json
+          path: backend/go.mod
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sbom-backend
+          path: byteport-backend-sbom.cdx.json
+          retention-days: 30
+
+  sbom-rust:
+    name: SBOM (Rust workspace)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install cargo-cyclonedx
+        run: cargo install cargo-cyclonedx --locked
+      - name: Generate SBOM
+        run: |
+          cargo cyclonedx --format json --override-filename workspace-sbom.cdx.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sbom-rust
+          path: workspace-sbom.cdx.json
+          retention-days: 30
+
+  scorecard-sbom-attestation:
+    name: SLSA Provenance (keyless)
+    needs: [sbom-go, sbom-rust]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/checkout@v4
+      - uses: slsa-framework/slsa-github-action/.github/workflows/slsa-attest.yml@v1.9.0
+        with:
+          attest-targets: |
+            artifacts:
+              - name: byteport-backend-sbom.cdx.json
+                from: sbom-backend
+              - name: workspace-sbom.cdx.json
+                from: sbom-rust
+
+      - name: Cosign sign provenance
+        uses: sigstore/cosign-installer@v3
+        with:
+          cosign-release-version: "v2.2.4"
+
+      - name: Sign SBOMs (keyless)
+        env:
+          COSIGN_EXPERIMENTAL: "1"
+        run: |
+          echo "${{ steps.slsa-github-action.outputs.intoto_provenance }}" > provenance.intoto.jsonl
+          cosign sign-blob \
+            --output-signature provenance.intoto.jsonl.sig \
+            --output-certificate provenance.intoto.jsonl.pem \
+            provenance.intoto.jsonl \
+            --yes
+          cosign attest-blob \
+            --predicate provenance.intoto.jsonl \
+            --type slsaprovenance \
+            --output attestation.intoto.jsonl \
+            --yes
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: slsa-provenance
+          path: |
+            provenance.intoto.jsonl
+            provenance.intoto.jsonl.sig
+            provenance.intoto.jsonl.pem
+            attestation.intoto.jsonl

@@ -1,5 +1,13 @@
-# Phenotype-org standard clippy config
+# BytePort clippy configuration
 msrv = "1.75"
 avoid-breaking-exported-api = true
-disallowed-methods = []
+
+# Complexity thresholds
+cognitive-complexity-threshold = 15
+cyclomatic-complexity-threshold = 20
+too-many-arguments-threshold = 7
+too-many-lines-threshold = 400
+
+# Test discipline
+allow-unwrap-in-tests = false
 allow-dbg-in-tests = true

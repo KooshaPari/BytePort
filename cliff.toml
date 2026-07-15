@@ -1,6 +1,5 @@
 # Configuration for git-cliff: https://git-cliff.org/
 # Generates CHANGELOG from conventional commits
-# Phenotype-org standard
 
 [changelog]
 header = """
@@ -11,7 +10,7 @@ All notable changes to this project will be documented in this file.
 
 body = """
 {%- for group, commits in commits | group_by(attribute="group") %}
-## {{ group | replace(from="Features", to="✨ Features") | replace(from="Bug Fixes", to="🐛 Bug Fixes") | replace(from="Documentation", to="📚 Documentation") | replace(from="Performance", to="⚡ Performance") }}
+## {{ group | replace(from="Features", to="Features") | replace(from="Bug Fixes", to="Bug Fixes") | replace(from="Documentation", to="Documentation") | replace(from="Performance", to="Performance") }}
 
 {%- for commit in commits %}
 - {% if commit.breaking %}**BREAKING** {% endif %}{{ commit.message | upper_first }} ([`{{ commit.id | truncate(length=7, end="") }}`]({{ commit.link }}))

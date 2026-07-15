@@ -1,0 +1,65 @@
+name: Fuzz
+
+on:
+  schedule:
+    # Weekly fuzz run every Monday at 06:00 UTC
+    - cron: "0 6 * * 1"
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  fuzz_transport_upload:
+    name: Fuzz — byteport-transport (UploadRequest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Install nightly Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: nightly
+
+      - uses: Swatinem/rust-cache@82a92a6e8fbeee089604da2575dc567ae9ddeaab
+
+      - name: Install cargo-fuzz
+        run: cargo install cargo-fuzz
+
+      - name: Run fuzz_transport_upload (2 min)
+        run: cargo fuzz run --fuzz-dir fuzz fuzz_transport_upload -- -max_total_time=120
+
+      - name: Minimize corpus
+        if: always()
+        run: cargo fuzz cmin --fuzz-dir fuzz fuzz_transport_upload -- -max_total_time=30
+
+  fuzz_dag_parse:
+    name: Fuzz — byteport-dag (DagSchema YAML)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Install nightly Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: nightly
+
+      - uses: Swatinem/rust-cache@82a92a6e8fbeee089604da2575dc567ae9ddeaab
+
+      - name: Install cargo-fuzz
+        run: cargo install cargo-fuzz
+
+      - name: Run fuzz_dag_parse (2 min)
+        run: cargo fuzz run --fuzz-dir fuzz fuzz_dag_parse -- -max_total_time=120
+
+      - name: Minimize corpus
+        if: always()
+        run: cargo fuzz cmin --fuzz-dir fuzz fuzz_dag_parse -- -max_total_time=30

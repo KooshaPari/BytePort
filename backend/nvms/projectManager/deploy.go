@@ -70,6 +70,7 @@ func DeployProject(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fmt.Println("Error parsing NVMS: ", err)
 		http.Error(w, "Error parsing NVMS: "+err.Error(), http.StatusBadRequest)
+		return
 	}
 	project.NvmsConfig = *nvmsConfig
 	project.Readme = readMeString
@@ -174,6 +175,7 @@ func DeployProject(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fmt.Println("Error provisioning network", err)
 		http.Error(w, "Error provisioning network: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
 	var listenArn, targetGArn string
 	// Create listener only for the first main instance
@@ -185,6 +187,7 @@ func DeployProject(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			fmt.Println("Error Creating Listener  ", err)
 			http.Error(w, "Error Creating Listener  : "+err.Error(), http.StatusInternalServerError)
+			return
 		}
 		fmt.Println("SSSListener ARN: ", listenArn)
 
@@ -257,11 +260,13 @@ func DeployProject(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Project: ", project)
 	if err := project.BeforeSave(); err != nil {
 		http.Error(w, "Error saving project", http.StatusInternalServerError)
+		return
 	}
 	err = addToDemo(project)
 	if err != nil {
 		fmt.Println("error generating demo: ", err)
 		http.Error(w, "error generating demo"+err.Error(), http.StatusInternalServerError)
+		return
 	}
 	projectJSON, err := json.Marshal(project)
 	if err != nil {

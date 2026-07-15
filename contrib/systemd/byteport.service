@@ -1,0 +1,112 @@
+# BytePort Daemon systemd unit (Linux service registration)
+# Installation:
+#   sudo cp contrib/systemd/byteport.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now byteport
+#   journalctl -u byteport -f
+#
+# This unit runs the BytePort API daemon as a non-root user with strict
+# sandboxing: ProtectSystem, ProtectHome, NoNewPrivileges, and a private /tmp.
+
+[Unit]
+Description=BytePort API Daemon
+Documentation=https://github.com/kooshapari/BytePort
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=/usr/local/bin/byteport-api
+
+[Service]
+Type=notify
+ExecStart=/usr/local/bin/byteport-api
+ExecReload=/bin/kill -HUP $MAINPID
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=30
+Restart=on-failure
+RestartSec=5
+SuccessExitStatus=0 SIGTERM
+
+# ──────────────────────────────────────────────────────────────────────────────
+# User / Sandboxing
+# ──────────────────────────────────────────────────────────────────────────────
+User=byteport
+Group=byteport
+DynamicUser=no
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=no
+SystemCallArchitectures=native
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Filesystem & State
+# ──────────────────────────────────────────────────────────────────────────────
+StateDirectory=byteport
+StateDirectoryMode=0750
+LogsDirectory=byteport
+LogsDirectoryMode=0750
+ConfigurationDirectory=byteport
+ConfigurationDirectoryMode=0750
+RuntimeDirectory=byteport
+RuntimeDirectoryMode=0750
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Environment
+# ──────────────────────────────────────────────────────────────────────────────
+EnvironmentFile=-/etc/byteport/byteport.env
+Environment=ENV=production
+Environment=LOG_LEVEL=info
+Environment=PORT=8080
+Environment=OTEL_SERVICE_NAME=byteport-api
+
+# Load secrets from Vault (override in /etc/byteport/byteport.env if not using Vault)
+Environment=DATABASE_URL=
+Environment=REDIS_URL=
+Environment=VAULT_ADDR=
+Environment=VAULT_TOKEN=
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Resource Limits
+# ──────────────────────────────────────────────────────────────────────────────
+LimitNOFILE=65536
+LimitNPROC=4096
+LimitCORE=infinity
+CPUQuota=200%
+MemoryMax=2G
+MemoryHigh=1G
+TasksMax=2048
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Security Hardening
+# ──────────────────────────────────────────────────────────────────────────────
+# Network: allow outbound for OTLP, Vault, AWS/GCP; restrict inbound
+RestrictAddressFamilies=AF_INET AF_INET6 AF_NETLINK AF_UNIX
+IPAddressDeny=any
+IPAddressAllow=localhost
+IPAddressAllow=10.0.0.0/8
+IPAddressAllow=172.16.0.0/12
+IPAddressAllow=192.168.0.0/16
+
+# Capabilities: drop everything we don't need
+CapabilityBoundingSet=
+AmbientCapabilities=
+
+# Syscall filter — let systemd-generate the profile
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+SystemCallArchitectures=native
+
+# Hide process information
+ProcSubset=pid
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,30 @@
+{
+  "title": "BytePort SLA — Procurement & Network",
+  "uid": "byteport-sla",
+  "version": "1.0.0",
+  "editable": true,
+  "time": { "from": "now-6h", "to": "now" },
+  "refresh": "1m",
+  "tags": ["byteport", "sla"],
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Procurement Queue Depth (P95)",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "byteport_procurement_queue_depth", "refId": "A", "legendFormat": "{{provider}}" }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Network Egress Bytes/s",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "sum by (region) (rate(byteport_network_egress_bytes_total[5m]))", "refId": "A", "legendFormat": "{{region}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "Bps" } }
+    }
+  ]
+}

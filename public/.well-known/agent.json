@@ -1,0 +1,201 @@
+{
+  "$schema": "https://json.schemastore.org/well-known-agent.json",
+  "name": "BytePort",
+  "version": "2.0.0",
+  "description": "Zero-cost deployment platform for stateless apps and APIs. Agents can call BytePort to deploy, manage, and observe services on behalf of human users across multiple cloud providers.",
+  "owner": {
+    "name": "Koosha Pari",
+    "email": "koosha@kooshapari.com",
+    "url": "https://kooshapari.com"
+  },
+  "homepage": "https://byte.kooshapari.com",
+  "repository": "https://github.com/kooshapari/BytePort",
+  "license": {
+    "name": "MIT",
+    "url": "https://github.com/kooshapari/BytePort/blob/main/LICENSE"
+  },
+  "authentication": {
+    "schemes": [
+      {
+        "type": "WorkOS_AuthKit",
+        "description": "Primary authentication provider. User-facing OAuth/SSO flow for human users.",
+        "docs": "https://workos.com/docs/user-management",
+        "endpoints": {
+          "authorize": "https://api.workos.com/user_management/authorize",
+          "callback": "/api/v1/auth/workos/callback"
+        }
+      },
+      {
+        "type": "api_key",
+        "description": "Long-lived API keys for server-to-server calls (machine agents, CI/CD, dataplane UDS).",
+        "in": "header",
+        "name": "X-BytePort-Key",
+        "scopes": [
+          "deploy:read",
+          "deploy:write",
+          "deploy:terminate",
+          "project:read",
+          "project:write",
+          "logs:read",
+          "metrics:read"
+        ]
+      },
+      {
+        "type": "WorkOS_DeviceFlow",
+        "description": "RFC 8628 device authorization grant for headless environments where a human must consent on a separate device.",
+        "docs": "https://workos.com/docs/device-authorization",
+        "endpoints": {
+          "device_authorization": "https://api.workos.com/user_management/device/authorize"
+        }
+      }
+    ]
+  },
+  "capabilities": {
+    "discovery": {
+      "openapi": "/api/v1/openapi.json",
+      "docs_html": "/api/v1/docs",
+      "mcp": {
+        "transport": "stdio",
+        "command": "byteport-mcp",
+        "url": "/api/v1/mcp"
+      },
+      "a2a_agent_card": "/.well-known/agent.json"
+    },
+    "tools": [
+      {
+        "name": "byteport_health",
+        "description": "Liveness probe — returns 'ok' if the API is responsive.",
+        "input_schema": { "type": "object", "properties": {}, "required": [] }
+      },
+      {
+        "name": "byteport_deploy",
+        "description": "Deploy an application from a Git URL or local source. Returns a deployment ID for status polling.",
+        "input_schema": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string", "description": "Deployment name." },
+            "type": { "type": "string", "enum": ["frontend", "backend", "database", "static"] },
+            "git_url": { "type": "string" },
+            "provider": { "type": "string", "enum": ["fly", "render", "railway", "vercel", "netlify", "cloudflare"] },
+            "env_vars": { "type": "object", "additionalProperties": { "type": "string" } }
+          },
+          "required": ["name", "type"]
+        }
+      },
+      {
+        "name": "byteport_list_deployments",
+        "description": "List the deployments owned by the user's organization.",
+        "input_schema": {
+          "type": "object",
+          "properties": {
+            "limit": { "type": "integer", "default": 50, "maximum": 200 },
+            "offset": { "type": "integer", "default": 0 }
+          }
+        }
+      },
+      {
+        "name": "byteport_get_deployment",
+        "description": "Fetch a single deployment with current status, URLs, and cost.",
+        "input_schema": {
+          "type": "object",
+          "properties": { "deployment_id": { "type": "string" } },
+          "required": ["deployment_id"]
+        }
+      },
+      {
+        "name": "byteport_terminate_deployment",
+        "description": "Terminate a deployment and release its resources.",
+        "input_schema": {
+          "type": "object",
+          "properties": { "deployment_id": { "type": "string" } },
+          "required": ["deployment_id"]
+        }
+      },
+      {
+        "name": "byteport_deployment_status",
+        "description": "Get the live status (pending, building, running, degraded, terminated) for a deployment.",
+        "input_schema": {
+          "type": "object",
+          "properties": { "deployment_id": { "type": "string" } },
+          "required": ["deployment_id"]
+        }
+      },
+      {
+        "name": "byteport_deployment_logs",
+        "description": "Stream recent logs (last N lines) for a deployment.",
+        "input_schema": {
+          "type": "object",
+          "properties": {
+            "deployment_id": { "type": "string" },
+            "limit": { "type": "integer", "default": 200, "maximum": 5000 },
+            "tail": { "type": "boolean", "default": false }
+          },
+          "required": ["deployment_id"]
+        }
+      },
+      {
+        "name": "byteport_estimate_cost",
+        "description": "Estimate the monthly cost for a planned deployment on each available provider.",
+        "input_schema": {
+          "type": "object",
+          "properties": {
+            "type": { "type": "string", "enum": ["frontend", "backend", "database", "static"] },
+            "expected_rps": { "type": "integer", "default": 1 },
+            "expected_storage_gb": { "type": "integer", "default": 0 }
+          },
+          "required": ["type"]
+        }
+      },
+      {
+        "name": "byteport_detect_app",
+        "description": "Given a Git URL, detect the app type (frontend framework, backend language, database), and infer the most cost-efficient deployment target.",
+        "input_schema": {
+          "type": "object",
+          "properties": { "git_url": { "type": "string" } },
+          "required": ["git_url"]
+        }
+      }
+    ],
+    "resources": [
+      {
+        "uri": "byteport://deployment/{id}",
+        "name": "Deployment snapshot",
+        "description": "Current state, URLs, costs, logs."
+      },
+      {
+        "uri": "byteport://user/{id}/deployments",
+        "name": "User deployments list",
+        "description": "All deployments scoped to a user."
+      },
+      {
+        "uri": "byteport://org/{id}/metrics",
+        "name": "Org metrics aggregate",
+        "description": "Read-only rollup of deployment counts, costs, and uptime across an org."
+      }
+    ]
+  },
+  "rate_limits": {
+    "default": { "per_minute": 60, "per_hour": 1000 },
+    "deployments": { "per_minute": 10, "per_hour": 100 },
+    "headers": {
+      "limit": "X-RateLimit-Limit",
+      "remaining": "X-RateLimit-Remaining",
+      "reset": "X-RateLimit-Reset"
+    }
+  },
+  "sla": {
+    "uptime_target": "99.5%",
+    "incident_channel": "https://github.com/kooshapari/BytePort/issues",
+    "status_page": "https://github.com/kooshapari/BytePort"
+  },
+  "privacy": {
+    "data_residency": "Varies by provider; deployments inherit the chosen cloud's region.",
+    "telemetry_opt_out": true,
+    "logs_retention_days": 30
+  },
+  "spec_versions": {
+    "mcp": "2024-11-05",
+    "a2a": "0.3.0",
+    "openapi": "3.1.0"
+  }
+}

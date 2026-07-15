@@ -1,0 +1,11 @@
+apiVersion: 1
+
+providers:
+  - name: 'default'
+    orgId: 1
+    folder: 'BytePort'
+    type: file
+    disableDeletion: false
+    updateInterval: 30
+    options:
+      path: /etc/grafana/dashboards

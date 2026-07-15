@@ -40,6 +40,18 @@ func NewAPIServer(c *container.Container) *APIServer {
 		AllowCredentials: true,
 	}))
 
+	// Public unauthenticated group — surfaces machine-readable discovery
+	// documents for agents. No auth required (information disclosure only).
+	public := r.Group("/")
+	{
+		// RFC 8615 well-known: agent-card for A2A-compatible agents.
+		// Mirrors public/.well-known/agent.json, served dynamically.
+		public.GET("/.well-known/agent.json", handleAgentDiscovery)
+
+		// Root: lightweight pointer to the discovery doc.
+		public.GET("/", handleRoot)
+	}
+
 	// API routes
 	v1 := r.Group("/api/v1")
 	{
@@ -54,6 +66,11 @@ func NewAPIServer(c *container.Container) *APIServer {
 
 		// GitHub webhook — authenticated by HMAC-SHA256, not by user JWT.
 		c.WebhookHandler.RegisterRoutes(v1)
+
+		// Engine daemon endpoints (gated by BYTEPORT_ENGINE_SOCKET env).
+		if c.EngineDeployHandler != nil {
+			c.EngineDeployHandler.RegisterRoutes(v1)
+		}
 
 		protected := v1.Group("/")
 		protected.Use(lib.AuthMiddleware())
@@ -133,19 +150,152 @@ func parseAllowedOrigins() []string {
 	return origins
 }
 
-// API info handler
+// API info handler — surfaces the canonical API description at /api/v1/.
 func handleAPIInfo(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"name":        "BytePort API",
 		"version":     "2.0.0",
 		"description": "Zero-cost deployment platform API",
 		"endpoints": gin.H{
-			"health":      "/api/v1/health",
-			"deployments": "/api/v1/deployments",
-			"projects":    "/api/v1/projects",
-			"docs":        "/api/v1/docs",
+			"health":        "/api/v1/health",
+			"health_ready":  "/api/v1/health/readiness",
+			"deployments":   "/api/v1/deployments",
+			"projects":      "/api/v1/projects",
+			"docs":          "/api/v1/docs",
+			"agent_card":    "/.well-known/agent.json",
 		},
 	})
+}
+
+// handleRoot — lightweight landing pointer that nudges agents and
+// humans toward the discovery document. Returns a small JSON body.
+func handleRoot(c *gin.Context) {
+	c.JSON(200, gin.H{
+		"name":          "BytePort API",
+		"version":       "2.0.0",
+		"description":   "Zero-cost deployment platform",
+		"discovery":     "/.well-known/agent.json",
+		"mcp_endpoint":  "stdio (spawn `byteport-mcp-server`)",
+		"openapi":       "/api/v1/docs",
+		"health":        "/api/v1/health",
+		"health_ready":  "/api/v1/health/readiness",
+		"agent_capable": true,
+	})
+}
+
+// handleAgentDiscovery — serves the A2A-compatible agent card.
+// The source of truth is public/.well-known/agent.json; this handler
+// embeds the canonical document inline so live deployments do not need
+// a separate static file route.
+//
+// Why embed vs read-file: this guarantees the well-known URI is reachable
+// from any deployment (Vercel, Docker, k8s) without requiring the static
+// asset to be copied alongside binaries. Drift between the static file
+// and the live endpoint is mitigated by the agent-card_test.go which
+// loads the static file and asserts both payloads decode to equivalent
+// semantic content.
+func handleAgentDiscovery(c *gin.Context) {
+	c.Header("Cache-Control", "public, max-age=300")
+	c.Header("Content-Type", "application/agent-card+json")
+	c.JSON(200, agentCard)
+}
+
+// agentCard is the canonical A2A 0.3.0-compliant agent descriptor
+// served at /.well-known/agent.json. Keep in sync with
+// public/.well-known/agent.json.
+//
+// Capabilities listed here are reflected in:
+//   - docs/openapi.yml (REST API)
+//   - backend/mcp/tools.go (MCP tool manifest)
+//   - .github/workflows/bench.yml (perf benchmarks)
+//
+// ui:// capabilities require the omniroute SDK to surface the
+// dashboard. Updates here must be idempotent and additive.
+var agentCard = gin.H{
+	"schema_version": "0.3.0",
+	"id":             "byteport-api/2.0.0",
+	"name":           "BytePort",
+	"description":    "Zero-cost deployment platform — deploy static sites, APIs, and databases to free-tier infrastructure.",
+	"version":        "2.0.0",
+	"author":         "kooshapari",
+	"homepage":       "https://byte.kooshapari.com",
+	"repository":     "https://github.com/kooshapari/BytePort",
+	"license":        "MIT",
+	"capabilities":   gin.H{
+		"ui": []string{
+			"ui://dashboard",
+			"ui://deployment-status",
+			"ui://logs-stream",
+		},
+		"tools": []string{
+			// MUST stay in sync with public/.well-known/agent.json
+			// capabilities.tools[].name — verified by TestHandleAgentDiscovery_StaticSync.
+			"byteport_health",
+			"byteport_deploy",
+			"byteport_list_deployments",
+			"byteport_get_deployment",
+			"byteport_terminate_deployment",
+			"byteport_deployment_status",
+			"byteport_deployment_logs",
+			"byteport_estimate_cost",
+			"byteport_detect_app",
+		},
+		"protocols": []string{
+			"mcp/0.1",
+			"json-rpc/2.0",
+			"a2a/0.3.0",
+			"openai-functions/v1",
+		},
+		"transports": []string{
+			"stdio",
+			"http",
+			"sse",
+		},
+	},
+	"endpoints": gin.H{
+		"discovery":         "/.well-known/agent.json",
+		"rest_api":          "https://api.byte.kooshapari.com/api/v1",
+		"openapi_spec":      "https://api.byte.kooshapari.com/api/v1/docs",
+		"mcp":               "stdio://byteport-mcp-server",
+		"webhook_ingress":   "https://api.byte.kooshapari.com/api/v1/webhooks/github",
+		"health":            "https://api.byte.kooshapari.com/api/v1/health",
+		"readiness":         "https://api.byte.kooshapari.com/api/v1/health/readiness",
+	},
+	"auth": gin.H{
+		"schemes":     []string{"Bearer", "WorkOS-AuthKit"},
+		"session":     "Cookie-based session for browser clients",
+		"machine":     "Bearer JWT or session-bound token for agents",
+		"federated":   true,
+		"scim":        true,
+		"sso":         true,
+		"docs":        "https://docs.byte.kooshapari.com/auth",
+	},
+	"security": gin.H{
+		"container_signing": "cosign keyless (Sigstore Fulcio + Rekor)",
+		"sbom":              "cyclonedx-json, published per release",
+		"vuln_scan":         "trivy, blocking on Critical/High",
+		"signed_releases":   true,
+	},
+	"sla": gin.H{
+		"uptime_target":    "99.9%",
+		"p95_latency_ms":   500,
+		"incident_channel": "https://status.byte.kooshapari.com",
+	},
+	"rate_limits": gin.H{
+		"per_minute":   60,
+		"per_hour":     1000,
+		"per_day":      10000,
+		"burst_window": "10s",
+	},
+	"metadata": gin.H{
+		"audit_score":       72.3,
+		"audit_grade":       "C-",
+		"convergence_track": "sprint-1-target-70",
+		"tested_at":         "2026-07-08",
+		"openapi":           "3.1.0",
+		"go_version":        "1.24",
+		"fips_140":          "go-crypto",
+	},
 }
 
 // Liveness probe — always returns ok with no dependency checks.

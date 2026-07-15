@@ -1,0 +1,97 @@
+name: Mutation Testing
+
+on:
+  schedule:
+    # Weekly: Monday 03:00 UTC
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+    inputs:
+      timeout:
+        description: 'Per-test timeout in seconds'
+        required: false
+        default: '30'
+        type: string
+      packages:
+        description: 'Packages to mutate (space-separated)'
+        required: false
+        default: 'byteport-cli byteport-dag byteport-transport byteport-otel'
+        type: string
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  checks: write
+
+jobs:
+  mutants:
+    name: cargo mutants
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v6
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, llvm-tools-preview
+
+      - uses: Swatinem/rust-cache@82a92a6e8fbeee089604da2575dc567ae9ddeaab
+
+      - name: Install Linux GTK/WebKit build dependencies (Tauri v2)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libglib2.0-dev
+
+      - name: Install cargo-mutants
+        run: cargo install cargo-mutants
+
+      - name: Build workspace ahead of mutation run
+        run: cargo build --workspace --locked
+
+      - name: Run cargo mutants
+        run: |
+          PACKAGES="${{ github.event_name == 'schedule' && 'byteport-cli byteport-dag byteport-transport byteport-otel' || inputs.packages }}"
+          TIMEOUT="${{ github.event_name == 'schedule' && '30' || inputs.timeout }}"
+          # Convert space-separated package list into --package flags
+          PACKAGE_FLAGS=""
+          for pkg in $PACKAGES; do
+            PACKAGE_FLAGS="$PACKAGE_FLAGS --package $pkg"
+          done
+          cargo mutants $PACKAGE_FLAGS --in-place --timeout "$TIMEOUT"
+        shell: bash
+
+      - name: Display mutation score summary
+        if: always()
+        run: |
+          if [ -f mutants.out/mutations.json ]; then
+            TOTAL=$(jq '.stats.total' mutants.out/mutations.json)
+            CAUGHT=$(jq '.stats.caught' mutants.out/mutations.json)
+            MISSED=$(jq '.stats.missed' mutants.out/mutations.json)
+            SCORE=$(jq '.stats.score' mutants.out/mutations.json)
+            echo "## Mutation Score Summary" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+            echo "| **Total Mutants** | $TOTAL |" >> $GITHUB_STEP_SUMMARY
+            echo "| **Caught** | $CAUGHT |" >> $GITHUB_STEP_SUMMARY
+            echo "| **Missed** | $MISSED |" >> $GITHUB_STEP_SUMMARY
+            echo "| **Mutation Score** | $SCORE |" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Surviving Mutants (needs review)" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            jq -r '.files[] | select(.mutants[] | .outcome == "missed") | "\(.file): \( [.mutants[] | select(.outcome == "missed") | .description] | join("; ") )"' mutants.out/mutations.json >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          else
+            echo "No mutation results found."
+          fi
+        shell: bash
+
+      - name: Upload mutation results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f48907b2e4 # v6
+        with:
+          name: mutants-out
+          path: mutants.out/

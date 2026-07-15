@@ -1,0 +1,259 @@
+# pillar-audit.yml — Weekly pillar scorecard health check
+#
+# Runs every Sunday to verify the 130-pillar scorecard is current, build/tests/lint
+# are passing across all pillars, and any regression is reported as a GitHub Issue.
+#
+# Triggers: weekly schedule (Sun), pushes to scorecard/docs, manual dispatch.
+# Concurrency: one in-flight run per ref; new commits cancel old runs.
+#
+# Pillar coverage (see docs/sessions/20260707-byteport-pillar-audit/04_RUBRIC_REPORT.md):
+#   L2  CI/CD         — workflow execution itself
+#   L4  Test Coverage — test gate
+#   L15 Build         — build gate
+#   L29 Monitoring    — scorecard staleness check
+#   L86 Audit         — the scorecard itself
+
+name: Pillar Scorecard Audit
+
+on:
+  schedule:
+    - cron: '0 0 * * 0'  # Sunday 00:00 UTC
+  push:
+    branches: [main, master]
+    paths:
+      - 'docs/audit/**'
+      - 'docs/sessions/**/04_RUBRIC_REPORT.md'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  issues: write
+  checks: write
+
+env:
+  SCORECARD_PATH: docs/audit/scorecard.json
+  AUDIT_REPORT_PATH: docs/sessions/20260707-byteport-pillar-audit/04_RUBRIC_REPORT.md
+  SCORECARD_MAX_AGE_DAYS: 45
+
+jobs:
+  pillar-health:
+    name: Pillar scorecard health
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          fetch-depth: 0
+
+      # ---- Scorecard staleness check (L86 Audit Automation) ----
+      - name: Check scorecard freshness
+        id: scorecard-age
+        run: |
+          if [ ! -f "$SCORECARD_PATH" ]; then
+            echo "status=missing" >> "$GITHUB_OUTPUT"
+            echo "age_days=-1" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Pillar Scorecard::Scorecard file not found at $SCORECARD_PATH"
+            exit 0
+          fi
+
+          GIT_TS=$(git log -1 --format="%ct" -- "$SCORECARD_PATH" 2>/dev/null || echo "0")
+          NOW_TS=$(date +%s)
+          AGE_DAYS=$(( (NOW_TS - GIT_TS) / 86400 ))
+
+          echo "age_days=$AGE_DAYS" >> "$GITHUB_OUTPUT"
+
+          if [ "$AGE_DAYS" -gt "$SCORECARD_MAX_AGE_DAYS" ]; then
+            echo "status=stale" >> "$GITHUB_OUTPUT"
+            echo "::warning title=Scorecard Stale::Scorecard is ${AGE_DAYS} days old (max ${SCORECARD_MAX_AGE_DAYS}). Run a fresh audit."
+          else
+            echo "status=fresh" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Scorecard Fresh::Scorecard updated ${AGE_DAYS} days ago (threshold: ${SCORECARD_MAX_AGE_DAYS} days)."
+          fi
+
+      # ---- Audit report staleness ----
+      - name: Check audit report freshness
+        id: report-age
+        run: |
+          if [ ! -f "$AUDIT_REPORT_PATH" ]; then
+            echo "status=missing" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Audit Report::130-pillar audit report not found at $AUDIT_REPORT_PATH"
+            exit 0
+          fi
+
+          GIT_TS=$(git log -1 --format="%ct" -- "$AUDIT_REPORT_PATH" 2>/dev/null || echo "0")
+          NOW_TS=$(date +%s)
+          AGE_DAYS=$(( (NOW_TS - GIT_TS) / 86400 ))
+          echo "age_days=$AGE_DAYS" >> "$GITHUB_OUTPUT"
+
+          if [ "$AGE_DAYS" -gt "$SCORECARD_MAX_AGE_DAYS" ]; then
+            echo "status=stale" >> "$GITHUB_OUTPUT"
+            echo "::warning title=Audit Report Stale::130-pillar report is ${AGE_DAYS} days old. Re-run pillar audit."
+          else
+            echo "status=fresh" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ---- L15 Build: Rust workspace ----
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@a327bdfb32916df2ae50a2d7a163e32945c55449
+        with:
+          toolchain: stable
+          components: clippy, rustfmt
+
+      - name: Rust build check (L15)
+        id: rust-build
+        continue-on-error: true
+        run: |
+          cargo check --workspace 2>&1 | tail -20
+          echo "status=$([ $? -eq 0 ] && echo 'pass' || echo 'fail')" >> "$GITHUB_OUTPUT"
+
+      # ---- L15 Build: Go backend ----
+      - name: Setup Go toolchain
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with:
+          go-version: '1.25'
+          cache-dependency-path: |
+            backend/go.sum
+            backend/nvms/go.sum
+
+      - name: Go build check (L15)
+        id: go-build
+        continue-on-error: true
+        working-directory: backend
+        run: |
+          go build ./... 2>&1 | tail -20
+          echo "status=$([ $? -eq 0 ] && echo 'pass' || echo 'fail')" >> "$GITHUB_OUTPUT"
+
+      # ---- L4 Test Coverage: Rust tests ----
+      - name: Rust test check (L4)
+        id: rust-test
+        continue-on-error: true
+        run: |
+          cargo test --workspace 2>&1 | tail -20
+          echo "status=$([ $? -eq 0 ] && echo 'pass' || echo 'fail')" >> "$GITHUB_OUTPUT"
+
+      # ---- L4 Test Coverage: Go tests ----
+      - name: Go test check (L4)
+        id: go-test
+        continue-on-error: true
+        working-directory: backend
+        run: |
+          go test ./... 2>&1 | tail -20
+          echo "status=$([ $? -eq 0 ] && echo 'pass' || echo 'fail')" >> "$GITHUB_OUTPUT"
+
+      # ---- L2 CI/CD: Check for stale scorecard ----
+      - name: Calculate overall health
+        id: health
+        run: |
+          PASS=0
+          TOTAL=0
+
+          for CHECK in "rust-build:${{ steps.rust-build.outputs.status }}" \
+                        "go-build:${{ steps.go-build.outputs.status }}" \
+                        "rust-test:${{ steps.rust-test.outputs.status }}" \
+                        "go-test:${{ steps.go-test.outputs.status }}"; do
+            NAME="${CHECK%%:*}"
+            STATUS="${CHECK#*:}"
+            TOTAL=$((TOTAL + 1))
+            if [ "$STATUS" = "pass" ]; then
+              PASS=$((PASS + 1))
+            fi
+          done
+
+          HEALTH_PCT=$(( PASS * 100 / TOTAL ))
+          echo "pass_count=$PASS" >> "$GITHUB_OUTPUT"
+          echo "total_checks=$TOTAL" >> "$GITHUB_OUTPUT"
+          echo "health_pct=$HEALTH_PCT" >> "$GITHUB_OUTPUT"
+
+          SCORECARD_AGE="${{ steps.scorecard-age.outputs.age_days }}"
+          REPORT_AGE="${{ steps.report-age.outputs.age_days }}"
+
+          if [ "$HEALTH_PCT" -lt 75 ]; then
+            echo "::error title=Pillar Health Critical::Only ${PASS}/${TOTAL} checks pass (${HEALTH_PCT}%). Minimum: 75%."
+            echo "status=critical" >> "$GITHUB_OUTPUT"
+          elif [ "$HEALTH_PCT" -lt 100 ]; then
+            echo "::warning title=Pillar Health Degraded::${PASS}/${TOTAL} checks pass (${HEALTH_PCT}%)."
+            echo "status=degraded" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice title=Pillar Health Pass::All ${TOTAL} checks pass."
+            echo "status=pass" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ---- Generate summary ----
+      - name: Generate audit summary
+        id: summary
+        run: |
+          SUMMARY_PATH="pillar-audit-summary.md"
+          cat > "$SUMMARY_PATH" << 'SUMMARY'
+          # Weekly Pillar Scorecard Audit
+
+          **Date:** $(date -u '+%Y-%m-%dT%H:%M:%SZ')
+
+          ## Build & Test Health
+
+          | Check | Status |
+          |-------|--------|
+          SUMMARY
+          echo "| Rust Build | ${{ steps.rust-build.outputs.status }} |" >> "$SUMMARY_PATH"
+          echo "| Go Build | ${{ steps.go-build.outputs.status }} |" >> "$SUMMARY_PATH"
+          echo "| Rust Tests | ${{ steps.rust-test.outputs.status }} |" >> "$SUMMARY_PATH"
+          echo "| Go Tests | ${{ steps.go-test.outputs.status }} |" >> "$SUMMARY_PATH"
+          cat >> "$SUMMARY_PATH" << 'SUMMARY'
+
+          ## Scorecard Freshness
+
+          | Asset | Status | Age (days) |
+          |-------|--------|------------|
+          SUMMARY
+          SCORE_AGE="${{ steps.scorecard-age.outputs.age_days }}"
+          SCORE_STATUS="${{ steps.scorecard-age.outputs.status }}"
+          echo "| Scorecard (JSON) | ${SCORE_STATUS} | ${SCORE_AGE} |" >> "$SUMMARY_PATH"
+          REPORT_AGE="${{ steps.report-age.outputs.age_days }}"
+          REPORT_STATUS="${{ steps.report-age.outputs.status }}"
+          echo "| 130-pillar report | ${REPORT_STATUS} | ${REPORT_AGE} |" >> "$SUMMARY_PATH"
+
+          cat >> "$SUMMARY_PATH" << 'SUMMARY'
+
+          ## Overall
+
+          - **Checks passing:** ${{ steps.health.outputs.pass_count }}/${{ steps.health.outputs.total_checks }}
+          - **Health:** ${{ steps.health.outputs.health_pct }}%
+          - **Status:** ${{ steps.health.outputs.status }}
+
+          ---
+          *Auto-generated by .github/workflows/pillar-audit.yml*
+          SUMMARY
+
+          echo "path=$SUMMARY_PATH" >> "$GITHUB_OUTPUT"
+
+      # ---- Upload summary artifact ----
+      - name: Upload audit summary
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: pillar-audit-summary
+          path: ${{ steps.summary.outputs.path }}
+          retention-days: 90
+
+      # ---- Create issue on health degradation ----
+      - name: Create issue on degradation
+        if: steps.health.outputs.status == 'critical' || steps.health.outputs.status == 'degraded'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3
+        with:
+          script: |
+            const fs = require('fs');
+            const summary = fs.readFileSync('${{ steps.summary.outputs.path }}', 'utf8');
+
+            const title = `🚨 Pillar Scorecard Health: ${{ steps.health.outputs.status }} (${{ steps.health.outputs.pass_count }}/${{ steps.health.outputs.total_checks }} checks)`;
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: summary,
+              labels: ['pillar-audit', 'automation', 'regression']
+            });

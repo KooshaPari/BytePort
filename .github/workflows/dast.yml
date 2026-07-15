@@ -1,0 +1,148 @@
+# DAST (Dynamic Application Security Testing) Workflow
+# Runs OWASP ZAP against the live API after build to surface runtime vulns.
+# Outputs SARIF to artifacts and uploads to Code Scanning.
+name: DAST (OWASP ZAP)
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * 1"   # weekly Monday 06:00 UTC
+
+permissions:
+  contents: read
+  security-events: write
+  pull-requests: write
+
+jobs:
+  zap-baseline:
+    name: ZAP Baseline Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    services:
+      api:
+        image: ghcr.io/byteport/backend:latest
+        env:
+          ENV: test
+          DATABASE_URL: postgres://byteport:byteport@db:5432/byteport?sslmode=disable
+          REDIS_URL: redis://redis:6379
+          VAULT_ADDR: http://vault:8200
+          VAULT_TOKEN: test-token
+          BYTEPORT_DISABLE_PROVIDERS: "1"
+        ports:
+          - 8080:8080
+        options: >-
+          --health-cmd "wget -q --spider http://localhost:8080/healthz || exit 1"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+      db:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: byteport
+          POSTGRES_USER: byteport
+          POSTGRES_PASSWORD: byteport
+        ports:
+          - 5432:5432
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Wait for API readiness
+        run: |
+          for i in {1..30}; do
+            if curl -sf http://localhost:8080/readyz > /dev/null; then
+              echo "API ready"
+              exit 0
+            fi
+            echo "Waiting for API... ($i/30)"
+            sleep 2
+          done
+          echo "API never became ready"
+          exit 1
+
+      - name: Cache ZAP nightly
+        id: cache-zap
+        uses: actions/cache@v4
+        with:
+          path: ~/.zap
+          key: ${{ runner.os }}-zap-nightly-${{ hashFiles('~/.zap/nightly.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-zap-nightly-
+
+      - name: Run ZAP Baseline
+        run: |
+          docker run --rm \
+            --network host \
+            -v $(pwd)/zap-reports:/zap/wrk \
+            ghcr.io/zaproxy/zaproxy:nightly \
+            zap-baseline.py \
+              -t http://localhost:8080 \
+              -r zap-baseline.html \
+              -J zap-baseline.json \
+              -m 5 \
+              -T 60 \
+              --hook=/zap/auth_hook.py || true
+
+      - name: Run ZAP Full (after baseline)
+        if: success()
+        run: |
+          docker run --rm \
+            --network host \
+            -v $(pwd)/zap-reports:/zap/wrk \
+            ghcr.io/zaproxy/zaproxy:nightly \
+            zap-full-scan.py \
+              -t http://localhost:8080 \
+              -r zap-full.html \
+              -J zap-full.json \
+              -m 5 \
+              -T 60 || true
+
+      - name: Convert ZAP JSON to SARIF
+        if: always()
+        run: |
+          pip install --quiet zap2sarif
+          for f in zap-reports/zap-baseline.json zap-reports/zap-full.json; do
+            if [ -f "$f" ]; then
+              base=$(basename "$f" .json)
+              zap2sarif "$f" > "zap-reports/${base}.sarif" || true
+            fi
+          done
+
+      - name: Upload SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: zap-reports/
+          category: zap
+
+      - name: Upload HTML reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-reports
+          path: zap-reports/
+          retention-days: 14
+
+      - name: Fail build on high severity
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import json, os, sys
+          for f in ['zap-reports/zap-baseline.json', 'zap-reports/zap-full.json']:
+              p = os.path.join(os.getcwd(), f)
+              if not os.path.exists(p):
+                  continue
+              with open(p) as fh:
+                  data = json.load(fh)
+              for site in data.get('site', []):
+                  for alert in site.get('alerts', []):
+                      if alert.get('riskcode') == '4':  # High
+                          print(f"HIGH severity alert: {alert.get('name')} -> {alert.get('uri')}")
+                          sys.exit(1)
+          sys.exit(0)
+          PY

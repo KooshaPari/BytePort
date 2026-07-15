@@ -71,3 +71,46 @@ jobs:
         uses: release-drafter/release-drafter@693d20e7c1ce1a81d3a41962f85914253b518449 # v6
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Sign release artifacts with cosign (run only when COSIGN_PRIVATE_KEY is available)
+  sign-release:
+    if: startsWith(github.ref, 'refs/tags/v') && secrets.COSIGN_PRIVATE_KEY != ''
+    needs: tauri-build-and-release
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      attestations: write
+    steps:
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+        with:
+          cosign-release: 'v2.2.4'
+
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Generate SHA256 checksums
+        run: |
+          find artifacts -type f -exec sha256sum {} \; | sort > checksums.txt
+
+      - name: Sign checksums with cosign
+        run: |
+          cosign sign-blob \
+            --key env://COSIGN_PRIVATE_KEY \
+            --output-signature checksums.sig \
+            --output-certificate checksums.pem \
+            checksums.txt
+        env:
+          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+
+      - name: Upload checksums and signature as release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "${{ github.ref_name }}" \
+            checksums.txt \
+            checksums.sig \
+            checksums.pem \
+            --clobber

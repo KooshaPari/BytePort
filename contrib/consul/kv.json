@@ -1,0 +1,28 @@
+# BytePort Consul Key-Value Configuration
+# These keys configure the byteport service mesh integration.
+# Deploy via: consul kv import @contrib/consul/kv.json
+
+{
+  "byteport": {
+    "config": {
+      "mesh": {
+        "enabled": true,
+        "mtls": true,
+        "protocol": "http"
+      },
+      "rate_limiting": {
+        "max_requests_per_second": 500,
+        "burst_size": 100
+      },
+      "retry": {
+        "max_attempts": 3,
+        "backoff_base_ms": 100,
+        "backoff_max_ms": 5000
+      },
+      "health": {
+        "check_interval": "10s",
+        "deregister_after": "5m"
+      }
+    }
+  }
+}

@@ -1,0 +1,45 @@
+[workspace]
+
+[package]
+name = "byteport-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+
+[dependencies.byteport-transport]
+path = "../crates/byteport-transport"
+
+[dependencies.byteport-dag]
+path = "../crates/byteport-dag"
+
+[dependencies.serde]
+version = "1"
+features = ["derive"]
+
+[dependencies.serde_json]
+version = "1"
+
+[dependencies.serde_yaml]
+version = "0.9"
+
+# ── fuzz_transport_upload ───────────────────────────────────────────────
+[[bin]]
+name = "fuzz_transport_upload"
+path = "fuzz_targets/fuzz_transport_upload.rs"
+test = false
+doc = false
+bench = false
+
+# ── fuzz_dag_parse ──────────────────────────────────────────────────────
+[[bin]]
+name = "fuzz_dag_parse"
+path = "fuzz_targets/fuzz_dag_parse.rs"
+test = false
+doc = false
+bench = false

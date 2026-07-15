@@ -1,0 +1,27 @@
+# BytePort default environment configuration
+# This file is sourced by systemd to configure the byteport daemon.
+#
+# Copy this file to /etc/byteport/env and edit for your deployment.
+
+# Server
+BYTEPORT_API_PORT=8080
+BYTEPORT_MCP_PORT=8081
+
+# Database (PostgreSQL connection string)
+BYTEPORT_DATABASE_URL=postgres://byteport:changeme@localhost:5432/byteport?sslmode=disable
+
+# Observability
+BYTEPORT_OTEL_ENDPOINT=http://localhost:4318
+BYTEPORT_PROMETHEUS_ENABLED=true
+
+# Auth
+BYTEPORT_AUTH_TOKEN=
+BYTEPORT_JWT_SECRET=
+
+# Logging
+BYTEPORT_LOG_LEVEL=info
+BYTEPORT_LOG_FORMAT=json
+
+# Circuit breaker defaults
+BYTEPORT_CB_MAX_FAILURES=5
+BYTEPORT_CB_TIMEOUT=30s

@@ -85,9 +85,29 @@
       "version": 1
     },
     "updater": {
-      "active": false,
-      "endpoints": ["https://releases.byteport.dev/byteport/{{target}}/{{arch}}/{{current_version}}"],
-      "pubkey": "REPLACE_WITH_RELEASE_SIGNING_PUBKEY"
+      "active": true,
+      "endpoints": [
+        {
+          "url": "https://releases.byteport.dev/byteport/{{target}}/{{arch}}/{{current_version}}/manifest.json",
+          "format": "json",
+          "signature_url": "https://releases.byteport.dev/byteport/{{target}}/{{arch}}/{{current_version}}/manifest.json.sig"
+        }
+      ],
+      "pubkey": "REPLACE_WITH_RELEASE_SIGNING_PUBKEY",
+      "windows": {
+        "installMode": "passive"
+      },
+      "macOS": {
+        "minimumSystemVersion": "11.0"
+      },
+      "channel": "stable",
+      "autoInstall": false,
+      "checkOnStartup": true,
+      "dialog": true,
+      "prefetchUpdateInterval": 3600,
+      "rollbackStrategy": {
+        "maxRollbacks": 3
+      }
     }
   }
 }

@@ -32,6 +32,20 @@ tower-http = { version = "0.6", features = ["cors"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
+# WASM-specific: only compile when targeting wasm32-unknown-unknown.
+# This gate excludes reqwest (no net in browser by default), and pulls in
+# wasm-bindgen for browser<->host interop.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = { version = "0.2", features = ["std"] }
+serde-wasm-bindgen = "0.6"
+js-sys = "0.3"
+getrandom = { version = "0.2", features = ["js"] }
+
+# When *not* targeting WASM, exclude reqwest if "nvms" feature is off, and
+# provide the standard reqwest + axum surface.
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+axum = { version = "0.8", features = ["macros"] }
+
 [dev-dependencies]
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync", "time", "test-util"] }
 wiremock = "0.6"

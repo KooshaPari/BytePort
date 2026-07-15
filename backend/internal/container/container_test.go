@@ -57,6 +57,14 @@ func TestNewContainer(t *testing.T) {
 	if container.DeploymentHandler == nil {
 		t.Error("Expected DeploymentHandler to be initialized")
 	}
+
+	// Engine daemon client is nil when env is not set
+	if container.EngineDaemonClient != nil {
+		t.Error("Expected EngineDaemonClient to be nil without BYTEPORT_ENGINE_SOCKET")
+	}
+	if container.EngineDeployHandler != nil {
+		t.Error("Expected EngineDeployHandler to be nil without BYTEPORT_ENGINE_SOCKET")
+	}
 }
 
 // TestInitRepositories tests repository initialization
@@ -119,6 +127,31 @@ func TestInitUseCases(t *testing.T) {
 	}
 }
 
+// TestInitEngineClient verifies engine client is initialized only when
+// the env var is set.
+func TestInitEngineClient(t *testing.T) {
+	t.Run("not initialized when env unset", func(t *testing.T) {
+		t.Setenv("BYTEPORT_ENGINE_SOCKET", "")
+		c := &Container{}
+		c.initEngineClient()
+		if c.EngineDaemonClient != nil {
+			t.Error("Expected EngineDaemonClient to be nil without BYTEPORT_ENGINE_SOCKET")
+		}
+	})
+
+	t.Run("initialized when env set", func(t *testing.T) {
+		t.Setenv("BYTEPORT_ENGINE_SOCKET", "/tmp/test-engine.sock")
+		c := &Container{}
+		c.initEngineClient()
+		if c.EngineDaemonClient == nil {
+			t.Fatal("Expected EngineDaemonClient to be initialized with BYTEPORT_ENGINE_SOCKET")
+		}
+		if c.EngineDaemonClient.SocketPath() != "/tmp/test-engine.sock" {
+			t.Errorf("Expected socket path /tmp/test-engine.sock, got %s", c.EngineDaemonClient.SocketPath())
+		}
+	})
+}
+
 // TestInitHandlers tests handler initialization
 func TestInitHandlers(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
@@ -130,10 +163,16 @@ func TestInitHandlers(t *testing.T) {
 	container.initRepositories()
 	container.initDomainServices()
 	container.initUseCases()
+	container.initEngineClient()
 	container.initHandlers()
 
 	if container.DeploymentHandler == nil {
 		t.Error("Expected DeploymentHandler to be initialized")
+	}
+
+	// Without BYTEPORT_ENGINE_SOCKET, the engine handler stays nil.
+	if container.EngineDeployHandler != nil {
+		t.Error("Expected EngineDeployHandler to be nil without BYTEPORT_ENGINE_SOCKET")
 	}
 }
 
@@ -175,5 +214,13 @@ func TestContainerIntegration(t *testing.T) {
 				t.Errorf("%s is nil", tt.name)
 			}
 		})
+	}
+
+	// Engine daemon fields should be nil without BYTEPORT_ENGINE_SOCKET.
+	if container.EngineDaemonClient != nil {
+		t.Error("Expected EngineDaemonClient to be nil without BYTEPORT_ENGINE_SOCKET")
+	}
+	if container.EngineDeployHandler != nil {
+		t.Error("Expected EngineDeployHandler to be nil without BYTEPORT_ENGINE_SOCKET")
 	}
 }

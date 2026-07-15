@@ -1,0 +1,20 @@
+Package: byteport
+Version: VERSION
+Section: utils
+Priority: optional
+Architecture: amd64
+Depends: libc6 (>= 2.31), systemd (>= 245)
+Recommends: postgresql (>= 13)
+Maintainer: BytePort Team <dev@byteport.dev>
+Homepage: https://byteport.dev
+Description: BytePort Cloud Gateway Daemon
+ BytePort is a cloud gateway for ephemeral environments and deployment
+ automation. This package provides the byteport daemon, systemd service
+ unit, and CLI integration.
+ .
+ Features:
+  - Ephemeral environment provisioning
+  - Agent-to-agent (A2A) protocol support
+  - MCP (Model Context Protocol) server
+  - OpenTelemetry observability
+  - Circuit-breaker resilience

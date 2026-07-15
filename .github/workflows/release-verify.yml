@@ -1,0 +1,158 @@
+# =============================================================================
+# BytePort — Release verification workflow
+#
+# Runs on every v* tag. Verifies:
+#   1. The checksums.txt attached to the release is signed by the
+#      maintainer's cosign key (verify-blob against checksums.sig).
+#   2. The actual binary artifacts hash to the same values listed in
+#      checksums.txt (this is what consumers will validate against).
+#   3. The release's title and body match expected patterns.
+#
+# On failure: opens (or comments on) an issue; the release is still published
+# because the signing step (release.yml#sign-release) only runs when
+# COSIGN_PRIVATE_KEY is present. This job verifies that the signature is valid
+# independently.
+# =============================================================================
+
+name: Release verify
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: write
+
+concurrency:
+  group: release-verify-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify-checksums:
+    name: Verify release checksums signature
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3.5.1
+
+      - name: Download checksums + signature from release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG="${{ github.ref_name }}"
+          mkdir -p verify
+          gh release download "$TAG" \
+            --pattern 'checksums.txt' \
+            --pattern 'checksums.sig' \
+            --pattern 'checksums.pem' \
+            --dir verify/ \
+            --clobber
+
+      - name: Verify cosign signature on checksums
+        env:
+          COSIGN_PUBLIC_KEY: ${{ secrets.COSIGN_PUBLIC_KEY }}
+          COSIGN_EXPERIMENTAL: '1'
+        run: |
+          set -euo pipefail
+          if [[ -z "$COSIGN_PUBLIC_KEY" ]]; then
+            echo "::error::COSIGN_PUBLIC_KEY secret is not configured; refusing to verify."
+            exit 1
+          fi
+          echo "$COSIGN_PUBLIC_KEY" > /tmp/cosign.pub
+          cosign verify-blob \
+            --key /tmp/cosign.pub \
+            --signature verify/checksums.sig \
+            --certificate verify/checksums.pem \
+            verify/checksums.txt
+          echo "✓ checksums.txt signature is valid."
+
+  verify-artifacts:
+    name: Verify artifact hashes match checksums
+    needs: verify-checksums
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+
+      - name: Download all release artifacts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          gh release download "${{ github.ref_name }}" \
+            --dir artifacts/ \
+            --clobber
+
+      - name: Recompute checksums and diff against checksums.txt
+        working-directory: artifacts
+        run: |
+          set -euo pipefail
+          echo "Computing SHA256 of all artifact files..."
+          find . -type f ! -name 'checksums.txt' ! -name 'checksums.sig' ! -name 'checksums.pem' \
+            -exec sha256sum {} \; | sort > /tmp/computed.txt
+
+          cp checksums.txt /tmp/expected.txt
+
+          if diff -u /tmp/expected.txt /tmp/computed.txt; then
+            echo "✓ All artifact SHA256 checksums match the signed checksums.txt."
+          else
+            echo "::error::Artifact checksums do NOT match checksums.txt - release integrity compromised."
+            grep -E '^[+-]' /tmp/diff.txt || true
+            exit 1
+          fi
+
+      - name: Verify binary artifacts match architecture expectations
+        run: |
+          set -euo pipefail
+          echo "Listing downloaded artifacts:"
+          ls -lh artifacts/
+          # Sanity: each binary executable should be executable and respond to --version.
+          for binary in $(find artifacts -type f \( -name 'byteport' -o -name 'BytePort*' -o -name '*-linux*' -o -name '*-macos*' -o -name '*-windows*' \)); do
+            if [[ -x "$binary" ]]; then
+              echo "✓ Executable: $binary"
+            else
+              echo "::warning::$binary is not executable — verify expected for the platform."
+            fi
+          done
+
+  notice-on-failure:
+    name: Open issue on verification failure
+    needs:
+      - verify-checksums
+      - verify-artifacts
+    if: failure()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Open issue documenting the failed verification
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tag = context.ref.replace(/^refs\/tags\//, '');
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Release verification failed for ${tag}`,
+              body: [
+                `The release verification workflow for **${tag}** failed.`,
+                '',
+                'Possible causes:',
+                '- The checksums.txt signature does not validate against COSIGN_PUBLIC_KEY.',
+                '- A binary artifact was modified between signing and verification (compromised release).',
+                '',
+                'Investigate run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}',
+              ].join('\n'),
+              labels: ['release', 'security', 'verification'],
+            });

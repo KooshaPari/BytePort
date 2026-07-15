@@ -1,0 +1,335 @@
+# BytePort Skills Manifest
+# Authored by agents and humans alike: this manifest declares the canonical
+# skills the BytePort agent exposes to downstream MCP / A2A clients.
+# Format documented in byteport-audit.json (skill_manifest domain).
+#
+# Convention: every skill MUST declare a handler and (ideally) tests.
+# Skills are versioned via `byteport_agent_skills_version`.
+
+byteport_agent_skills_version: 1
+
+metadata:
+  name: byteport
+  description: |
+    Multi-cloud deployment skill set for BytePort: ship apps to AWS, GCP,
+    Azure, Fly, and local Docker from a single declarative interface.
+  owner: kooshapari
+  homepage: https://github.com/kooshapari/BytePort
+  license: Apache-2.0
+  docs: docs/skills/
+  tags:
+    - deployment
+    - devops
+    - multi-cloud
+    - cost-optimization
+    - log-streaming
+
+skills:
+
+  - id: byteport_deploy
+    name: Deploy Application
+    description: |
+      Provision a new deployment from a git repository. BytePort detects
+      the project type (Node, Go, Python, Rust, static, Docker) and chooses
+      an appropriate cloud provider automatically.
+    version: 1.4.0
+    inputs:
+      - name: name
+        type: string
+        required: true
+        description: Deployment name (DNS-safe)
+      - name: git_url
+        type: string
+        required: true
+        description: Git repo URL
+      - name: branch
+        type: string
+        default: main
+      - name: provider
+        type: string
+        enum: [aws, gcp, azure, fly, local]
+        description: Cloud provider (auto-detected if absent)
+      - name: env_vars
+        type: object
+        additionalProperties: { type: string }
+        description: Key-value environment variables
+    outputs:
+      - name: deployment_id
+        type: string
+      - name: status
+        type: string
+        enum: [pending, building, deploying, running, failed]
+    handler:
+      module: byteport.mcp.tools
+      function: deploy
+    tests:
+      - tests/mcp/test_deploy.py::test_deploy_basic
+      - tests/mcp/test_deploy.py::test_deploy_with_env
+      - tests/e2e/deploy_full_flow_test.go
+
+  - id: byteport_list_deployments
+    name: List Deployments
+    description: Enumerate current deployments, optionally filtered by status or project.
+    version: 1.0.0
+    inputs:
+      - name: project_id
+        type: string
+        description: Optional project filter
+      - name: status
+        type: string
+        enum: [pending, running, failed, terminated, all]
+        default: all
+      - name: limit
+        type: integer
+        default: 50
+        maximum: 200
+    outputs:
+      - name: deployments
+        type: array
+        items: { $ref: '#/definitions/Deployment' }
+    handler:
+      module: byteport.mcp.tools
+      function: list_deployments
+    tests:
+      - tests/mcp/test_list.py::test_list_all
+      - tests/mcp/test_list.py::test_list_filtered
+
+  - id: byteport_get_deployment
+    name: Get Deployment
+    description: Fetch a single deployment with its full state, metadata, and recent logs.
+    version: 1.1.0
+    inputs:
+      - name: deployment_id
+        type: string
+        required: true
+    outputs:
+      - name: deployment
+        $ref: '#/definitions/Deployment'
+    handler:
+      module: byteport.mcp.tools
+      function: get_deployment
+    tests:
+      - tests/mcp/test_get.py::test_get_existing
+      - tests/mcp/test_get.py::test_get_404
+
+  - id: byteport_terminate_deployment
+    name: Terminate Deployment
+    description: Stop and remove a deployment, freeing all cloud resources.
+    version: 1.0.0
+    inputs:
+      - name: deployment_id
+        type: string
+        required: true
+      - name: force
+        type: boolean
+        default: false
+    outputs:
+      - name: status
+        type: string
+        enum: [terminating, terminated]
+    handler:
+      module: byteport.mcp.tools
+      function: terminate_deployment
+    tests:
+      - tests/mcp/test_terminate.py::test_terminate_graceful
+
+  - id: byteport_deployment_status
+    name: Deployment Status Stream
+    description: Stream real-time status updates via Server-Sent Events for an in-progress deployment.
+    version: 0.9.0
+    inputs:
+      - name: deployment_id
+        type: string
+        required: true
+      - name: follow
+        type: boolean
+        default: true
+    outputs:
+      - name: events
+        type: array
+        items: { $ref: '#/definitions/StatusEvent' }
+    handler:
+      module: byteport.mcp.tools
+      function: deployment_status
+    tests:
+      - tests/mcp/test_status.py::test_status_running
+
+  - id: byteport_deployment_logs
+    name: Deployment Logs
+    description: Tail or retrieve historical logs from a deployment.
+    version: 1.0.0
+    inputs:
+      - name: deployment_id
+        type: string
+        required: true
+      - name: tail
+        type: integer
+        description: "Number of recent log lines to fetch (-1 for all)"
+        default: 100
+      - name: follow
+        type: boolean
+        default: false
+    outputs:
+      - name: lines
+        type: array
+        items: { type: string }
+    handler:
+      module: byteport.mcp.tools
+      function: deployment_logs
+    tests:
+      - tests/mcp/test_logs.py::test_logs_recent
+
+  - id: byteport_estimate_cost
+    name: Estimate Cost
+    description: Project monthly cost for a planned deployment based on provider pricing.
+    version: 1.2.0
+    inputs:
+      - name: provider
+        type: string
+        required: true
+        enum: [aws, gcp, azure, fly, local]
+      - name: cpu
+        type: integer
+        default: 1
+      - name: memory_mb
+        type: integer
+        default: 512
+      - name: egress_gb
+        type: number
+        default: 0
+      - name: storage_gb
+        type: integer
+        default: 10
+    outputs:
+      - name: monthly_usd
+        type: number
+      - name: breakdown
+        type: object
+        properties:
+          compute: { type: number }
+          network: { type: number }
+          storage: { type: number }
+    handler:
+      module: byteport.mcp.tools
+      function: estimate_cost
+    tests:
+      - tests/mcp/test_cost.py::test_estimate_aws
+      - tests/mcp/test_cost.py::test_estimate_local
+
+  - id: byteport_detect_app
+    name: Detect Application Type
+    description: Inspect a local directory or git URL to detect the project type and suggest a deployment config.
+    version: 1.3.0
+    inputs:
+      - name: path
+        type: string
+        description: Local filesystem path
+      - name: git_url
+        type: string
+        description: Git repository URL
+    outputs:
+      - name: detected_type
+        type: string
+        enum: [node, python, go, rust, static, docker, unknown]
+      - name: suggested_config
+        type: object
+      - name: build_command
+        type: string
+      - name: start_command
+        type: string
+    handler:
+      module: byteport.mcp.tools
+      function: detect_app
+    tests:
+      - tests/mcp/test_detect.py::test_detect_node
+      - tests/mcp/test_detect.py::test_detect_go
+      - tests/mcp/test_detect.py::test_detect_python
+
+  - id: byteport_health
+    name: API Health Check
+    description: Liveness probe — returns 200 if the API is responding.
+    version: 1.0.0
+    inputs: []
+    outputs:
+      - name: status
+        type: string
+        enum: [ok, degraded]
+      - name: version
+        type: string
+      - name: uptime_seconds
+        type: number
+    handler:
+      module: byteport.mcp.tools
+      function: health
+    tests:
+      - tests/mcp/test_health.py::test_health_ok
+
+  - id: byteport_ready
+    name: API Readiness Check
+    description: Readiness probe — returns 200 only when the API is fully ready (DB, cache, providers).
+    version: 1.0.0
+    inputs: []
+    outputs:
+      - name: status
+        type: string
+        enum: [ready, not_ready]
+      - name: checks
+        type: object
+        properties:
+          database: { type: boolean }
+          cache: { type: boolean }
+          vault: { type: boolean }
+          otel: { type: boolean }
+    handler:
+      module: byteport.mcp.tools
+      function: ready
+    tests:
+      - tests/mcp/test_ready.py::test_ready_all_green
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Definitions (shared across skills)
+# ──────────────────────────────────────────────────────────────────────────────
+definitions:
+  Deployment:
+    type: object
+    properties:
+      id: { type: string }
+      name: { type: string }
+      status:
+        type: string
+        enum: [pending, building, deploying, running, failed, terminated]
+      provider: { type: string }
+      url: { type: string }
+      created_at: { type: string, format: date-time }
+      updated_at: { type: string, format: date-time }
+      git_url: { type: string }
+      branch: { type: string }
+      env_vars:
+        type: object
+        additionalProperties: { type: string }
+      metadata:
+        type: object
+
+  StatusEvent:
+    type: object
+    properties:
+      ts: { type: string, format: date-time }
+      level:
+        type: string
+        enum: [debug, info, warn, error]
+      message: { type: string }
+      source: { type: string }
+
+# ──────────────────────────────────────────────────────────────────────────────
+# A2A Protocol Compatibility
+# ──────────────────────────────────────────────────────────────────────────────
+a2a_protocol:
+  version: 0.3.0
+  role: agent
+  identity:
+    card_url: /.well-known/agent.json
+    auth:
+      schemes: [bearer, oauth2]
+      required_for_skills:
+        - byteport_deploy
+        - byteport_terminate_deployment

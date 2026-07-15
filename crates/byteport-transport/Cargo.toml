@@ -11,6 +11,8 @@ thiserror = "2.0"
 [features]
 default = []
 otel = []
+native-tls = []
+rustls-tls = []
 
 [dependencies.serde]
 version = "1.0"

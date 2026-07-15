@@ -1,0 +1,210 @@
+# BytePort Prometheus Metrics Endpoint
+# Format reference: https://prometheus.io/docs/instrumenting/exposition_formats/
+# This file is served from the Go API at GET /metrics
+
+# ──────────────────────────────────────────────────────────────────────────────
+# HELP byteport_up Service up status (1=up, 0=down)
+# TYPE byteport_up gauge
+byteport_up 1
+
+# ──────────────────────────────────────────────────────────────────────────────
+# HELP byteport_build_info Build information
+# TYPE byteport_build_info gauge
+byteport_build_info{version="0.0.0",commit="dev",go_version="go1.25.0"} 1
+
+# ──────────────────────────────────────────────────────────────────────────────
+# HTTP Metrics
+# ──────────────────────────────────────────────────────────────────────────────
+# HELP byteport_http_requests_total Total HTTP requests
+# TYPE byteport_http_requests_total counter
+byteport_http_requests_total{method="GET",route="/healthz",status="200"} 0
+byteport_http_requests_total{method="GET",route="/readyz",status="200"} 0
+byteport_http_requests_total{method="GET",route="/api/v1/deployments",status="200"} 0
+byteport_http_requests_total{method="POST",route="/api/v1/deployments",status="201"} 0
+byteport_http_requests_total{method="GET",route="/api/v1/deployments/:id",status="200"} 0
+byteport_http_requests_total{method="GET",route="/api/v1/deployments/:id/logs",status="200"} 0
+byteport_http_requests_total{method="DELETE",route="/api/v1/deployments/:id",status="204"} 0
+byteport_http_requests_total{method="POST",route="/api/v1/deployments/:id/cancel",status="200"} 0
+byteport_http_requests_total{method="GET",route="/api/v1/costs/estimate",status="200"} 0
+byteport_http_requests_total{method="POST",route="/api/v1/detect",status="200"} 0
+byteport_http_requests_total{method="GET",route="/api/v1/projects",status="200"} 0
+byteport_http_requests_total{method="POST",route="/api/v1/projects",status="201"} 0
+byteport_http_requests_total{method="GET",route="/.well-known/agent.json",status="200"} 0
+
+# HELP byteport_http_request_duration_seconds HTTP request duration
+# TYPE byteport_http_request_duration_seconds histogram
+byteport_http_request_duration_seconds_bucket{le="0.005"} 0
+byteport_http_request_duration_seconds_bucket{le="0.01"} 0
+byteport_http_request_duration_seconds_bucket{le="0.025"} 0
+byteport_http_request_duration_seconds_bucket{le="0.05"} 0
+byteport_http_request_duration_seconds_bucket{le="0.1"} 0
+byteport_http_request_duration_seconds_bucket{le="0.25"} 0
+byteport_http_request_duration_seconds_bucket{le="0.5"} 0
+byteport_http_request_duration_seconds_bucket{le="1"} 0
+byteport_http_request_duration_seconds_bucket{le="2.5"} 0
+byteport_http_request_duration_seconds_bucket{le="5"} 0
+byteport_http_request_duration_seconds_bucket{le="10"} 0
+byteport_http_request_duration_seconds_bucket{le="+Inf"} 0
+byteport_http_request_duration_seconds_sum 0
+byteport_http_request_duration_seconds_count 0
+
+# HELP byteport_http_requests_in_flight In-flight HTTP requests
+# TYPE byteport_http_requests_in_flight gauge
+byteport_http_requests_in_flight 0
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Business Domain Metrics
+# ──────────────────────────────────────────────────────────────────────────────
+# HELP byteport_deployments_total Total deployments created (cumulative)
+# TYPE byteport_deployments_total counter
+byteport_deployments_total{status="pending"} 0
+byteport_deployments_total{status="running"} 0
+byteport_deployments_total{status="failed"} 0
+byteport_deployments_total{status="terminated"} 0
+
+# HELP byteport_deployments_active Currently active deployments
+# TYPE byteport_deployments_active gauge
+byteport_deployments_active 0
+
+# HELP byteport_deployments_by_provider Active deployments by provider
+# TYPE byteport_deployments_by_provider gauge
+byteport_deployments_by_provider{provider="aws"} 0
+byteport_deployments_by_provider{provider="gcp"} 0
+byteport_deployments_by_provider{provider="azure"} 0
+byteport_deployments_by_provider{provider="fly"} 0
+byteport_deployments_by_provider{provider="local"} 0
+
+# HELP byteport_deployment_duration_seconds Deployment lifecycle duration
+# TYPE byteport_deployment_duration_seconds histogram
+byteport_deployment_duration_seconds_bucket{le="1"} 0
+byteport_deployment_duration_seconds_bucket{le="5"} 0
+byteport_deployment_duration_seconds_bucket{le="30"} 0
+byteport_deployment_duration_seconds_bucket{le="60"} 0
+byteport_deployment_duration_seconds_bucket{le="300"} 0
+byteport_deployment_duration_seconds_bucket{le="600"} 0
+byteport_deployment_duration_seconds_bucket{le="1800"} 0
+byteport_deployment_duration_seconds_bucket{le="3600"} 0
+byteport_deployment_duration_seconds_bucket{le="+Inf"} 0
+byteport_deployment_duration_seconds_sum 0
+byteport_deployment_duration_seconds_count 0
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Cost Metrics
+# ──────────────────────────────────────────────────────────────────────────────
+# HELP byteport_cost_estimated_monthly_usd Estimated monthly cost by provider
+# TYPE byteport_cost_estimated_monthly_usd gauge
+byteport_cost_estimated_monthly_usd{provider="aws"} 0
+byteport_cost_estimated_monthly_usd{provider="gcp"} 0
+byteport_cost_estimated_monthly_usd{provider="azure"} 0
+byteport_cost_estimated_monthly_usd{provider="fly"} 0
+byteport_cost_estimated_monthly_usd{provider="local"} 0
+
+# HELP byteport_cost_estimates_total Total cost estimate requests
+# TYPE byteport_cost_estimates_total counter
+byteport_cost_estimates_total 0
+
+# ──────────────────────────────────────────────────────────────────────────────
+# MCP / Agent Metrics
+# ──────────────────────────────────────────────────────────────────────────────
+# HELP byteport_mcp_tool_calls_total MCP tool invocations
+# TYPE byteport_mcp_tool_calls_total counter
+byteport_mcp_tool_calls_total{tool="byteport_health"} 0
+byteport_mcp_tool_calls_total{tool="byteport_ready"} 0
+byteport_mcp_tool_calls_total{tool="byteport_deploy"} 0
+byteport_mcp_tool_calls_total{tool="byteport_list_deployments"} 0
+byteport_mcp_tool_calls_total{tool="byteport_get_deployment"} 0
+byteport_mcp_tool_calls_total{tool="byteport_terminate_deployment"} 0
+byteport_mcp_tool_calls_total{tool="byteport_deployment_status"} 0
+byteport_mcp_tool_calls_total{tool="byteport_deployment_logs"} 0
+byteport_mcp_tool_calls_total{tool="byteport_estimate_cost"} 0
+byteport_mcp_tool_calls_total{tool="byteport_detect_app"} 0
+
+# HELP byteport_mcp_tool_errors_total MCP tool errors
+# TYPE byteport_mcp_tool_errors_total counter
+byteport_mcp_tool_errors_total{tool="byteport_health"} 0
+byteport_mcp_tool_errors_total{tool="byteport_ready"} 0
+byteport_mcp_tool_errors_total{tool="byteport_deploy"} 0
+byteport_mcp_tool_errors_total{tool="byteport_list_deployments"} 0
+byteport_mcp_tool_errors_total{tool="byteport_get_deployment"} 0
+byteport_mcp_tool_errors_total{tool="byteport_terminate_deployment"} 0
+byteport_mcp_tool_errors_total{tool="byteport_deployment_status"} 0
+byteport_mcp_tool_errors_total{tool="byteport_deployment_logs"} 0
+byteport_mcp_tool_errors_total{tool="byteport_estimate_cost"} 0
+byteport_mcp_tool_errors_total{tool="byteport_detect_app"} 0
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Database / Cache Metrics
+# ──────────────────────────────────────────────────────────────────────────────
+# HELP byteport_db_queries_total Database queries
+# TYPE byteport_db_queries_total counter
+byteport_db_queries_total{operation="insert",table="deployments"} 0
+byteport_db_queries_total{operation="select",table="deployments"} 0
+byteport_db_queries_total{operation="update",table="deployments"} 0
+byteport_db_queries_total{operation="delete",table="deployments"} 0
+
+# HELP byteport_db_query_duration_seconds Database query latency
+# TYPE byteport_db_query_duration_seconds histogram
+byteport_db_query_duration_seconds_bucket{le="0.001"} 0
+byteport_db_query_duration_seconds_bucket{le="0.005"} 0
+byteport_db_query_duration_seconds_bucket{le="0.01"} 0
+byteport_db_query_duration_seconds_bucket{le="0.05"} 0
+byteport_db_query_duration_seconds_bucket{le="0.1"} 0
+byteport_db_query_duration_seconds_bucket{le="0.5"} 0
+byteport_db_query_duration_seconds_bucket{le="1"} 0
+byteport_db_query_duration_seconds_bucket{le="+Inf"} 0
+byteport_db_query_duration_seconds_sum 0
+byteport_db_query_duration_seconds_count 0
+
+# HELP byteport_redis_operations_total Redis operations
+# TYPE byteport_redis_operations_total counter
+byteport_redis_operations_total{operation="get"} 0
+byteport_redis_operations_total{operation="set"} 0
+byteport_redis_operations_total{operation="del"} 0
+byteport_redis_operations_total{operation="ping"} 0
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Runtime Metrics (Go)
+# ──────────────────────────────────────────────────────────────────────────────
+# HELP go_goroutines Number of goroutines that currently exist
+# TYPE go_goroutines gauge
+go_goroutines 0
+
+# HELP go_memstats_alloc_bytes Number of bytes allocated and still in use
+# TYPE go_memstats_alloc_bytes gauge
+go_memstats_alloc_bytes 0
+
+# HELP go_memstats_alloc_bytes_total Total number of bytes allocated
+# TYPE go_memstats_alloc_bytes_total counter
+go_memstats_alloc_bytes_total 0
+
+# HELP go_memstats_heap_objects Number of allocated objects
+# TYPE go_memstats_heap_objects gauge
+go_memstats_heap_objects 0
+
+# HELP go_memstats_heap_alloc_bytes Bytes of allocated heap objects
+# TYPE go_memstats_heap_alloc_bytes gauge
+go_memstats_heap_alloc_bytes 0
+
+# HELP go_memstats_heap_idle_bytes Bytes in idle spans
+# TYPE go_memstats_heap_idle_bytes gauge
+go_memstats_heap_idle_bytes 0
+
+# HELP go_memstats_heap_inuse_bytes Bytes in in-use spans
+# TYPE go_memstats_heap_inuse_bytes gauge
+go_memstats_heap_inuse_bytes 0
+
+# HELP go_gc_duration_seconds Garbage collection duration
+# TYPE go_gc_duration_seconds summary
+go_gc_duration_seconds 0
+
+# HELP process_cpu_seconds_total Total user and system CPU time spent
+# TYPE process_cpu_seconds_total counter
+process_cpu_seconds_total 0
+
+# HELP process_open_fds Number of open file descriptors
+# TYPE process_open_fds gauge
+process_open_fds 0
+
+# HELP process_max_fds Maximum number of open file descriptors
+# TYPE process_max_fds gauge
+process_max_fds 0

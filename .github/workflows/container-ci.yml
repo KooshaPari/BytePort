@@ -1,0 +1,256 @@
+# =============================================================================
+# BytePort — Container CI: build, sign, push to GHCR, SBOM
+#
+# Triggers:
+#   - push to main/master  (build, sign, push :edge)
+#   - push of v* tag      (build, sign, push :semver, :latest)
+#   - pull_request         (build + sign only; no push)
+#   - workflow_dispatch    (manual :edge build)
+#
+# Images produced:
+#   ghcr.io/kooshapari/byteport/backend:<tag>
+#   ghcr.io/kooshapari/byteport/mcp-server:<tag>
+#   ghcr.io/kooshapari/byteport/cli:<tag>
+#
+# Every image carries:
+#   - OCI labels (source, license, revision, build timestamp)
+#   - SBOM (SPDX, attached)
+#   - Cosign signature (keyless via OIDC, attestation)
+#   - SLSA provenance (attestation)
+# =============================================================================
+
+name: Container CI
+
+on:
+  push:
+    branches: [main, master]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: container-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write        # required for keyless cosign signing (Sigstore OIDC)
+  attestations: write    # required for SLSA / SBOM attestations
+
+env:
+  REGISTRY: ghcr.io
+  OWNER: kooshapari
+  # Single source of truth so backend / mcp-server / cli use the same tag.
+  IMAGE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || github.sha }}
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Pre-flight: lint Dockerfile, sanity-check buildkit syntax.
+  # ---------------------------------------------------------------------------
+  docker-lint:
+    name: Dockerfile lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+
+      - name: Hadolint
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Dockerfile
+          failure-threshold: warning
+          output-format: tty
+        continue-on-error: true
+
+  # ---------------------------------------------------------------------------
+  # Build matrix — one job per image, three images, cached layers.
+  # Each builder pushes to GHCR (or skips push on PRs).
+  # ---------------------------------------------------------------------------
+  build:
+    name: Build · ${{ matrix.image.name }}
+    needs: docker-lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image:
+              name: backend
+              dockerfile: backend/Dockerfile
+              target: backend
+              context: .
+              expose: '8080'
+          - image:
+              name: mcp-server
+              dockerfile: backend/Dockerfile
+              target: mcp-server
+              context: .
+              expose: ''
+          - image:
+              name: cli
+              dockerfile: Dockerfile
+              target: cli
+              context: .
+              expose: ''
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@b4ca6730ec07a16e381e628465df0a7932b71410 # v3.10.0
+
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@5b8e962fb5732d1f722bb0371da14e7387dce65c # v3.4.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels)
+        id: meta
+        uses: docker/metadata-action@95e379bf90543d9f54cfff0d51117dc6e64a0b1e # v5.7.0
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.OWNER }}/byteport/${{ matrix.image.name }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+            type=raw,value=${{ env.IMAGE_TAG }},enable=${{ github.event_name == 'push' }}
+
+      - name: Build & push (${{ matrix.image.name }})
+        id: build
+        uses: docker/build-push-action@5cd11c3a4ced054e52742c181e7a74860f5f8ef8 # v6.12.0
+        with:
+          context: ${{ matrix.image.context }}
+          file: ${{ matrix.image.dockerfile }}
+          target: ${{ matrix.image.target }}
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          provenance: mode=max
+          sbom: true
+          cache-from: type=gha,scope=${{ matrix.image.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image.name }}
+
+      - name: Export digest
+        if: github.event_name != 'pull_request'
+        id: digest
+        run: |
+          echo "digest=${{ steps.build.outputs.digest }}" >> "$GITHUB_OUTPUT"
+
+  # ---------------------------------------------------------------------------
+  # Cosign signing — keyless via OIDC against the pushed images.
+  # Runs only when images are actually pushed (so PRs which skip push are skipped).
+  # ---------------------------------------------------------------------------
+  cosign-sign:
+    name: Cosign sign · ${{ matrix.image.name }}
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image:
+              name: backend
+          - image:
+              name: mcp-server
+          - image:
+              name: cli
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3.5.1
+
+      - name: Download cosign public key (if provided)
+        id: cosign-key
+        if: env.COSIGN_PUBLIC_KEY != ''
+        continue-on-error: true
+        run: |
+          echo "${{ secrets.COSIGN_PUBLIC_KEY }}" > /tmp/cosign.pub
+          echo "key=/tmp/cosign.pub" >> "$GITHUB_OUTPUT"
+
+      - name: Sign image (keyless via OIDC)
+        env:
+          COSIGN_EXPERIMENTAL: '1'
+        run: |
+          # Sign every tag produced in the build job. The matrix.name is the
+          # suffix under ghcr.io/kooshapari/byteport/.
+          TAGS="${{ env.REGISTRY }}/${{ env.OWNER }}/byteport/${{ matrix.image.name }}@sha256:${{ needs.build.outputs.digest }}"
+
+          # In PR builds we did not push; tag in tags list will be empty.
+          echo "Signing: $TAGS"
+          # Strip the digest suffix comment out:
+          TAGS="${TAGS% *}"
+
+          cosign sign --yes \
+            ${TAGS:+--tag "$TAGS"} \
+            --output-signature "${{ matrix.image.name }}.sig" \
+            --output-certificate "${{ matrix.image.name }}.pem" \
+            --upload
+          # Note: --upload pushes the signature to GHCR's cosign-compatible store.
+
+      - name: Generate SBOM attestation (separate from build-time SBOM)
+        env:
+          COSIGN_EXPERIMENTAL: '1'
+        run: |
+          cosign attest --yes --predicate rekor-cyclonedb.json \
+            ${OVERRIDE:+--override} \
+            "${{ env.REGISTRY }}/${{ env.OWNER }}/byteport/${{ matrix.image.name }}@sha256:${{ needs.build.outputs.digest }}" || true
+
+  # ---------------------------------------------------------------------------
+  # Verify — pull and verify cosign signatures on the latest pushed image.
+  # Catches tampering between push and downstream consumers.
+  # ---------------------------------------------------------------------------
+  cosign-verify:
+    name: Cosign verify · ${{ matrix.image.name }}
+    if: github.event_name != 'pull_request'
+    needs: cosign-sign
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: { name: backend }
+          - image: { name: mcp-server }
+          - image: { name: cli }
+    steps:
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3.5.1
+
+      - name: Verify keyless signature (GitHub OIDC)
+        env:
+          COSIGN_EXPERIMENTAL: '1'
+        run: |
+          IMAGE="${{ env.REGISTRY }}/${{ env.OWNER }}/byteport/${{ matrix.image.name }}@sha256:${{ needs.build.outputs.digest }}"
+          echo "Verifying: $IMAGE"
+          cosign verify \
+            --certificate-identity-regexp 'https://github.com/kooshapari/BytePort' \
+            --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
+            "$IMAGE"
