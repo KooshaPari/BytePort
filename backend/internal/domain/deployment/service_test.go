@@ -125,12 +125,12 @@ func TestValidateDeployment_InvalidDeployment(t *testing.T) {
 
 	// Create deployment with invalid data that will fail deployment.Validate()
 	deployment := &Deployment{
-		uuid:  "", // Empty UUID will cause validation to fail
-		name:  "test-name",
-		owner: "owner-123",
+		uuid:   "", // Empty UUID will cause validation to fail
+		name:   "test-name",
+		owner:  "owner-123",
 		status: StatusPending,
 	}
-	
+
 	err := service.ValidateDeployment(context.Background(), deployment)
 	if err == nil {
 		t.Error("Expected validation error for invalid deployment, got nil")
@@ -144,11 +144,13 @@ func TestValidateDeployment_InvalidDeployment(t *testing.T) {
 func TestValidateDeployment_NameConflict(t *testing.T) {
 	existingDeployment, _ := NewDeployment("existing-name", "owner-123", nil)
 	existingDeployment.uuid = "existing-uuid"
-	existingDeployment.AddService(DeploymentService{
+	if err := existingDeployment.AddService(DeploymentService{
 		Name:     "web",
 		Type:     "frontend",
 		Provider: "vercel",
-	})
+	}); err != nil {
+		t.Fatalf("failed to add existing service: %v", err)
+	}
 
 	repo := &MockServiceRepository{
 		FindByOwnerFunc: func(ctx context.Context, ownerUUID string) ([]*Deployment, error) {
@@ -159,11 +161,13 @@ func TestValidateDeployment_NameConflict(t *testing.T) {
 
 	newDeployment, _ := NewDeployment("existing-name", "owner-123", nil)
 	newDeployment.uuid = "new-uuid"
-	newDeployment.AddService(DeploymentService{
+	if err := newDeployment.AddService(DeploymentService{
 		Name:     "web",
 		Type:     "frontend",
 		Provider: "vercel",
-	})
+	}); err != nil {
+		t.Fatalf("failed to add new service: %v", err)
+	}
 
 	err := service.ValidateDeployment(context.Background(), newDeployment)
 	if err == nil {
@@ -182,11 +186,13 @@ func TestValidateDeployment_NameConflict(t *testing.T) {
 func TestValidateDeployment_SameDeploymentUpdate(t *testing.T) {
 	existingDeployment, _ := NewDeployment("test-name", "owner-123", nil)
 	existingDeployment.uuid = "same-uuid"
-	existingDeployment.AddService(DeploymentService{
+	if err := existingDeployment.AddService(DeploymentService{
 		Name:     "web",
 		Type:     "frontend",
 		Provider: "vercel",
-	})
+	}); err != nil {
+		t.Fatalf("failed to add existing service: %v", err)
+	}
 
 	repo := &MockServiceRepository{
 		FindByOwnerFunc: func(ctx context.Context, ownerUUID string) ([]*Deployment, error) {
@@ -214,11 +220,13 @@ func TestValidateDeployment_RepositoryError(t *testing.T) {
 	service := NewDomainService(repo)
 
 	deployment, _ := NewDeployment("test-deploy", "owner-123", nil)
-	deployment.AddService(DeploymentService{
+	if err := deployment.AddService(DeploymentService{
 		Name:     "web",
 		Type:     "frontend",
 		Provider: "vercel",
-	})
+	}); err != nil {
+		t.Fatalf("failed to add service: %v", err)
+	}
 
 	err := service.ValidateDeployment(context.Background(), deployment)
 	if err == nil {
@@ -244,7 +252,7 @@ func TestEstimateServiceCost_AllCases(t *testing.T) {
 		},
 		{
 			name:         "valid backend render",
-			serviceType:  "backend", 
+			serviceType:  "backend",
 			provider:     "render",
 			expectedCost: 7.0,
 		},
@@ -368,16 +376,20 @@ func TestCalculateEstimatedCost_Success(t *testing.T) {
 	service := NewDomainService(repo)
 
 	deployment, _ := NewDeployment("test-deploy", "owner-123", nil)
-	deployment.AddService(DeploymentService{
+	if err := deployment.AddService(DeploymentService{
 		Name:     "backend",
 		Type:     "backend",
 		Provider: "render",
-	})
-	deployment.AddService(DeploymentService{
+	}); err != nil {
+		t.Fatalf("failed to add backend service: %v", err)
+	}
+	if err := deployment.AddService(DeploymentService{
 		Name:     "database",
 		Type:     "database",
 		Provider: "supabase",
-	})
+	}); err != nil {
+		t.Fatalf("failed to add database service: %v", err)
+	}
 
 	costInfo, err := service.CalculateEstimatedCost(context.Background(), deployment)
 	if err != nil {
@@ -443,7 +455,7 @@ func TestCalculateEstimatedCost_MultipleProviders(t *testing.T) {
 	if err != nil {
 		t.Errorf("Expected no error, got: %v", err)
 	}
-	
+
 	// render $7 + railway $5 = $12
 	expectedTotal := 12.0
 	if costInfo.Monthly != expectedTotal {
