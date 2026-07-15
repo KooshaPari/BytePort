@@ -440,16 +440,20 @@ func TestCalculateEstimatedCost_MultipleProviders(t *testing.T) {
 	service := NewDomainService(repo)
 
 	deployment, _ := NewDeployment("test-deploy", "owner-123", nil)
-	deployment.AddService(DeploymentService{
+	if err := deployment.AddService(DeploymentService{
 		Name:     "api",
 		Type:     "backend",
 		Provider: "render",
-	})
-	deployment.AddService(DeploymentService{
+	}); err != nil {
+		t.Fatalf("failed to add api service: %v", err)
+	}
+	if err := deployment.AddService(DeploymentService{
 		Name:     "worker",
 		Type:     "backend",
 		Provider: "railway",
-	})
+	}); err != nil {
+		t.Fatalf("failed to add worker service: %v", err)
+	}
 
 	costInfo, err := service.CalculateEstimatedCost(context.Background(), deployment)
 	if err != nil {
