@@ -114,6 +114,7 @@ pub fn run() {
                 .build(),
         )
         .plugin(tauri_plugin_os::init())
+        .plugin(tauri_plugin_splashscreen::init())
         .setup(move |app| {
             // Register shared state for IPC handlers.
             app.manage(AppState {
