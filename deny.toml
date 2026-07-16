@@ -36,6 +36,15 @@ ignore = [
     # Other unmaintained transitives surfaced via Tauri stack
     { id = "RUSTSEC-2024-0370", reason = "proc-macro-error 1.x unmaintained; transitive via gtk3-macros/Tauri proc-macro deps; replacement proc-macro-error2 pending upstream migration." },
     { id = "RUSTSEC-2025-0057", reason = "fxhash unmaintained; transitive via Tauri/webview deps; no safe upgrade; not invoked directly." },
+    # quick-xml 0.39.4 is pulled by Tauri's plist 1.9.0 parser. BytePort does
+    # not expose plist/XML parsing for user-controlled input: this dependency
+    # is used by Tauri build/resource metadata and platform bundles only. The
+    # fixed quick-xml (>=0.41) is available through plist 1.10, but plist 1.10
+    # raises its MSRV to Rust 1.88 while this app intentionally supports 1.77.2.
+    # Remove these bounded exceptions when Tauri/plist can upgrade without
+    # breaking the declared MSRV, and re-run `cargo deny check advisories`.
+    { id = "RUSTSEC-2026-0194", reason = "quick-xml 0.39.4 is transitive via Tauri/plist and only parses trusted local platform metadata; fixed quick-xml requires plist 1.10 (MSRV Rust 1.88), incompatible with app MSRV 1.77.2." },
+    { id = "RUSTSEC-2026-0195", reason = "quick-xml 0.39.4 is transitive via Tauri/plist and only parses trusted local platform metadata; fixed quick-xml requires plist 1.10 (MSRV Rust 1.88), incompatible with app MSRV 1.77.2." },
     # Note: RUSTSEC-2024-0436 (paste) removed 2026-05-04 — advisory-not-detected per cargo-deny; no longer in dep tree.
 ]
 
