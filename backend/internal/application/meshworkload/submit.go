@@ -2,6 +2,7 @@ package meshworkload
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 	"time"
 
@@ -35,7 +36,7 @@ func (s *DeploymentStore) Save(ctx context.Context, owner string, req DesiredSta
 	}
 	dep.SetCompositionMetadata(domain.CompositionMetadata{Digest: req.CompositionDigest, ArtifactRef: req.ArtifactRef})
 	dep.SetProvider("execution_backend", req.ExecutionBackend)
-	if len(req.Placement.Labels)+len(req.Placement.Constraints) > 0 {
+	if placementSpecified(req.Placement) {
 		dep.SetProvider("placement", req.Placement)
 	}
 	return s.repository.Create(ctx, dep)
@@ -54,9 +55,34 @@ func (s *DeploymentStore) List(ctx context.Context, owner string) ([]DesiredStat
 			continue
 		}
 		backend, _ := dep.Providers()["execution_backend"].(string)
-		responses = append(responses, DesiredStateResponse{Name: dep.Name(), Owner: dep.Owner(), CompositionDigest: metadata.Digest, ArtifactRef: metadata.ArtifactRef, ExecutionBackend: backend, Status: dep.Status().String(), AcceptedAt: dep.CreatedAt()})
+		placement, _ := decodePlacement(dep.Providers()["placement"])
+		responses = append(responses, DesiredStateResponse{Name: dep.Name(), Owner: dep.Owner(), CompositionDigest: metadata.Digest, ArtifactRef: metadata.ArtifactRef, ExecutionBackend: backend, Placement: placement, Status: dep.Status().String(), AcceptedAt: dep.CreatedAt()})
 	}
 	return responses, nil
+}
+
+func placementSpecified(p Placement) bool {
+	return p.Region != "" || p.Zone != "" || p.NodePool != "" || len(p.Labels) > 0 || len(p.Constraints) > 0
+}
+
+// decodePlacement accepts both an in-memory Placement and the map representation
+// produced when provider metadata is round-tripped through PostgreSQL JSONB.
+func decodePlacement(value interface{}) (Placement, bool) {
+	if value == nil {
+		return Placement{}, false
+	}
+	if placement, ok := value.(Placement); ok {
+		return placement, true
+	}
+	payload, err := json.Marshal(value)
+	if err != nil {
+		return Placement{}, false
+	}
+	var placement Placement
+	if err := json.Unmarshal(payload, &placement); err != nil {
+		return Placement{}, false
+	}
+	return placement, true
 }
 
 // SubmitDesiredStateUseCase validates mesh intent and returns an acknowledgement.
