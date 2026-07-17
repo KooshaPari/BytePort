@@ -1,58 +1,13 @@
 {
   "project": "BytePort",
-  "dag_unit": "E2",
-  "title": "Lift recovered terminal UI to branch + open PR",
   "stack": "rust",
-  "mode": "e2-verification",
-  "status": "COMPLETED",
-  "branch": "recover/E2-terminal-ui-pr",
-  "pr": 252,
-  "pr_url": "https://github.com/KooshaPari/BytePort/pull/252",
-  "date": "2026-06-30",
-  "epic": "epic_E — BytePort: terminal UI, tools CLI, otel, governance",
-  "files_verified": {
-    "terminal_ui_rs": {
-      "path": "crates/byteport-transport/src/ports/terminal_ui.rs",
-      "lines": 370,
-      "tests": 21
-    },
-    "ui_rs": {
-      "path": "crates/byteport-transport/src/ports/ui.rs",
-      "lines": 389,
-      "tests": 14
-    },
-    "mod_rs": {
-      "path": "crates/byteport-transport/src/ports/mod.rs",
-      "lines": 5,
-      "includes_terminal_ui": true
-    }
-  },
-  "tier_0": {
-    "build": "pass",
-    "test_unit": {"pass": 43, "fail": 0},
-    "clippy": "pass (0 warnings)",
-    "fmt": "cosmetic-only (single-line vs multi-line style, import ordering)"
-  },
-  "workspace_build": "failing — pre-existing byteport-otel crate (OTel SDK API v0.28 vs v0.32 incompatibility, not in E2 scope)",
-  "pre_existing_issues": [
-    {
-      "crate": "byteport-otel",
-      "issue": "OTel SDK API v0.28 vs v0.32 incompatibility: `.init()` removed, `TracerProvider` → `SdkTracerProvider`, `shutdown_tracer_provider()` missing",
-      "scope": "pre-existing, not introduced by E2",
-      "affects": "workspace build only; transport crate independent"
-    }
+  "mode": "fast",
+  "score": 0,
+  "max": 10,
+  "percentage": 0,
+  "grade": "F",
+  "checks": [
+    {"name":"build","status":"fail","score":0,"max":2,"detail":"error: failed to parse manifest at `/mnt/c/Users/koosh/BytePort/Cargo.toml`  Caused by:   `resolver` setting `3` is not valid, valid options are "1" or "2" "},{"name":"test-unit","status":"fail","score":0,"max":3,"detail":"error: failed to parse manifest at `/mnt/c/Users/koosh/BytePort/Cargo.toml`  Caused by:   `resolver` setting `3` is not valid, valid options are "1" or "2" "},{"name":"fmt","status":"fail","score":0,"max":2,"detail":"`cargo metadata` exited with an error: error: failed to parse manifest at `/mnt/c/Users/koosh/BytePort/Cargo.toml`  Caused by:   `resolver` setting `3` is not valid, valid options are "1" or "2"  "},{"name":"clippy","status":"fail","score":0,"max":2,"detail":"error: failed to parse manifest at `/mnt/c/Users/koosh/BytePort/Cargo.toml`  Caused by:   `resolver` setting `3` is not valid, valid options are "1" or "2" "},{"name":"deny","status":"skipped","score":0,"max":1,"detail":"skipped in fast mode"},{"name":"doc","status":"fail","score":0,"max":1,"detail":"error: failed to parse manifest at `/mnt/c/Users/koosh/BytePort/Cargo.toml`  Caused by:   `resolver` setting `3` is not valid, valid options are "1" or "2" "},{"name":"test-snapshot","status":"skipped","score":0,"max":1,"detail":"skipped in fast mode"},{"name":"test-fuzz","status":"skipped","score":0,"max":1,"detail":"skipped in fast mode"},{"name":"coverage","status":"skipped","score":0,"max":2,"detail":"skipped in fast mode"},{"name":"audit","status":"skipped","score":0,"max":1,"detail":"skipped in fast mode"},{"name":"bench","status":"skipped","score":0,"max":1,"detail":"skipped in fast mode"}
   ],
-  "deliverables": {
-    "spec_created": "agileplus-specs/005-compute-infra-hardening/E2-terminal-ui-recovery/spec.md",
-    "tasks_created": ["WP01 (verify files)", "WP02 (create branch)", "WP03 (grade.sh)", "WP04 (worklog)", "WP05 (PR)"],
-    "branch_pushed": "recover/E2-terminal-ui-pr",
-    "worklog_updated": true
-  },
-  "diffstat": {
-    "files_changed": 2,
-    "additions": 40,
-    "deletions": 57
-  },
-  "auditor_note": "E1 terminal UI recovery landed on main via PR #248. E2 documents completion, updates worklog, and creates DAG-compatible audit trail. Terminal UI code already on main — no new code changes needed.",
-  "timestamp": "2026-06-30T12:00:00Z"
+  "timestamp": "2026-07-03T02:27:44Z"
 }

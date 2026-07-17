@@ -1,0 +1,87 @@
+{
+  "task": "A13 — BytePort .gitignore harmonization",
+  "canonical_source": "phenotype-registry/.gitignore",
+  "target": "BytePort/.gitignore",
+  "analysis": {
+    "total_lines_before": 66,
+    "total_lines_after": 109,
+    "entries_added": 34
+  },
+  "svelte_specific_additions": {
+    "entries": [".svelte-kit/"],
+    "rationale": "SvelteKit build output directory — analogous to .next/ for Next.js projects."
+  },
+  "go_specific_additions": {
+    "entries": ["vendor/", "*.exe", "*.test", "*.out"],
+    "rationale": "Go workspace vendor directory, Windows executable artifacts, test binaries, and compiled output."
+  },
+  "rust_specific_additions": {
+    "entries": ["Cargo.lock (already present)"],
+    "rationale": "Cargo.lock was already ignored. Also added /target/ for root-only variant."
+  },
+  "missing_entries_added": [
+    { "entry": ".svelte-kit/", "section": "Node / TS / JS", "category": "svelte" },
+    { "entry": "vendor/", "section": "Go", "category": "go" },
+    { "entry": "*.exe", "section": "Go", "category": "go" },
+    { "entry": "*.test", "section": "Go", "category": "go" },
+    { "entry": "*.out", "section": "Go", "category": "go" },
+    { "entry": "__pycache__/", "section": "Test / cache", "category": "python" },
+    { "entry": ".cache/", "section": "Test / cache", "category": "general" },
+    { "entry": ".venv/", "section": "Python runtime environments", "category": "python" },
+    { "entry": "venv/", "section": "Python runtime environments", "category": "python" },
+    { "entry": "!.env.example", "section": "Env / secrets", "category": "secrets" },
+    { "entry": "*.pem", "section": "Env / secrets", "category": "secrets" },
+    { "entry": "*.key", "section": "Env / secrets", "category": "secrets" },
+    { "entry": "*_rsa", "section": "Env / secrets", "category": "secrets" },
+    { "entry": "*id_rsa*", "section": "Env / secrets", "category": "secrets" },
+    { "entry": "*credential*.json", "section": "Env / secrets", "category": "secrets" },
+    { "entry": "*credentials*.json", "section": "Env / secrets", "category": "secrets" },
+    { "entry": "*service-account*.json", "section": "Env / secrets", "category": "secrets" },
+    { "entry": ".npmrc", "section": "Credential / registry config files", "category": "config" },
+    { "entry": ".pypirc", "section": "Credential / registry config files", "category": "config" },
+    { "entry": ".netrc", "section": "Credential / registry config files", "category": "config" },
+    { "entry": "/build/", "section": "Root-only build output variants", "category": "build" },
+    { "entry": "/coverage/", "section": "Root-only build output variants", "category": "build" },
+    { "entry": "/dist/", "section": "Root-only build output variants", "category": "build" },
+    { "entry": "/out/", "section": "Root-only build output variants", "category": "build" },
+    { "entry": "/target/", "section": "Root-only build output variants", "category": "build" },
+    { "entry": "lerna-debug.log*", "section": "Build logs", "category": "logs" },
+    { "entry": "npm-debug.log*", "section": "Build logs", "category": "logs" },
+    { "entry": "pnpm-debug.log*", "section": "Build logs", "category": "logs" },
+    { "entry": "yarn-debug.log*", "section": "Build logs", "category": "logs" },
+    { "entry": "yarn-error.log*", "section": "Build logs", "category": "logs" },
+    { "entry": "incident-evidence/", "section": "Incident / audit evidence", "category": "audit" },
+    { "entry": ".incident-evidence/", "section": "Incident / audit evidence", "category": "audit" },
+    { "entry": "local/incident-evidence/", "section": "Incident / audit evidence", "category": "audit" }
+  ],
+  "entries_intentionally_omitted": [
+    {
+      "entry": "docs/.vitepress/dist/",
+      "rationale": "BytePort does not use VitePress docs at this location.",
+      "category": "project-specific"
+    },
+    {
+      "entry": "lefthook.yml",
+      "rationale": "BytePort does not use Lefthook hooks.",
+      "category": "tooling"
+    },
+    {
+      "entry": ".grade-reports/",
+      "rationale": "Canonical has a grade-report generator. Not relevant to BytePort's CI.",
+      "category": "tooling"
+    },
+    {
+      "entry": "grade.sh",
+      "rationale": "Canonical grade script. Not applicable.",
+      "category": "tooling"
+    }
+  ],
+  "summary": {
+    "status": "harmonized",
+    "file_updated": "BytePort/.gitignore",
+    "canonical_aligns": true,
+    "missing_count": 34,
+    "omitted_count": 4,
+    "note": "All polyglot patterns (Svelte .svelte-kit/, Go vendor/*.exe/*.test/*.out) plus extended secrets/creds and audit-evidence patterns from the registry canonical have been backfilled."
+  }
+}
