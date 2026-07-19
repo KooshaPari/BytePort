@@ -59,13 +59,23 @@ func (r DesiredStateRequest) Validate(owner string) error {
 	if !digestPattern.MatchString(r.CompositionDigest) {
 		return &ValidationError{Message: "composition_digest must be a sha256 digest"}
 	}
-	if strings.TrimSpace(r.ArtifactRef) == "" {
-		return &ValidationError{Message: "artifact_ref is required"}
+	if err := validateArtifactRef(r.ArtifactRef); err != nil {
+		return err
 	}
 	if !supportedBackend(r.ExecutionBackend) {
 		return &ValidationError{Message: fmt.Sprintf("unsupported execution_backend %q", r.ExecutionBackend)}
 	}
 	return validatePlacement(r.Placement)
+}
+
+func validateArtifactRef(value string) error {
+	if strings.TrimSpace(value) == "" {
+		return &ValidationError{Message: "artifact_ref is required"}
+	}
+	if len(value) > 512 || strings.IndexFunc(value, func(r rune) bool { return r < 0x20 || r == 0x7f }) >= 0 {
+		return &ValidationError{Message: "artifact_ref must be at most 512 characters and contain no control characters"}
+	}
+	return nil
 }
 
 func supportedBackend(backend string) bool {
