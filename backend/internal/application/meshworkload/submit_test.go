@@ -37,6 +37,16 @@ func TestDesiredStateRejectsImpersonationAndUnsupportedBackend(t *testing.T) {
 	}
 }
 
+func TestDesiredStateRejectsUnsafeArtifactRefs(t *testing.T) {
+	for _, ref := range []string{"oci://registry/demo\nnext", strings.Repeat("x", 513)} {
+		request := validRequest()
+		request.ArtifactRef = ref
+		if err := request.Validate("user-1"); err == nil {
+			t.Fatalf("unsafe artifact ref accepted: %q", ref)
+		}
+	}
+}
+
 type recordingStore struct {
 	owner   string
 	request DesiredStateRequest
@@ -55,7 +65,6 @@ func TestSubmitDesiredStatePersistsOwnerScopedIntent(t *testing.T) {
 	}
 	if store.owner != "user-1" || store.request.Name != "demo" {
 		t.Fatalf("unexpected persisted intent: %+v", store)
-	}
 }
 
 type deploymentRepositoryStub struct {
