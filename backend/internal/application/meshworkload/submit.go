@@ -30,6 +30,9 @@ func NewDeploymentStore(repository domain.Repository) *DeploymentStore {
 
 // Save stores mesh identity and portable placement as deployment metadata.
 func (s *DeploymentStore) Save(ctx context.Context, owner string, req DesiredStateRequest) error {
+	if err := req.Validate(owner); err != nil {
+		return err
+	}
 	dep, err := domain.NewDeployment(req.Name, owner, nil)
 	if err != nil {
 		return err
@@ -54,11 +57,21 @@ func (s *DeploymentStore) List(ctx context.Context, owner string) ([]DesiredStat
 		if metadata == nil {
 			continue
 		}
+		if err := validatePersistedMetadata(*metadata); err != nil {
+			return nil, err
+		}
 		backend, _ := dep.Providers()["execution_backend"].(string)
 		placement, _ := decodePlacement(dep.Providers()["placement"])
 		responses = append(responses, DesiredStateResponse{Name: dep.Name(), Owner: dep.Owner(), CompositionDigest: metadata.Digest, ArtifactRef: metadata.ArtifactRef, ExecutionBackend: backend, Placement: placement, Status: dep.Status().String(), AcceptedAt: dep.CreatedAt()})
 	}
 	return responses, nil
+}
+
+func validatePersistedMetadata(metadata domain.CompositionMetadata) error {
+	if !digestPattern.MatchString(metadata.Digest) {
+		return &ValidationError{Message: "persisted composition_digest is invalid"}
+	}
+	return validateArtifactRef(metadata.ArtifactRef)
 }
 
 func placementSpecified(p Placement) bool {
