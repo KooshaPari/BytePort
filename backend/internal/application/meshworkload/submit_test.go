@@ -65,6 +65,7 @@ func TestSubmitDesiredStatePersistsOwnerScopedIntent(t *testing.T) {
 	}
 	if store.owner != "user-1" || store.request.Name != "demo" {
 		t.Fatalf("unexpected persisted intent: %+v", store)
+	}
 }
 
 type deploymentRepositoryStub struct {
