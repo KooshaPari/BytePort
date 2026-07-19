@@ -130,3 +130,28 @@ func TestDeploymentStoreListReadsPlacementMetadata(t *testing.T) {
 		t.Fatalf("placement readback omitted or malformed: %#v", response.Placement)
 	}
 }
+
+
+func TestDeploymentStoreSaveValidatesPersistenceBoundary(t *testing.T) {
+	repository := new(deploymentRepositoryStub)
+	request := validRequest()
+	request.CompositionDigest = "sha256:invalid"
+	if err := NewDeploymentStore(repository).Save(context.Background(), "user-1", request); err == nil {
+		t.Fatal("invalid composition digest persisted")
+	}
+	if repository.created != nil {
+		t.Fatal("invalid request reached repository")
+	}
+}
+
+func TestDeploymentStoreListRejectsInvalidPersistedDigest(t *testing.T) {
+	dep, err := domain.NewDeployment("demo", "user-1", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dep.SetCompositionMetadata(domain.CompositionMetadata{Digest: "sha256:invalid", ArtifactRef: "oci://registry/demo"})
+	repository := &deploymentRepositoryStub{listed: []*domain.Deployment{dep}}
+	if _, err := NewDeploymentStore(repository).List(context.Background(), "user-1"); err == nil {
+		t.Fatal("invalid persisted composition digest accepted")
+	}
+}
