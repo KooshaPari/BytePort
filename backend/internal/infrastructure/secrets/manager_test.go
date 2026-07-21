@@ -64,8 +64,8 @@ func newAWSProviderWithHandler(t *testing.T, handler awsHandlerFunc) (*AWSSecret
 			"access", "secret", "",
 		)),
 		HTTPClient: server.Client(),
-		EndpointResolverWithOptions: aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
-			return aws.Endpoint{
+		EndpointResolverWithOptions: aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) { //nolint:staticcheck // legacy resolver hook for local mock server
+			return aws.Endpoint{ //nolint:staticcheck // legacy endpoint type for local mock server
 				URL:               server.URL,
 				SigningRegion:     region,
 				HostnameImmutable: true,
@@ -278,8 +278,7 @@ func TestEnvironmentProvider(t *testing.T) {
 	ctx := context.Background()
 
 	// Set environment variable
-	os.Setenv("TEST_SECRET", "test-value")
-	defer os.Unsetenv("TEST_SECRET")
+	t.Setenv("TEST_SECRET", "test-value")
 
 	// Get the secret
 	val, err := provider.GetSecret(ctx, "TEST_SECRET")
@@ -1128,7 +1127,7 @@ func TestVaultProvider_SuccessOperations(t *testing.T) {
 			}
 			if !ok {
 				w.WriteHeader(http.StatusNotFound)
-				fmt.Fprint(w, `{"errors":["not found"]}`)
+				_, _ = fmt.Fprint(w, `{"errors":["not found"]}`)
 				return
 			}
 			resp := map[string]any{
@@ -1148,14 +1147,14 @@ func TestVaultProvider_SuccessOperations(t *testing.T) {
 			secrets[key] = payload.Data["value"]
 			mu.Unlock()
 			w.WriteHeader(http.StatusOK)
-			fmt.Fprint(w, `{}`)
+			_, _ = fmt.Fprint(w, `{}`)
 		case r.Method == http.MethodDelete && strings.HasPrefix(r.URL.Path, "/v1/secret/data/"):
 			key := strings.TrimPrefix(r.URL.Path, "/v1/secret/data/")
 			mu.Lock()
 			delete(secrets, key)
 			mu.Unlock()
 			w.WriteHeader(http.StatusOK)
-			fmt.Fprint(w, `{}`)
+			_, _ = fmt.Fprint(w, `{}`)
 		case r.Method == "LIST" && strings.HasPrefix(r.URL.Path, "/v1/secret/metadata"),
 			(r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/v1/secret") && r.URL.Query().Get("list") == "true"):
 			mu.Lock()

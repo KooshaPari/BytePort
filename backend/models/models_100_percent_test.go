@@ -139,7 +139,7 @@ func TestFindOrCreateUserFromWorkOSCompleteCoverage(t *testing.T) {
 
 		// This should panic due to nil database
 		assert.Panics(t, func() {
-			FindOrCreateUserFromWorkOS(workosUserInfo)
+			_, _ = FindOrCreateUserFromWorkOS(workosUserInfo)
 		})
 	})
 
@@ -152,7 +152,7 @@ func TestFindOrCreateUserFromWorkOSCompleteCoverage(t *testing.T) {
 
 		// Close the database to simulate an error
 		if sqlDB, err := db.DB(); err == nil {
-			sqlDB.Close()
+			_ = sqlDB.Close()
 		}
 
 		// Set the global DB variable for testing
@@ -227,7 +227,7 @@ func TestDatabaseFunctionsCompleteCoverage(t *testing.T) {
 
 		// This should panic due to nil database
 		assert.Panics(t, func() {
-			GetUserByWorkOSID("test-id")
+			_, _ = GetUserByWorkOSID("test-id")
 		})
 	})
 
@@ -248,7 +248,7 @@ func TestDatabaseFunctionsCompleteCoverage(t *testing.T) {
 
 		// This should panic due to nil database
 		assert.Panics(t, func() {
-			CreateUserFromWorkOS(workosUserInfo)
+			_, _ = CreateUserFromWorkOS(workosUserInfo)
 		})
 	})
 
@@ -261,7 +261,7 @@ func TestDatabaseFunctionsCompleteCoverage(t *testing.T) {
 
 		// Close the database to simulate an error
 		if sqlDB, err := db.DB(); err == nil {
-			sqlDB.Close()
+			_ = sqlDB.Close()
 		}
 
 		// Set the global DB variable for testing
@@ -294,7 +294,7 @@ func TestEdgeCasesCompleteCoverage(t *testing.T) {
 
 		// This should not panic even with nil GORM DB
 		assert.NotPanics(t, func() {
-			project.BeforeSave(nil)
+			_ = project.BeforeSave(nil)
 		})
 		assert.NotEmpty(t, project.UUID)
 	})
@@ -477,7 +477,7 @@ func TestConnectDatabaseImplementation(t *testing.T) {
 		assert.IsType(t, funcType, ConnectDatabase)
 
 		// Test that it can be assigned to a variable
-		var dbFunc func() = ConnectDatabase
+		var dbFunc = ConnectDatabase
 		assert.NotNil(t, dbFunc)
 	})
 }

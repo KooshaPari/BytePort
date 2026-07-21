@@ -75,12 +75,12 @@ func (cv *CredentialValidator) ValidateOllamaCredentials(ctx context.Context, ba
 
 	resp, err := cv.httpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("Ollama not reachable at %s — is `ollama serve` running? (%w)", baseURL, err)
+		return fmt.Errorf("ollama not reachable at %s — is `ollama serve` running? (%w)", baseURL, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("Ollama /api/tags returned status %d", resp.StatusCode)
+		return fmt.Errorf("ollama /api/tags returned status %d", resp.StatusCode)
 	}
 
 	if model == "" {
@@ -127,7 +127,7 @@ func (cv *CredentialValidator) ValidateOpenAICompatCredentials(ctx context.Conte
 	if err != nil {
 		return fmt.Errorf("failed to connect to LLM API at %s: %w", baseURL, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("LLM API returned status %d — check your API key", resp.StatusCode)
@@ -212,9 +212,9 @@ func (cv *CredentialValidator) ValidateAzureCredentials(ctx context.Context, ten
 
 	resp, err := cv.httpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("Azure auth request failed: %w", err)
+		return fmt.Errorf("azure auth request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
@@ -264,7 +264,7 @@ func (cv *CredentialValidator) ValidateVercelCredentials(ctx context.Context, to
 	if err != nil {
 		return fmt.Errorf("Vercel API unreachable: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusUnauthorized {
 		return fmt.Errorf("invalid Vercel token (401 Unauthorized)")
@@ -291,7 +291,7 @@ func (cv *CredentialValidator) ValidateNetlifyCredentials(ctx context.Context, t
 	if err != nil {
 		return fmt.Errorf("Netlify API unreachable: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusUnauthorized {
 		return fmt.Errorf("invalid Netlify token (401 Unauthorized)")
@@ -321,7 +321,7 @@ func (cv *CredentialValidator) ValidateRailwayCredentials(ctx context.Context, t
 	if err != nil {
 		return fmt.Errorf("Railway API unreachable: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusUnauthorized {
 		return fmt.Errorf("invalid Railway token (401 Unauthorized)")
@@ -349,7 +349,7 @@ func (cv *CredentialValidator) ValidateFlyIOCredentials(ctx context.Context, tok
 	if err != nil {
 		return fmt.Errorf("Fly.io API unreachable: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusUnauthorized {
 		return fmt.Errorf("invalid Fly.io token (401 Unauthorized)")
@@ -378,7 +378,7 @@ func (cv *CredentialValidator) ValidateSupabaseCredentials(ctx context.Context, 
 	if err != nil {
 		return fmt.Errorf("Supabase API unreachable: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusUnauthorized {
 		return fmt.Errorf("invalid Supabase management token (401 Unauthorized)")
@@ -410,7 +410,7 @@ func (cv *CredentialValidator) ValidatePortfolioAPI(ctx context.Context, endpoin
 	if err != nil {
 		return fmt.Errorf("failed to connect to Portfolio API: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("invalid Portfolio API credentials, status: %d", resp.StatusCode)
@@ -467,7 +467,7 @@ func (cv *CredentialValidator) OllamaGenerate(ctx context.Context, baseURL, mode
 	if err != nil {
 		return "", fmt.Errorf("Ollama generate request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("Ollama generate returned status %d", resp.StatusCode)
@@ -581,7 +581,7 @@ func sendLLMChat(ctx context.Context, client httpDoer, baseURL, model, apiKey, p
 	if err != nil {
 		return "", fmt.Errorf("LLM chat request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		b, _ := io.ReadAll(resp.Body)
@@ -611,7 +611,7 @@ func ValidateLLMEndpoint(ctx context.Context, baseURL string, client httpDoer) e
 	if err != nil {
 		return fmt.Errorf("LLM server unreachable at %s: %w", baseURL, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("LLM server at %s returned %d", baseURL, resp.StatusCode)
 	}

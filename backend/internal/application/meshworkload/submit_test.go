@@ -131,7 +131,6 @@ func TestDeploymentStoreListReadsPlacementMetadata(t *testing.T) {
 	}
 }
 
-
 func TestDeploymentStoreSaveValidatesPersistenceBoundary(t *testing.T) {
 	repository := new(deploymentRepositoryStub)
 	request := validRequest()
