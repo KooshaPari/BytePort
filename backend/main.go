@@ -26,7 +26,7 @@ func main() {
 	}
 
 	if orchestratorPort != "" {
-		os.Setenv("PORT", orchestratorPort)
+		_ = os.Setenv("PORT", orchestratorPort)
 	}
 
 	if err := lib.InitializeEncryptionKey(); err != nil {

@@ -270,7 +270,7 @@ func (cv *CredentialValidator) ValidateVercelCredentials(ctx context.Context, to
 		return fmt.Errorf("invalid Vercel token (401 Unauthorized)")
 	}
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("Vercel API returned %d", resp.StatusCode)
+		return fmt.Errorf("vercel API returned %d", resp.StatusCode)
 	}
 	return nil
 }
@@ -279,7 +279,7 @@ func (cv *CredentialValidator) ValidateVercelCredentials(ctx context.Context, to
 // wraps: Netlify REST API GET /api/v1/user
 func (cv *CredentialValidator) ValidateNetlifyCredentials(ctx context.Context, token string) error {
 	if token == "" {
-		return fmt.Errorf("Netlify token is required")
+		return fmt.Errorf("netlify token is required")
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://api.netlify.com/api/v1/user", nil)
 	if err != nil {
@@ -289,7 +289,7 @@ func (cv *CredentialValidator) ValidateNetlifyCredentials(ctx context.Context, t
 
 	resp, err := cv.httpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("Netlify API unreachable: %w", err)
+		return fmt.Errorf("netlify API unreachable: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 

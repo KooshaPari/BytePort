@@ -197,7 +197,7 @@ func (w *WorkOSAuthService) getWorkOSPublicKey(ctx context.Context, kid string) 
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch JWKS: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("JWKS request failed with status: %d", resp.StatusCode)
@@ -343,7 +343,7 @@ func (w *WorkOSAuthService) exchangeWithWorkOS(ctx context.Context, code, client
 	if err != nil {
 		return nil, fmt.Errorf("failed to make request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)

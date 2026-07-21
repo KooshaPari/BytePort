@@ -265,7 +265,7 @@ func (p *VercelProvider) GetLogs(ctx context.Context, resource *Resource, opts L
 		return nil, fmt.Errorf("vercel: log fetch failed: %w", err)
 	}
 	if resp.StatusCode != http.StatusOK {
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		return nil, fmt.Errorf("vercel: log endpoint returned %d", resp.StatusCode)
 	}
 	return &vercelLogStream{decoder: json.NewDecoder(resp.Body), closer: resp.Body}, nil
