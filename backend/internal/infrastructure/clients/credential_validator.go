@@ -297,7 +297,7 @@ func (cv *CredentialValidator) ValidateNetlifyCredentials(ctx context.Context, t
 		return fmt.Errorf("invalid Netlify token (401 Unauthorized)")
 	}
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("Netlify auth failed (%d)", resp.StatusCode)
+		return fmt.Errorf("netlify auth failed (%d)", resp.StatusCode)
 	}
 	return nil
 }
@@ -306,7 +306,7 @@ func (cv *CredentialValidator) ValidateNetlifyCredentials(ctx context.Context, t
 // wraps: Railway GraphQL API POST /graphql/v2
 func (cv *CredentialValidator) ValidateRailwayCredentials(ctx context.Context, token string) error {
 	if token == "" {
-		return fmt.Errorf("Railway token is required")
+		return fmt.Errorf("railway token is required")
 	}
 	query := `{"query": "{ me { id email } }"}`
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost,
@@ -319,7 +319,7 @@ func (cv *CredentialValidator) ValidateRailwayCredentials(ctx context.Context, t
 
 	resp, err := cv.httpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("Railway API unreachable: %w", err)
+		return fmt.Errorf("railway API unreachable: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
@@ -327,7 +327,7 @@ func (cv *CredentialValidator) ValidateRailwayCredentials(ctx context.Context, t
 		return fmt.Errorf("invalid Railway token (401 Unauthorized)")
 	}
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("Railway auth failed (%d)", resp.StatusCode)
+		return fmt.Errorf("railway auth failed (%d)", resp.StatusCode)
 	}
 	return nil
 }
@@ -336,7 +336,7 @@ func (cv *CredentialValidator) ValidateRailwayCredentials(ctx context.Context, t
 // wraps: Fly.io Machines API GET /v1/apps
 func (cv *CredentialValidator) ValidateFlyIOCredentials(ctx context.Context, token string) error {
 	if token == "" {
-		return fmt.Errorf("Fly.io token is required")
+		return fmt.Errorf("fly.io token is required")
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
 		"https://api.machines.dev/v1/apps?org_slug=personal", nil)
@@ -347,7 +347,7 @@ func (cv *CredentialValidator) ValidateFlyIOCredentials(ctx context.Context, tok
 
 	resp, err := cv.httpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("Fly.io API unreachable: %w", err)
+		return fmt.Errorf("fly.io API unreachable: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
@@ -356,7 +356,7 @@ func (cv *CredentialValidator) ValidateFlyIOCredentials(ctx context.Context, tok
 	}
 	// 200 or 403 (valid token, no personal org) are both "valid credential" signals.
 	if resp.StatusCode >= 500 {
-		return fmt.Errorf("Fly.io API server error (%d)", resp.StatusCode)
+		return fmt.Errorf("fly.io API server error (%d)", resp.StatusCode)
 	}
 	return nil
 }
@@ -365,7 +365,7 @@ func (cv *CredentialValidator) ValidateFlyIOCredentials(ctx context.Context, tok
 // wraps: Supabase Management API GET /v1/projects
 func (cv *CredentialValidator) ValidateSupabaseCredentials(ctx context.Context, managementToken string) error {
 	if managementToken == "" {
-		return fmt.Errorf("Supabase management token is required")
+		return fmt.Errorf("supabase management token is required")
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
 		"https://api.supabase.com/v1/projects", nil)
@@ -376,7 +376,7 @@ func (cv *CredentialValidator) ValidateSupabaseCredentials(ctx context.Context, 
 
 	resp, err := cv.httpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("Supabase API unreachable: %w", err)
+		return fmt.Errorf("supabase API unreachable: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
@@ -384,7 +384,7 @@ func (cv *CredentialValidator) ValidateSupabaseCredentials(ctx context.Context, 
 		return fmt.Errorf("invalid Supabase management token (401 Unauthorized)")
 	}
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("Supabase API returned %d", resp.StatusCode)
+		return fmt.Errorf("supabase API returned %d", resp.StatusCode)
 	}
 	return nil
 }
@@ -392,10 +392,10 @@ func (cv *CredentialValidator) ValidateSupabaseCredentials(ctx context.Context, 
 // ValidatePortfolioAPI validates Portfolio API credentials using a health probe.
 func (cv *CredentialValidator) ValidatePortfolioAPI(ctx context.Context, endpoint, apiKey string) error {
 	if endpoint == "" {
-		return fmt.Errorf("Portfolio API endpoint is required")
+		return fmt.Errorf("portfolio API endpoint is required")
 	}
 	if apiKey == "" {
-		return fmt.Errorf("Portfolio API key is required")
+		return fmt.Errorf("portfolio API key is required")
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint+"/byteport", nil)
