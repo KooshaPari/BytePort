@@ -58,8 +58,8 @@ func NewNetlifyProvider(credentials Credentials) (CloudProvider, error) {
 	}, nil
 }
 
-func (p *NetlifyProvider) GetMetadata() ProviderMetadata  { return p.metadata }
-func (p *NetlifyProvider) GetCapabilities() []Capability  { return p.metadata.Capabilities }
+func (p *NetlifyProvider) GetMetadata() ProviderMetadata { return p.metadata }
+func (p *NetlifyProvider) GetCapabilities() []Capability { return p.metadata.Capabilities }
 
 func (p *NetlifyProvider) SupportsResource(resourceType ResourceType) bool {
 	for _, t := range p.metadata.SupportedResources {
@@ -119,9 +119,9 @@ func (p *NetlifyProvider) CreateResource(ctx context.Context, config ResourceCon
 			branch = b
 		}
 		repoBody := map[string]any{
-			"repo_url":     repoURL,
-			"repo_branch":  branch,
-			"provider":     "github",
+			"repo_url":    repoURL,
+			"repo_branch": branch,
+			"provider":    "github",
 		}
 		if bc, ok := config.Spec["build_command"].(string); ok && bc != "" {
 			repoBody["build_command"] = bc
@@ -253,13 +253,13 @@ func (p *NetlifyProvider) GetActualCost(ctx context.Context, resource *Resource,
 // ---------------------------------------------------------------------------
 
 type netlifySite struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	URL         string `json:"url"`
-	AdminURL    string `json:"admin_url"`
-	State       string `json:"state"`
-	CreatedAt   string `json:"created_at"`
-	UpdatedAt   string `json:"updated_at"`
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	URL       string `json:"url"`
+	AdminURL  string `json:"admin_url"`
+	State     string `json:"state"`
+	CreatedAt string `json:"created_at"`
+	UpdatedAt string `json:"updated_at"`
 }
 
 type netlifyDeploy struct {

@@ -19,7 +19,7 @@ func TestUpdateStatus_Success(t *testing.T) {
 	handler, repo, svc := setupTestHandler()
 
 	dep, _ := domain.NewDeployment("test-dep", "test-owner", nil)
-	
+
 	repo.On("FindByUUID", mock.Anything, "test-uuid").Return(dep, nil)
 	svc.On("CanUserAccessDeployment", mock.Anything, "user-123", "test-uuid").Return(true, nil)
 	repo.On("Update", mock.Anything, mock.Anything).Return(nil)
@@ -54,7 +54,7 @@ func TestUpdateStatus_InvalidJSON(t *testing.T) {
 	c.Request = httptest.NewRequest(http.MethodPatch, "/deployments/test-uuid/status", bytes.NewReader([]byte("invalid")))
 	c.Request.Header.Set("Content-Type", "application/json")
 	c.Params = gin.Params{{Key: "uuid", Value: "test-uuid"}}
-	
+
 	handler.UpdateStatus(c)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
@@ -74,7 +74,7 @@ func TestUpdateStatus_NotFound(t *testing.T) {
 	c.Request.Header.Set("Content-Type", "application/json")
 	c.Set("user_uuid", "user-123")
 	c.Params = gin.Params{{Key: "uuid", Value: "nonexistent"}}
-	
+
 	handler.UpdateStatus(c)
 
 	assert.Equal(t, http.StatusNotFound, w.Code)
@@ -93,7 +93,7 @@ func TestUpdateStatus_Unauthorized(t *testing.T) {
 	c.Request = httptest.NewRequest(http.MethodPatch, "/deployments/test-uuid/status", bytes.NewReader(body))
 	c.Request.Header.Set("Content-Type", "application/json")
 	c.Params = gin.Params{{Key: "uuid", Value: "test-uuid"}}
-	
+
 	handler.UpdateStatus(c)
 
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
@@ -103,7 +103,7 @@ func TestUpdateStatus_Forbidden(t *testing.T) {
 	handler, repo, svc := setupTestHandler()
 
 	dep, _ := domain.NewDeployment("test-dep", "test-owner", nil)
-	
+
 	repo.On("FindByUUID", mock.Anything, "test-uuid").Return(dep, nil)
 	svc.On("CanUserAccessDeployment", mock.Anything, "user-123", "test-uuid").Return(false, nil)
 
@@ -116,7 +116,7 @@ func TestUpdateStatus_Forbidden(t *testing.T) {
 	c.Request.Header.Set("Content-Type", "application/json")
 	c.Set("user_uuid", "user-123")
 	c.Params = gin.Params{{Key: "uuid", Value: "test-uuid"}}
-	
+
 	handler.UpdateStatus(c)
 
 	assert.Equal(t, http.StatusForbidden, w.Code)
@@ -129,7 +129,7 @@ func TestUpdateStatus_UpdateError(t *testing.T) {
 	handler, repo, svc := setupTestHandler()
 
 	dep, _ := domain.NewDeployment("test-dep", "test-owner", nil)
-	
+
 	repo.On("FindByUUID", mock.Anything, "test-uuid").Return(dep, nil)
 	svc.On("CanUserAccessDeployment", mock.Anything, "user-123", "test-uuid").Return(true, nil)
 	repo.On("Update", mock.Anything, mock.Anything).Return(errors.New("update error"))
@@ -143,7 +143,7 @@ func TestUpdateStatus_UpdateError(t *testing.T) {
 	c.Request.Header.Set("Content-Type", "application/json")
 	c.Set("user_uuid", "user-123")
 	c.Params = gin.Params{{Key: "uuid", Value: "test-uuid"}}
-	
+
 	handler.UpdateStatus(c)
 
 	assert.Equal(t, http.StatusInternalServerError, w.Code)

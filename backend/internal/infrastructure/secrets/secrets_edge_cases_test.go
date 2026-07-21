@@ -141,7 +141,7 @@ func TestNewFunctions(t *testing.T) {
 		// Test that the function exists and can be called
 		// We can't actually call it without AWS credentials
 		assert.NotNil(t, NewAWSSecretsProvider)
-		
+
 		// Test that it's a function type
 		funcType := func(context.Context, string) (*AWSSecretsProvider, error) { return nil, nil }
 		assert.IsType(t, funcType, NewAWSSecretsProvider)
@@ -151,7 +151,7 @@ func TestNewFunctions(t *testing.T) {
 		// Test that the function exists and can be called
 		// We can't actually call it without Vault server
 		assert.NotNil(t, NewVaultProvider)
-		
+
 		// Test that it's a function type
 		funcType := func(string, string, string) (*VaultProvider, error) { return nil, nil }
 		assert.IsType(t, funcType, NewVaultProvider)

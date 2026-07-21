@@ -16,7 +16,7 @@ func TestConnectDatabaseComprehensive(t *testing.T) {
 	t.Run("ConnectDatabase function exists and is callable", func(t *testing.T) {
 		// Test that the function exists and can be referenced
 		assert.NotNil(t, ConnectDatabase)
-		
+
 		// Test that it's a function
 		funcType := func() {}
 		assert.IsType(t, funcType, ConnectDatabase)
@@ -413,7 +413,7 @@ func TestJSONMarshalingEdgeCases(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotEmpty(t, project.UUID)
 		assert.NotEmpty(t, project.DeploymentsJSON)
-		
+
 		// Verify the JSON is valid
 		var result map[string]Instance
 		err = json.Unmarshal([]byte(project.DeploymentsJSON), &result)
@@ -454,7 +454,7 @@ func TestJSONMarshalingEdgeCases(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotEmpty(t, project.UUID)
 		assert.NotEmpty(t, project.DeploymentsJSON)
-		
+
 		// Verify the JSON is valid
 		var result map[string]Instance
 		err = json.Unmarshal([]byte(project.DeploymentsJSON), &result)
@@ -471,11 +471,11 @@ func TestConnectDatabaseImplementation(t *testing.T) {
 		// Test that ConnectDatabase is a function that can be called
 		// We can't actually call it without a real database, but we can test its existence
 		assert.NotNil(t, ConnectDatabase)
-		
+
 		// Test that it's a function type
 		funcType := func() {}
 		assert.IsType(t, funcType, ConnectDatabase)
-		
+
 		// Test that it can be assigned to a variable
 		var dbFunc func() = ConnectDatabase
 		assert.NotNil(t, dbFunc)
