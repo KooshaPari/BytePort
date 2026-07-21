@@ -354,7 +354,7 @@ func (p *NetlifyProvider) doRequest(ctx context.Context, method, path string, bo
 	if err != nil {
 		return fmt.Errorf("netlify: %s %s — HTTP transport error: %w", method, path, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusUnauthorized {
 		return fmt.Errorf("netlify: 401 Unauthorized — check your personal access token")

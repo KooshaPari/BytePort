@@ -434,7 +434,7 @@ func (p *VercelProvider) doRequest(ctx context.Context, method, path string, bod
 	if err != nil {
 		return fmt.Errorf("vercel: %s %s — HTTP transport error: %w", method, path, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusUnauthorized {
 		return fmt.Errorf("vercel: 401 Unauthorized — check your token at https://vercel.com/account/tokens")

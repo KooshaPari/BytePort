@@ -218,7 +218,7 @@ func (cv *CredentialValidator) ValidateAzureCredentials(ctx context.Context, ten
 
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("Azure auth failed (%d): %s", resp.StatusCode, string(respBody))
+		return fmt.Errorf("azure auth failed (%d): %s", resp.StatusCode, string(respBody))
 	}
 	return nil
 }
@@ -252,7 +252,7 @@ func (cv *CredentialValidator) ValidateGCPCredentials(ctx context.Context, servi
 // wraps: Vercel REST API GET /v2/user
 func (cv *CredentialValidator) ValidateVercelCredentials(ctx context.Context, token string) error {
 	if token == "" {
-		return fmt.Errorf("Vercel token is required")
+		return fmt.Errorf("vercel token is required")
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://api.vercel.com/v2/user", nil)
 	if err != nil {
@@ -262,7 +262,7 @@ func (cv *CredentialValidator) ValidateVercelCredentials(ctx context.Context, to
 
 	resp, err := cv.httpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("Vercel API unreachable: %w", err)
+		return fmt.Errorf("vercel API unreachable: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 

@@ -95,21 +95,22 @@ func TestDeployment_StatusTransitions(t *testing.T) {
 			// Reset to from status
 			dep, _ = NewDeployment("test", "owner", nil)
 			// Chain transitions to reach fromStatus
-			if tt.fromStatus == StatusDetecting {
+			switch tt.fromStatus {
+			case StatusDetecting:
 				_ = dep.SetStatus(StatusDetecting)
-			} else if tt.fromStatus == StatusProvisioning {
+			case StatusProvisioning:
 				_ = dep.SetStatus(StatusDetecting)
 				_ = dep.SetStatus(StatusProvisioning)
-			} else if tt.fromStatus == StatusDeploying {
+			case StatusDeploying:
 				_ = dep.SetStatus(StatusDetecting)
 				_ = dep.SetStatus(StatusProvisioning)
 				_ = dep.SetStatus(StatusDeploying)
-			} else if tt.fromStatus == StatusDeployed {
+			case StatusDeployed:
 				_ = dep.SetStatus(StatusDetecting)
 				_ = dep.SetStatus(StatusProvisioning)
 				_ = dep.SetStatus(StatusDeploying)
 				_ = dep.SetStatus(StatusDeployed)
-			} else if tt.fromStatus == StatusTerminated {
+			case StatusTerminated:
 				_ = dep.SetStatus(StatusTerminated)
 			}
 			// fromStatus is now set properly

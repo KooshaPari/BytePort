@@ -390,7 +390,7 @@ func (p *RailwayProvider) graphQL(ctx context.Context, query string, variables m
 	if err != nil {
 		return fmt.Errorf("railway: GraphQL HTTP transport error: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusUnauthorized {
 		return fmt.Errorf("railway: 401 Unauthorized — check your API token at https://railway.app/account/tokens")

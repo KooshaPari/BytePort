@@ -511,7 +511,7 @@ func TestEnvironmentProvider_SetSecret(t *testing.T) {
 	assert.Equal(t, "test-value", val)
 
 	// Cleanup
-	os.Unsetenv("TEST_SET_SECRET")
+	t.Setenv("TEST_SET_SECRET", "")
 }
 
 func TestJSONSecret_ErrorPaths(t *testing.T) {
@@ -827,8 +827,7 @@ func TestProvider_EdgeCaseSecretValues(t *testing.T) {
 	provider := NewEnvironmentProvider()
 
 	// Test empty secret value
-	os.Setenv("EMPTY_SECRET", "")
-	defer os.Unsetenv("EMPTY_SECRET")
+	t.Setenv("EMPTY_SECRET", "")
 
 	// Environment provider treats empty strings as "not found"
 	_, err := provider.GetSecret(ctx, "EMPTY_SECRET")
@@ -837,8 +836,7 @@ func TestProvider_EdgeCaseSecretValues(t *testing.T) {
 
 	// Test secret with special characters
 	specialValue := "secret!@#$%^&*(){}[]|\\:;\"'<>?,./_+-="
-	os.Setenv("SPECIAL_SECRET", specialValue)
-	defer os.Unsetenv("SPECIAL_SECRET")
+	t.Setenv("SPECIAL_SECRET", specialValue)
 
 	val, err := provider.GetSecret(ctx, "SPECIAL_SECRET")
 	require.NoError(t, err)
@@ -846,8 +844,7 @@ func TestProvider_EdgeCaseSecretValues(t *testing.T) {
 
 	// Test very long secret value
 	longValue := strings.Repeat("a", 10000)
-	os.Setenv("LONG_SECRET", longValue)
-	defer os.Unsetenv("LONG_SECRET")
+	t.Setenv("LONG_SECRET", longValue)
 
 	val, err = provider.GetSecret(ctx, "LONG_SECRET")
 	require.NoError(t, err)
@@ -1172,7 +1169,7 @@ func TestVaultProvider_SuccessOperations(t *testing.T) {
 			require.NoError(t, json.NewEncoder(w).Encode(resp))
 		default:
 			w.WriteHeader(http.StatusBadRequest)
-			fmt.Fprint(w, `{"errors":["unexpected request"]}`)
+			_, _ = fmt.Fprint(w, `{"errors":["unexpected request"]}`)
 		}
 	}
 
@@ -1199,7 +1196,7 @@ func TestVaultProvider_SuccessOperations(t *testing.T) {
 func TestVaultProvider_ErrorResponses(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprint(w, `{"errors":["boom"]}`)
+		_, _ = fmt.Fprint(w, `{"errors":["boom"]}`)
 	}
 	provider, cleanup := newVaultProviderWithServer(t, handler)
 	defer cleanup()
