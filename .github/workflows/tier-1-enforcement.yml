@@ -18,7 +18,8 @@ jobs:
     name: Security Audit (cargo-audit)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v6      - uses: rustsec/audit-check@v2
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v6
+      - uses: rustsec/audit-check@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -27,7 +28,8 @@ jobs:
     name: SBOM Generation & Validation
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v6
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v6
+
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
@@ -69,7 +71,8 @@ jobs:
     name: LICENSE Presence Check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v6
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v6
+
       - name: Verify LICENSE file exists
         run: |
           if [ -f LICENSE ]; then
@@ -84,7 +87,6 @@ jobs:
             echo "✅ LICENSE.md file present"
             head -5 LICENSE.md
             lic_file="LICENSE.md"
-<<<<<<< HEAD
           elif [ -f LICENSE-Apache-2.0 ]; then
             echo "✅ LICENSE-Apache-2.0 file present"
             head -5 LICENSE-Apache-2.0
@@ -93,8 +95,6 @@ jobs:
             echo "✅ LICENSE.txt file present"
             head -5 LICENSE.txt
             lic_file="LICENSE.txt"
-=======
->>>>>>> ed412378 (feat(ci): add Tier-1 enforcement workflow on PR)
           else
             echo "❌ No LICENSE file found"
             exit 1
@@ -114,7 +114,8 @@ jobs:
     name: CHANGELOG Update Check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v6        with:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v6
+        with:
           fetch-depth: 0
 
       - name: Check CHANGELOG.md was modified
