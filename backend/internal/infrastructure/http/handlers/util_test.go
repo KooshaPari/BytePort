@@ -51,7 +51,7 @@ func TestHandleApplicationError_WithApplicationError(t *testing.T) {
 	handleApplicationError(c, appErr)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
-	
+
 	var errResp ErrorResponse
 	err := json.Unmarshal(w.Body.Bytes(), &errResp)
 	assert.NoError(t, err)
@@ -68,7 +68,7 @@ func TestHandleApplicationError_WithUnknownError(t *testing.T) {
 	handleApplicationError(c, unknownErr)
 
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
-	
+
 	var errResp ErrorResponse
 	err := json.Unmarshal(w.Body.Bytes(), &errResp)
 	assert.NoError(t, err)

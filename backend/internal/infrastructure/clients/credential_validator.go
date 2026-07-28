@@ -53,7 +53,7 @@ func WithHTTPClient(client httpDoer) func(*CredentialValidator) {
 // OpenAI-compatible health probe used by vLLM, MLX, and hosted providers.
 func (cv *CredentialValidator) ValidateLLMCredentials(ctx context.Context, baseURL, apiKey string) error {
 	if baseURL == "" {
-		return fmt.Errorf("LLM base URL is required; use http://localhost:8000 for vLLM or http://localhost:8080 for MLX")
+		return fmt.Errorf("llm base URL is required; use http://localhost:8000 for vLLM or http://localhost:8080 for MLX")
 	}
 	if err := cv.ValidateOpenAICompatCredentials(ctx, baseURL, apiKey); err != nil {
 		return fmt.Errorf("%s", strings.Replace(err.Error(), "failed to connect to LLM API", "LLM server unreachable", 1))
@@ -75,12 +75,12 @@ func (cv *CredentialValidator) ValidateOllamaCredentials(ctx context.Context, ba
 
 	resp, err := cv.httpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("Ollama not reachable at %s — is `ollama serve` running? (%w)", baseURL, err)
+		return fmt.Errorf("ollama not reachable at %s — is `ollama serve` running? (%w)", baseURL, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("Ollama /api/tags returned status %d", resp.StatusCode)
+		return fmt.Errorf("ollama /api/tags returned status %d", resp.StatusCode)
 	}
 
 	if model == "" {
@@ -110,7 +110,7 @@ func (cv *CredentialValidator) ValidateOllamaCredentials(ctx context.Context, ba
 // API key may be empty for local/unauthenticated servers.
 func (cv *CredentialValidator) ValidateOpenAICompatCredentials(ctx context.Context, baseURL, apiKey string) error {
 	if baseURL == "" {
-		return fmt.Errorf("LLM base URL is required")
+		return fmt.Errorf("llm base URL is required")
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/v1/models", nil)
@@ -127,10 +127,10 @@ func (cv *CredentialValidator) ValidateOpenAICompatCredentials(ctx context.Conte
 	if err != nil {
 		return fmt.Errorf("failed to connect to LLM API at %s: %w", baseURL, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("LLM API returned status %d — check your API key", resp.StatusCode)
+		return fmt.Errorf("llm API returned status %d — check your API key", resp.StatusCode)
 	}
 
 	return nil
@@ -144,13 +144,13 @@ func (cv *CredentialValidator) ValidateOpenAICompatCredentials(ctx context.Conte
 // Full STS Signature V4 calls are handled by the AWS SDK in manager.go.
 func (cv *CredentialValidator) ValidateAWSCredentials(ctx context.Context, accessKeyID, secretAccessKey, region string) error {
 	if accessKeyID == "" {
-		return fmt.Errorf("AWS access key ID is required")
+		return fmt.Errorf("aws access key ID is required")
 	}
 	if secretAccessKey == "" {
-		return fmt.Errorf("AWS secret access key is required")
+		return fmt.Errorf("aws secret access key is required")
 	}
 	if accessKeyID == "access" || secretAccessKey == "secret" {
-		return fmt.Errorf("AWS credentials appear malformed")
+		return fmt.Errorf("aws credentials appear malformed")
 	}
 	_ = region
 	if (strings.HasPrefix(accessKeyID, "AKIA") || strings.HasPrefix(accessKeyID, "ASIA")) && len(accessKeyID) >= 16 {
@@ -170,10 +170,10 @@ type AWSConfig struct {
 func (cv *CredentialValidator) GetAWSConfig(ctx context.Context, accessKeyID, secretAccessKey, region string) (*AWSConfig, error) {
 	_ = ctx
 	if accessKeyID == "" {
-		return nil, fmt.Errorf("AWS access key ID is required")
+		return nil, fmt.Errorf("aws access key ID is required")
 	}
 	if secretAccessKey == "" {
-		return nil, fmt.Errorf("AWS secret access key is required")
+		return nil, fmt.Errorf("aws secret access key is required")
 	}
 	if region == "" {
 		region = "us-east-1"
@@ -212,13 +212,13 @@ func (cv *CredentialValidator) ValidateAzureCredentials(ctx context.Context, ten
 
 	resp, err := cv.httpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("Azure auth request failed: %w", err)
+		return fmt.Errorf("azure auth request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("Azure auth failed (%d): %s", resp.StatusCode, string(respBody))
+		return fmt.Errorf("azure auth failed (%d): %s", resp.StatusCode, string(respBody))
 	}
 	return nil
 }
@@ -228,7 +228,7 @@ func (cv *CredentialValidator) ValidateAzureCredentials(ctx context.Context, ten
 // wraps: GCP service account JSON format validation
 func (cv *CredentialValidator) ValidateGCPCredentials(ctx context.Context, serviceAccountKeyJSON string) error {
 	if serviceAccountKeyJSON == "" {
-		return fmt.Errorf("GCP service account key JSON is required")
+		return fmt.Errorf("gcp service account key JSON is required")
 	}
 
 	var key struct {
@@ -243,7 +243,7 @@ func (cv *CredentialValidator) ValidateGCPCredentials(ctx context.Context, servi
 		return fmt.Errorf("expected service_account key type, got: %q", key.Type)
 	}
 	if key.ClientEmail == "" {
-		return fmt.Errorf("GCP service account key missing client_email field")
+		return fmt.Errorf("gcp service account key missing client_email field")
 	}
 	return nil
 }
@@ -252,7 +252,7 @@ func (cv *CredentialValidator) ValidateGCPCredentials(ctx context.Context, servi
 // wraps: Vercel REST API GET /v2/user
 func (cv *CredentialValidator) ValidateVercelCredentials(ctx context.Context, token string) error {
 	if token == "" {
-		return fmt.Errorf("Vercel token is required")
+		return fmt.Errorf("vercel token is required")
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://api.vercel.com/v2/user", nil)
 	if err != nil {
@@ -262,15 +262,15 @@ func (cv *CredentialValidator) ValidateVercelCredentials(ctx context.Context, to
 
 	resp, err := cv.httpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("Vercel API unreachable: %w", err)
+		return fmt.Errorf("vercel API unreachable: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusUnauthorized {
 		return fmt.Errorf("invalid Vercel token (401 Unauthorized)")
 	}
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("Vercel API returned %d", resp.StatusCode)
+		return fmt.Errorf("vercel API returned %d", resp.StatusCode)
 	}
 	return nil
 }
@@ -279,7 +279,7 @@ func (cv *CredentialValidator) ValidateVercelCredentials(ctx context.Context, to
 // wraps: Netlify REST API GET /api/v1/user
 func (cv *CredentialValidator) ValidateNetlifyCredentials(ctx context.Context, token string) error {
 	if token == "" {
-		return fmt.Errorf("Netlify token is required")
+		return fmt.Errorf("netlify token is required")
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://api.netlify.com/api/v1/user", nil)
 	if err != nil {
@@ -289,15 +289,15 @@ func (cv *CredentialValidator) ValidateNetlifyCredentials(ctx context.Context, t
 
 	resp, err := cv.httpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("Netlify API unreachable: %w", err)
+		return fmt.Errorf("netlify API unreachable: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusUnauthorized {
 		return fmt.Errorf("invalid Netlify token (401 Unauthorized)")
 	}
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("Netlify auth failed (%d)", resp.StatusCode)
+		return fmt.Errorf("netlify auth failed (%d)", resp.StatusCode)
 	}
 	return nil
 }
@@ -306,7 +306,7 @@ func (cv *CredentialValidator) ValidateNetlifyCredentials(ctx context.Context, t
 // wraps: Railway GraphQL API POST /graphql/v2
 func (cv *CredentialValidator) ValidateRailwayCredentials(ctx context.Context, token string) error {
 	if token == "" {
-		return fmt.Errorf("Railway token is required")
+		return fmt.Errorf("railway token is required")
 	}
 	query := `{"query": "{ me { id email } }"}`
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost,
@@ -319,15 +319,15 @@ func (cv *CredentialValidator) ValidateRailwayCredentials(ctx context.Context, t
 
 	resp, err := cv.httpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("Railway API unreachable: %w", err)
+		return fmt.Errorf("railway API unreachable: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusUnauthorized {
 		return fmt.Errorf("invalid Railway token (401 Unauthorized)")
 	}
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("Railway auth failed (%d)", resp.StatusCode)
+		return fmt.Errorf("railway auth failed (%d)", resp.StatusCode)
 	}
 	return nil
 }
@@ -336,7 +336,7 @@ func (cv *CredentialValidator) ValidateRailwayCredentials(ctx context.Context, t
 // wraps: Fly.io Machines API GET /v1/apps
 func (cv *CredentialValidator) ValidateFlyIOCredentials(ctx context.Context, token string) error {
 	if token == "" {
-		return fmt.Errorf("Fly.io token is required")
+		return fmt.Errorf("fly.io token is required")
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
 		"https://api.machines.dev/v1/apps?org_slug=personal", nil)
@@ -347,16 +347,16 @@ func (cv *CredentialValidator) ValidateFlyIOCredentials(ctx context.Context, tok
 
 	resp, err := cv.httpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("Fly.io API unreachable: %w", err)
+		return fmt.Errorf("fly.io API unreachable: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusUnauthorized {
 		return fmt.Errorf("invalid Fly.io token (401 Unauthorized)")
 	}
 	// 200 or 403 (valid token, no personal org) are both "valid credential" signals.
 	if resp.StatusCode >= 500 {
-		return fmt.Errorf("Fly.io API server error (%d)", resp.StatusCode)
+		return fmt.Errorf("fly.io API server error (%d)", resp.StatusCode)
 	}
 	return nil
 }
@@ -365,7 +365,7 @@ func (cv *CredentialValidator) ValidateFlyIOCredentials(ctx context.Context, tok
 // wraps: Supabase Management API GET /v1/projects
 func (cv *CredentialValidator) ValidateSupabaseCredentials(ctx context.Context, managementToken string) error {
 	if managementToken == "" {
-		return fmt.Errorf("Supabase management token is required")
+		return fmt.Errorf("supabase management token is required")
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
 		"https://api.supabase.com/v1/projects", nil)
@@ -376,15 +376,15 @@ func (cv *CredentialValidator) ValidateSupabaseCredentials(ctx context.Context, 
 
 	resp, err := cv.httpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("Supabase API unreachable: %w", err)
+		return fmt.Errorf("supabase API unreachable: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusUnauthorized {
 		return fmt.Errorf("invalid Supabase management token (401 Unauthorized)")
 	}
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("Supabase API returned %d", resp.StatusCode)
+		return fmt.Errorf("supabase API returned %d", resp.StatusCode)
 	}
 	return nil
 }
@@ -392,10 +392,10 @@ func (cv *CredentialValidator) ValidateSupabaseCredentials(ctx context.Context, 
 // ValidatePortfolioAPI validates Portfolio API credentials using a health probe.
 func (cv *CredentialValidator) ValidatePortfolioAPI(ctx context.Context, endpoint, apiKey string) error {
 	if endpoint == "" {
-		return fmt.Errorf("Portfolio API endpoint is required")
+		return fmt.Errorf("portfolio API endpoint is required")
 	}
 	if apiKey == "" {
-		return fmt.Errorf("Portfolio API key is required")
+		return fmt.Errorf("portfolio API key is required")
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint+"/byteport", nil)
@@ -410,7 +410,7 @@ func (cv *CredentialValidator) ValidatePortfolioAPI(ctx context.Context, endpoin
 	if err != nil {
 		return fmt.Errorf("failed to connect to Portfolio API: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("invalid Portfolio API credentials, status: %d", resp.StatusCode)
@@ -465,12 +465,12 @@ func (cv *CredentialValidator) OllamaGenerate(ctx context.Context, baseURL, mode
 
 	resp, err := cv.httpClient.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("Ollama generate request failed: %w", err)
+		return "", fmt.Errorf("ollama generate request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("Ollama generate returned status %d", resp.StatusCode)
+		return "", fmt.Errorf("ollama generate returned status %d", resp.StatusCode)
 	}
 
 	var result OllamaGenerateResponse
@@ -579,13 +579,13 @@ func sendLLMChat(ctx context.Context, client httpDoer, baseURL, model, apiKey, p
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("LLM chat request failed: %w", err)
+		return "", fmt.Errorf("llm chat request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		b, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("LLM chat error %d: %s", resp.StatusCode, string(b))
+		return "", fmt.Errorf("llm chat error %d: %s", resp.StatusCode, string(b))
 	}
 
 	var result llmResponse
@@ -601,7 +601,7 @@ func sendLLMChat(ctx context.Context, client httpDoer, baseURL, model, apiKey, p
 // ValidateLLMEndpoint checks connectivity to a vLLM or MLX inference server.
 func ValidateLLMEndpoint(ctx context.Context, baseURL string, client httpDoer) error {
 	if baseURL == "" {
-		return fmt.Errorf("LLM base URL is required")
+		return fmt.Errorf("llm base URL is required")
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/v1/models", nil)
 	if err != nil {
@@ -609,11 +609,11 @@ func ValidateLLMEndpoint(ctx context.Context, baseURL string, client httpDoer) e
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("LLM server unreachable at %s: %w", baseURL, err)
+		return fmt.Errorf("llm server unreachable at %s: %w", baseURL, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("LLM server at %s returned %d", baseURL, resp.StatusCode)
+		return fmt.Errorf("llm server at %s returned %d", baseURL, resp.StatusCode)
 	}
 	return nil
 }

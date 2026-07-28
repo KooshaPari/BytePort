@@ -77,6 +77,15 @@ func DomainToModel(dep *deployment.Deployment) (*DeploymentModel, error) {
 	} else {
 		model.CostInfo = "null"
 	}
+	if metadata := dep.CompositionMetadata(); metadata != nil {
+		metadataJSON, err := jsonMarshal(map[string]deployment.CompositionMetadata{"composition": *metadata})
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal metadata: %w", err)
+		}
+		model.Metadata = string(metadataJSON)
+	} else {
+		model.Metadata = "null"
+	}
 
 	return model, nil
 }
@@ -148,6 +157,15 @@ func ModelToDomain(model *DeploymentModel) (*deployment.Deployment, error) {
 			return nil, fmt.Errorf("failed to unmarshal cost info: %w", err)
 		}
 		dep.SetCostInfo(&costInfo)
+	}
+	if model.Metadata != "" && model.Metadata != "null" {
+		var metadata map[string]deployment.CompositionMetadata
+		if err := json.Unmarshal([]byte(model.Metadata), &metadata); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal metadata: %w", err)
+		}
+		if composition, ok := metadata["composition"]; ok {
+			dep.SetCompositionMetadata(composition)
+		}
 	}
 
 	return dep, nil

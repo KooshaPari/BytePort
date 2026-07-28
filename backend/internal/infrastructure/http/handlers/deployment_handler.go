@@ -9,10 +9,10 @@ import (
 
 // DeploymentHandler handles HTTP requests for deployments
 type DeploymentHandler struct {
-	createUseCase    *deployment.CreateDeploymentUseCase
-	getUseCase       *deployment.GetDeploymentUseCase
-	listUseCase      *deployment.ListDeploymentsUseCase
-	terminateUseCase *deployment.TerminateDeploymentUseCase
+	createUseCase       *deployment.CreateDeploymentUseCase
+	getUseCase          *deployment.GetDeploymentUseCase
+	listUseCase         *deployment.ListDeploymentsUseCase
+	terminateUseCase    *deployment.TerminateDeploymentUseCase
 	updateStatusUseCase *deployment.UpdateStatusUseCase
 }
 
@@ -25,10 +25,10 @@ func NewDeploymentHandler(
 	updateStatusUseCase *deployment.UpdateStatusUseCase,
 ) *DeploymentHandler {
 	return &DeploymentHandler{
-		createUseCase:    createUseCase,
-		getUseCase:       getUseCase,
-		listUseCase:      listUseCase,
-		terminateUseCase: terminateUseCase,
+		createUseCase:       createUseCase,
+		getUseCase:          getUseCase,
+		listUseCase:         listUseCase,
+		terminateUseCase:    terminateUseCase,
 		updateStatusUseCase: updateStatusUseCase,
 	}
 }
