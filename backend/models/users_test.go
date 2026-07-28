@@ -269,7 +269,7 @@ func TestUser_DatabaseOperations(t *testing.T) {
 	// Skip complex database operations for now - focus on core functionality
 	// These would require full GORM schema setup with embedded fields
 	t.Skip("Database operations test skipped - requires full PostgreSQL setup")
-	
+
 	// Note: This test would verify:
 	// - User creation with embedded AWS credentials, LLM config, and Portfolio
 	// - Finding users by UUID
@@ -388,10 +388,10 @@ func TestUser_EdgeCases(t *testing.T) {
 
 	t.Run("user with nil pointers handled gracefully", func(t *testing.T) {
 		user := User{
-			UUID:     "safe-user",
-			Name:     "Safe User",
-			Email:    "safe@example.com",
-			Password: "pass",
+			UUID:      "safe-user",
+			Name:      "Safe User",
+			Email:     "safe@example.com",
+			Password:  "pass",
 			Projects:  nil,
 			Instances: nil,
 		}

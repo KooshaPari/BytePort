@@ -139,23 +139,23 @@ func TestHostTableNames(t *testing.T) {
 func TestHostHelperMethods(t *testing.T) {
 	t.Run("IsOnline returns correct status", func(t *testing.T) {
 		now := time.Now()
-		
+
 		testCases := []struct {
-			status       string
+			status        string
 			lastHeartbeat *time.Time
-			expected     bool
+			expected      bool
 		}{
 			{"online", &now, true},
 			{"online", func() *time.Time { t := time.Now().Add(-3 * time.Minute); return &t }(), false}, // Too old
-			{"online", nil, false}, // No heartbeat
-			{"offline", &now, false}, // Wrong status
+			{"online", nil, false},       // No heartbeat
+			{"offline", &now, false},     // Wrong status
 			{"maintenance", &now, false}, // Wrong status
 		}
 
 		for _, tc := range testCases {
 			h := &Host{
-				Status:         tc.status,
-				LastHeartbeat:  tc.lastHeartbeat,
+				Status:        tc.status,
+				LastHeartbeat: tc.lastHeartbeat,
 			}
 			assert.Equal(t, tc.expected, h.IsOnline(), "Host with status %s and heartbeat %v should be online: %v", tc.status, tc.lastHeartbeat, tc.expected)
 		}
@@ -163,7 +163,7 @@ func TestHostHelperMethods(t *testing.T) {
 
 	t.Run("CanAcceptDeployment returns correct status", func(t *testing.T) {
 		now := time.Now()
-		
+
 		testCases := []struct {
 			status             string
 			lastHeartbeat      *time.Time
@@ -171,10 +171,10 @@ func TestHostHelperMethods(t *testing.T) {
 			maxDeployments     int
 			expected           bool
 		}{
-			{"online", &now, 0, 5, true}, // Online and has capacity
-			{"online", &now, 4, 5, true}, // Online and has capacity
-			{"online", &now, 5, 5, false}, // Online but at capacity
-			{"online", &now, 6, 5, false}, // Online but over capacity
+			{"online", &now, 0, 5, true},   // Online and has capacity
+			{"online", &now, 4, 5, true},   // Online and has capacity
+			{"online", &now, 5, 5, false},  // Online but at capacity
+			{"online", &now, 6, 5, false},  // Online but over capacity
 			{"offline", &now, 0, 5, false}, // Offline
 			{"online", func() *time.Time { t := time.Now().Add(-3 * time.Minute); return &t }(), 0, 5, false}, // Stale heartbeat
 		}
@@ -229,10 +229,10 @@ func TestHostHelperMethods(t *testing.T) {
 
 	t.Run("HostDeployment SetStatus updates status", func(t *testing.T) {
 		hd := &HostDeployment{Status: "stopped"}
-		
+
 		hd.SetStatus("running")
 		assert.Equal(t, "running", hd.Status)
-		
+
 		hd.SetStatus("stopped")
 		assert.Equal(t, "stopped", hd.Status)
 	})
@@ -258,7 +258,7 @@ func TestProviderTableNames(t *testing.T) {
 func TestProviderHelperMethods(t *testing.T) {
 	t.Run("ProviderConfig SupportsType", func(t *testing.T) {
 		pc := &ProviderConfig{}
-		
+
 		// Currently returns true as placeholder
 		assert.True(t, pc.SupportsType("frontend"))
 		assert.True(t, pc.SupportsType("backend"))
@@ -267,7 +267,7 @@ func TestProviderHelperMethods(t *testing.T) {
 
 	t.Run("ProviderConfig GetTier", func(t *testing.T) {
 		pc := &ProviderConfig{}
-		
+
 		tier, err := pc.GetTier("free")
 		assert.NoError(t, err)
 		assert.Nil(t, tier) // Currently returns nil as placeholder
@@ -275,7 +275,7 @@ func TestProviderHelperMethods(t *testing.T) {
 
 	t.Run("FrameworkPattern Matches", func(t *testing.T) {
 		fp := &FrameworkPattern{}
-		
+
 		matches, confidence := fp.Matches([]string{"package.json", "src/index.js"})
 		assert.False(t, matches) // Currently returns false as placeholder
 		assert.Equal(t, 0.0, confidence)
@@ -285,13 +285,13 @@ func TestProviderHelperMethods(t *testing.T) {
 		buildCmd := "npm run build"
 		startCmd := "npm start"
 		installCmd := "npm install"
-		
+
 		fp := &FrameworkPattern{
 			DefaultBuildCommand:   &buildCmd,
 			DefaultStartCommand:   &startCmd,
 			DefaultInstallCommand: &installCmd,
 		}
-		
+
 		config := fp.GetBuildConfig()
 		assert.Equal(t, "npm run build", config["build"])
 		assert.Equal(t, "npm start", config["start"])
@@ -300,21 +300,21 @@ func TestProviderHelperMethods(t *testing.T) {
 
 	t.Run("FrameworkPattern GetBuildConfig with nil commands", func(t *testing.T) {
 		fp := &FrameworkPattern{}
-		
+
 		config := fp.GetBuildConfig()
 		assert.Empty(t, config)
 	})
 
 	t.Run("APIRateLimit IsExpired", func(t *testing.T) {
 		now := time.Now()
-		
+
 		testCases := []struct {
 			windowStart time.Time
 			expected    bool
 		}{
-			{now, false}, // Just started
+			{now, false},                        // Just started
 			{now.Add(-30 * time.Minute), false}, // 30 minutes ago
-			{now.Add(-2 * time.Hour), true}, // 2 hours ago
+			{now.Add(-2 * time.Hour), true},     // 2 hours ago
 		}
 
 		for _, tc := range testCases {
@@ -329,10 +329,10 @@ func TestProviderHelperMethods(t *testing.T) {
 		arl := &APIRateLimit{
 			RequestCount: 5,
 		}
-		
+
 		arl.IncrementCount()
 		assert.Equal(t, 6, arl.RequestCount)
-		
+
 		arl.IncrementCount()
 		assert.Equal(t, 7, arl.RequestCount)
 	})
@@ -356,9 +356,9 @@ func TestWorkOSUserHelperMethods(t *testing.T) {
 			Instances: []Instance{},
 			CreatedAt: now,
 		}
-		
+
 		workosUser := user.MigrateToWorkOSUser("workos-123")
-		
+
 		assert.Equal(t, "test-uuid", workosUser.UUID)
 		assert.Equal(t, "workos-123", workosUser.WorkOSID)
 		assert.Equal(t, "Test User", workosUser.Name)
@@ -374,7 +374,7 @@ func TestWorkOSUserHelperMethods(t *testing.T) {
 		if DB == nil {
 			t.Skip("Database not initialized, skipping database-dependent test")
 		}
-		
+
 		// This test would require a database connection
 		// For now, we'll test the function exists and can be called
 		_, err := GetUserByWorkOSID("test-workos-id")
@@ -387,14 +387,14 @@ func TestWorkOSUserHelperMethods(t *testing.T) {
 		if DB == nil {
 			t.Skip("Database not initialized, skipping database-dependent test")
 		}
-		
+
 		workosUserInfo := &WorkOSUserInfo{
 			ID:        "workos-123",
 			Email:     "test@example.com",
 			FirstName: "Test",
 			LastName:  "User",
 		}
-		
+
 		// This test would require a database connection
 		// For now, we'll test the function exists and can be called
 		_, err := CreateUserFromWorkOS(workosUserInfo)
@@ -407,14 +407,14 @@ func TestWorkOSUserHelperMethods(t *testing.T) {
 		if DB == nil {
 			t.Skip("Database not initialized, skipping database-dependent test")
 		}
-		
+
 		workosUserInfo := &WorkOSUserInfo{
 			ID:        "workos-123",
 			Email:     "test@example.com",
 			FirstName: "Test",
 			LastName:  "User",
 		}
-		
+
 		// This test would require a database connection
 		// For now, we'll test the function exists and can be called
 		_, err := FindOrCreateUserFromWorkOS(workosUserInfo)
@@ -451,19 +451,19 @@ func TestModelIntegration(t *testing.T) {
 
 	t.Run("deployment status transitions work correctly", func(t *testing.T) {
 		d := &Deployment{}
-		
+
 		// Test full lifecycle
 		d.SetStatus("deploying")
 		assert.True(t, d.IsActive())
 		assert.False(t, d.IsFailed())
 		assert.False(t, d.IsTerminated())
-		
+
 		d.SetStatus("deployed")
 		assert.True(t, d.IsActive())
 		assert.False(t, d.IsFailed())
 		assert.False(t, d.IsTerminated())
 		assert.NotNil(t, d.DeployedAt)
-		
+
 		d.SetStatus("terminated")
 		assert.False(t, d.IsActive())
 		assert.False(t, d.IsFailed())
@@ -479,14 +479,14 @@ func TestModelIntegration(t *testing.T) {
 			CurrentDeployments: 2,
 			MaxDeployments:     5,
 		}
-		
+
 		assert.True(t, h.IsOnline())
 		assert.True(t, h.CanAcceptDeployment())
-		
+
 		// Test at capacity
 		h.CurrentDeployments = 5
 		assert.False(t, h.CanAcceptDeployment())
-		
+
 		// Test offline
 		h.Status = "offline"
 		assert.False(t, h.IsOnline())
@@ -497,15 +497,15 @@ func TestModelIntegration(t *testing.T) {
 func TestEdgeCases(t *testing.T) {
 	t.Run("deployment with nil timestamps", func(t *testing.T) {
 		d := &Deployment{
-			Status:     "pending",
-			DeployedAt: nil,
+			Status:       "pending",
+			DeployedAt:   nil,
 			TerminatedAt: nil,
 		}
-		
+
 		d.SetStatus("deployed")
 		assert.NotNil(t, d.DeployedAt)
 		assert.Nil(t, d.TerminatedAt)
-		
+
 		d.SetStatus("terminated")
 		assert.NotNil(t, d.DeployedAt)
 		assert.NotNil(t, d.TerminatedAt)
@@ -516,7 +516,7 @@ func TestEdgeCases(t *testing.T) {
 			Status:        "online",
 			LastHeartbeat: nil,
 		}
-		
+
 		assert.False(t, h.IsOnline())
 		assert.False(t, h.CanAcceptDeployment())
 	})
@@ -527,7 +527,7 @@ func TestEdgeCases(t *testing.T) {
 			DefaultBuildCommand: &buildCmd,
 			// Other commands are nil
 		}
-		
+
 		config := fp.GetBuildConfig()
 		assert.Equal(t, "npm run build", config["build"])
 		assert.Empty(t, config["start"])
@@ -538,7 +538,7 @@ func TestEdgeCases(t *testing.T) {
 		arl := &APIRateLimit{
 			RequestCount: 0,
 		}
-		
+
 		arl.IncrementCount()
 		assert.Equal(t, 1, arl.RequestCount)
 	})

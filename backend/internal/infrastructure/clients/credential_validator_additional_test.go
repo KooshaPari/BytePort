@@ -46,7 +46,7 @@ func TestCredentialValidator_ValidateLLMErrors(t *testing.T) {
 	t.Run("empty base URL returns descriptive error", func(t *testing.T) {
 		err := validator.ValidateLLMCredentials(ctx, "", "")
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "LLM base URL is required")
+		assert.Contains(t, err.Error(), "llm base URL is required")
 		// Should mention both vLLM and MLX defaults
 		assert.Contains(t, err.Error(), "8000")
 		assert.Contains(t, err.Error(), "8080")

@@ -22,7 +22,7 @@ func TestConnectDatabaseDirectCall(t *testing.T) {
 		assert.IsType(t, funcType, ConnectDatabase)
 
 		// Test that it can be assigned to a variable
-		var dbFunc func() = ConnectDatabase
+		var dbFunc = ConnectDatabase
 		assert.NotNil(t, dbFunc)
 
 		// Test that it can be called (this will fail due to no database, but we're testing coverage)
@@ -70,7 +70,7 @@ func TestBeforeSaveCompleteLineCoverage(t *testing.T) {
 
 		// This should not panic even with nil GORM DB
 		assert.NotPanics(t, func() {
-			project.BeforeSave(nil)
+			_ = project.BeforeSave(nil)
 		})
 		assert.NotEmpty(t, project.UUID)
 	})
@@ -254,7 +254,7 @@ func TestFindOrCreateUserFromWorkOSCompleteLineCoverage(t *testing.T) {
 
 		// This should panic due to nil database
 		assert.Panics(t, func() {
-			FindOrCreateUserFromWorkOS(workosUserInfo)
+			_, _ = FindOrCreateUserFromWorkOS(workosUserInfo)
 		})
 	})
 
@@ -267,7 +267,7 @@ func TestFindOrCreateUserFromWorkOSCompleteLineCoverage(t *testing.T) {
 
 		// Close the database to simulate an error
 		if sqlDB, err := db.DB(); err == nil {
-			sqlDB.Close()
+			_ = sqlDB.Close()
 		}
 
 		// Set the global DB variable for testing
@@ -440,7 +440,7 @@ func TestDatabaseFunctionsCompleteLineCoverage(t *testing.T) {
 
 		// This should panic due to nil database
 		assert.Panics(t, func() {
-			GetUserByWorkOSID("test-id")
+			_, _ = GetUserByWorkOSID("test-id")
 		})
 	})
 
@@ -461,7 +461,7 @@ func TestDatabaseFunctionsCompleteLineCoverage(t *testing.T) {
 
 		// This should panic due to nil database
 		assert.Panics(t, func() {
-			CreateUserFromWorkOS(workosUserInfo)
+			_, _ = CreateUserFromWorkOS(workosUserInfo)
 		})
 	})
 
@@ -474,7 +474,7 @@ func TestDatabaseFunctionsCompleteLineCoverage(t *testing.T) {
 
 		// Close the database to simulate an error
 		if sqlDB, err := db.DB(); err == nil {
-			sqlDB.Close()
+			_ = sqlDB.Close()
 		}
 
 		// Set the global DB variable for testing
@@ -508,7 +508,7 @@ func TestConnectDatabaseImplementationFinal(t *testing.T) {
 		assert.IsType(t, funcType, ConnectDatabase)
 
 		// Test that it can be assigned to a variable
-		var dbFunc func() = ConnectDatabase
+		var dbFunc = ConnectDatabase
 		assert.NotNil(t, dbFunc)
 
 		// Test that it can be called (this will fail due to no database, but we're testing coverage)

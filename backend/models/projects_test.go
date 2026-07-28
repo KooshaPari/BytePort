@@ -71,7 +71,7 @@ func TestProject_JSONSerialization(t *testing.T) {
 func TestProject_DatabaseOperations(t *testing.T) {
 	// Skip complex database operations that require full schema setup
 	t.Skip("Database operations test skipped - requires full PostgreSQL setup with proper relationships")
-	
+
 	// Note: This test would verify:
 	// - Project creation with foreign key relationships to users and repositories
 	// - GORM hooks (BeforeSave, AfterFind) for JSON serialization of deployments
@@ -209,7 +209,7 @@ func TestProject_EdgeCases(t *testing.T) {
 func TestProject_DeploymentsSerialization(t *testing.T) {
 	t.Run("complex deployments serialization", func(t *testing.T) {
 		t.Skip("Complex serialization test skipped - requires GORM database setup")
-		
+
 		// Note: This test would verify complex GORM serialization:
 		// - BeforeSave hook with multiple deployment instances
 		// - AfterFind hook deserialization with timestamps

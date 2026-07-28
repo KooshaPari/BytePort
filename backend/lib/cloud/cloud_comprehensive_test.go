@@ -38,16 +38,16 @@ func TestAuthenticationError(t *testing.T) {
 	cause := errors.New("http 401")
 	authErr := NewAuthenticationError("aws", "Invalid API key", cause)
 
-	if authErr.CloudError.Category != ErrorCategoryAuthentication {
+	if authErr.Category != ErrorCategoryAuthentication {
 		t.Error("Expected AUTHENTICATION category")
 	}
-	if authErr.CloudError.Code != "AUTH_FAILED" {
+	if authErr.Code != "AUTH_FAILED" {
 		t.Error("Expected AUTH_FAILED code")
 	}
-	if authErr.CloudError.Retryable {
+	if authErr.Retryable {
 		t.Error("Expected non-retryable")
 	}
-	if authErr.CloudError.Cause != cause {
+	if authErr.Cause != cause {
 		t.Error("Expected cause to be set")
 	}
 }
@@ -56,7 +56,7 @@ func TestQuotaError(t *testing.T) {
 	resetTime := time.Now().Add(time.Hour)
 	quotaErr := NewQuotaError("gcp", "Rate limit exceeded", 100, 101, resetTime)
 
-	if quotaErr.CloudError.Category != ErrorCategoryQuota {
+	if quotaErr.Category != ErrorCategoryQuota {
 		t.Error("Expected QUOTA category")
 	}
 	if quotaErr.Limit != 100 {
@@ -65,7 +65,7 @@ func TestQuotaError(t *testing.T) {
 	if quotaErr.Current != 101 {
 		t.Errorf("Expected current 101, got %d", quotaErr.Current)
 	}
-	if !quotaErr.CloudError.Retryable {
+	if !quotaErr.Retryable {
 		t.Error("Expected retryable")
 	}
 }
@@ -73,13 +73,13 @@ func TestQuotaError(t *testing.T) {
 func TestConflictError(t *testing.T) {
 	conflictErr := NewConflictError("azure", "Resource already exists", "my-resource")
 
-	if conflictErr.CloudError.Category != ErrorCategoryConflict {
+	if conflictErr.Category != ErrorCategoryConflict {
 		t.Error("Expected CONFLICT category")
 	}
 	if conflictErr.ConflictingResource != "my-resource" {
 		t.Error("Expected conflicting resource to be set")
 	}
-	if conflictErr.CloudError.Retryable {
+	if conflictErr.Retryable {
 		t.Error("Expected non-retryable")
 	}
 }
@@ -88,13 +88,13 @@ func TestInternalProviderError(t *testing.T) {
 	cause := errors.New("internal server error")
 	internalErr := NewInternalProviderError("aws", "Service unavailable", 500, cause)
 
-	if internalErr.CloudError.Category != ErrorCategoryInternal {
+	if internalErr.Category != ErrorCategoryInternal {
 		t.Error("Expected INTERNAL category")
 	}
-	if internalErr.CloudError.StatusCode != 500 {
-		t.Errorf("Expected status code 500, got %d", internalErr.CloudError.StatusCode)
+	if internalErr.StatusCode != 500 {
+		t.Errorf("Expected status code 500, got %d", internalErr.StatusCode)
 	}
-	if !internalErr.CloudError.Retryable {
+	if !internalErr.Retryable {
 		t.Error("Expected retryable")
 	}
 }
@@ -116,7 +116,7 @@ func TestWrapError(t *testing.T) {
 
 func TestShouldRetry_NetworkError(t *testing.T) {
 	networkErr := NewNetworkError("aws", "https://api.aws.com", "Timeout", nil)
-	
+
 	if !ShouldRetry(networkErr, DefaultRetryConfig) {
 		t.Error("Expected network error to be retryable")
 	}
@@ -124,7 +124,7 @@ func TestShouldRetry_NetworkError(t *testing.T) {
 
 func TestShouldRetry_QuotaError(t *testing.T) {
 	quotaErr := NewQuotaError("gcp", "Rate limit", 100, 101, time.Now().Add(time.Hour))
-	
+
 	if !ShouldRetry(quotaErr, DefaultRetryConfig) {
 		t.Error("Expected quota error to be retryable")
 	}
@@ -132,7 +132,7 @@ func TestShouldRetry_QuotaError(t *testing.T) {
 
 func TestShouldRetry_ProvisioningError(t *testing.T) {
 	provErr := NewProvisioningError("azure", "building", "Build failed", nil)
-	
+
 	if !ShouldRetry(provErr, DefaultRetryConfig) {
 		t.Error("Expected provisioning error to be retryable")
 	}
@@ -140,7 +140,7 @@ func TestShouldRetry_ProvisioningError(t *testing.T) {
 
 func TestShouldRetry_InternalError(t *testing.T) {
 	internalErr := NewInternalProviderError("aws", "Server error", 500, nil)
-	
+
 	if !ShouldRetry(internalErr, DefaultRetryConfig) {
 		t.Error("Expected internal error to be retryable")
 	}
@@ -148,7 +148,7 @@ func TestShouldRetry_InternalError(t *testing.T) {
 
 func TestShouldRetry_NonRetryable(t *testing.T) {
 	authErr := NewAuthenticationError("aws", "Invalid key", nil)
-	
+
 	if ShouldRetry(authErr, DefaultRetryConfig) {
 		t.Error("Expected authentication error to not be retryable")
 	}

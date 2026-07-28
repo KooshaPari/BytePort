@@ -52,7 +52,7 @@ func TestCredentialValidator_ValidateLLMCredentials(t *testing.T) {
 		validator := NewCredentialValidator()
 		err := validator.ValidateLLMCredentials(ctx, "", "")
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "LLM base URL is required")
+		assert.Contains(t, err.Error(), "llm base URL is required")
 	})
 
 	t.Run("succeeds when server returns 200 on /v1/models", func(t *testing.T) {
@@ -168,7 +168,7 @@ func TestCredentialValidator_LLMChat(t *testing.T) {
 		})
 		_, err := validator.LLMChat(ctx, "http://localhost:8000", "", "", "ping")
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "LLM chat request failed")
+		assert.Contains(t, err.Error(), "llm chat request failed")
 	})
 }
 
@@ -183,13 +183,13 @@ func TestCredentialValidator_ValidateAWSCredentials(t *testing.T) {
 	t.Run("fails with empty access key ID", func(t *testing.T) {
 		err := validator.ValidateAWSCredentials(ctx, "", "secret", "us-east-1")
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "AWS access key ID is required")
+		assert.Contains(t, err.Error(), "aws access key ID is required")
 	})
 
 	t.Run("fails with empty secret access key", func(t *testing.T) {
 		err := validator.ValidateAWSCredentials(ctx, "access-key", "", "us-east-1")
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "AWS secret access key is required")
+		assert.Contains(t, err.Error(), "aws secret access key is required")
 	})
 
 	t.Run("fails with invalid credentials when no real AWS env present", func(t *testing.T) {
@@ -248,14 +248,14 @@ func TestCredentialValidator_ValidatePortfolioAPI(t *testing.T) {
 		validator := NewCredentialValidator()
 		err := validator.ValidatePortfolioAPI(ctx, "", "api-key")
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "Portfolio API endpoint is required")
+		assert.Contains(t, err.Error(), "portfolio API endpoint is required")
 	})
 
 	t.Run("fails with empty API key", func(t *testing.T) {
 		validator := NewCredentialValidator()
 		err := validator.ValidatePortfolioAPI(ctx, "https://api.example.com", "")
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "Portfolio API key is required")
+		assert.Contains(t, err.Error(), "portfolio API key is required")
 	})
 
 	t.Run("validates with successful response", func(t *testing.T) {

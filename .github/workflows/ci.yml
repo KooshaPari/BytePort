@@ -170,8 +170,12 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v5
         with:
-          python-version: '3.12'
+          # The Black pre-commit hook pins its environment to Python 3.11.
+          # Install that interpreter explicitly so pre-commit can provision it.
+          python-version: '3.11'
       - name: Run pre-commit
         uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd # v3.0.1
         with:
-          extra_args: --hook-stage manual --all-files
+          # Default-stage hooks only; manual hooks duplicate dedicated CI jobs
+          # (golangci-lint, cargo-clippy, tsc, trufflehog) and need extra tooling.
+          extra_args: --all-files
