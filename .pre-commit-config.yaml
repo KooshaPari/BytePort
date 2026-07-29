@@ -8,8 +8,10 @@ repos:
     rev: v5.0.0
     hooks:
       - id: end-of-file-fixer
+        exclude: ^(backend/nvms/tmp/|\.grade-reports/|spin\.sig)
       - id: check-yaml
         args: [--allow-multiple-documents]
+        exclude: ^backend/nvms/tmp/
       - id: check-toml
       - id: check-added-large-files
         args: [--maxkb=1000]

@@ -21,10 +21,10 @@ func TestVaultProviderFunctionSignatures(t *testing.T) {
 		assert.NotNil(t, provider.ListSecrets)
 
 		// Test function types
-		var getSecretFunc func(context.Context, string) (string, error) = provider.GetSecret
-		var setSecretFunc func(context.Context, string, string) error = provider.SetSecret
-		var deleteSecretFunc func(context.Context, string) error = provider.DeleteSecret
-		var listSecretsFunc func(context.Context) ([]string, error) = provider.ListSecrets
+		var getSecretFunc = provider.GetSecret
+		var setSecretFunc = provider.SetSecret
+		var deleteSecretFunc = provider.DeleteSecret
+		var listSecretsFunc = provider.ListSecrets
 
 		assert.NotNil(t, getSecretFunc)
 		assert.NotNil(t, setSecretFunc)
@@ -47,10 +47,10 @@ func TestAWSSecretsProviderFunctionSignatures(t *testing.T) {
 		assert.NotNil(t, provider.ListSecrets)
 
 		// Test function types
-		var getSecretFunc func(context.Context, string) (string, error) = provider.GetSecret
-		var setSecretFunc func(context.Context, string, string) error = provider.SetSecret
-		var deleteSecretFunc func(context.Context, string) error = provider.DeleteSecret
-		var listSecretsFunc func(context.Context) ([]string, error) = provider.ListSecrets
+		var getSecretFunc = provider.GetSecret
+		var setSecretFunc = provider.SetSecret
+		var deleteSecretFunc = provider.DeleteSecret
+		var listSecretsFunc = provider.ListSecrets
 
 		assert.NotNil(t, getSecretFunc)
 		assert.NotNil(t, setSecretFunc)
@@ -71,10 +71,10 @@ func TestEnvironmentProviderFunctionSignatures(t *testing.T) {
 		assert.NotNil(t, provider.ListSecrets)
 
 		// Test function types
-		var getSecretFunc func(context.Context, string) (string, error) = provider.GetSecret
-		var setSecretFunc func(context.Context, string, string) error = provider.SetSecret
-		var deleteSecretFunc func(context.Context, string) error = provider.DeleteSecret
-		var listSecretsFunc func(context.Context) ([]string, error) = provider.ListSecrets
+		var getSecretFunc = provider.GetSecret
+		var setSecretFunc = provider.SetSecret
+		var deleteSecretFunc = provider.DeleteSecret
+		var listSecretsFunc = provider.ListSecrets
 
 		assert.NotNil(t, getSecretFunc)
 		assert.NotNil(t, setSecretFunc)
@@ -96,11 +96,11 @@ func TestManagerFunctionSignatures(t *testing.T) {
 		assert.NotNil(t, manager.RegisterProvider)
 
 		// Test function types
-		var getSecretFunc func(context.Context, string) (string, error) = manager.GetSecret
-		var setSecretFunc func(context.Context, string, string) error = manager.SetSecret
-		var invalidateCacheFunc func(string) = manager.InvalidateCache
-		var clearCacheFunc func() = manager.ClearCache
-		var registerProviderFunc func(string, Provider) = manager.RegisterProvider
+		var getSecretFunc = manager.GetSecret
+		var setSecretFunc = manager.SetSecret
+		var invalidateCacheFunc = manager.InvalidateCache
+		var clearCacheFunc = manager.ClearCache
+		var registerProviderFunc = manager.RegisterProvider
 
 		assert.NotNil(t, getSecretFunc)
 		assert.NotNil(t, setSecretFunc)
@@ -141,7 +141,7 @@ func TestNewFunctions(t *testing.T) {
 		// Test that the function exists and can be called
 		// We can't actually call it without AWS credentials
 		assert.NotNil(t, NewAWSSecretsProvider)
-		
+
 		// Test that it's a function type
 		funcType := func(context.Context, string) (*AWSSecretsProvider, error) { return nil, nil }
 		assert.IsType(t, funcType, NewAWSSecretsProvider)
@@ -151,7 +151,7 @@ func TestNewFunctions(t *testing.T) {
 		// Test that the function exists and can be called
 		// We can't actually call it without Vault server
 		assert.NotNil(t, NewVaultProvider)
-		
+
 		// Test that it's a function type
 		funcType := func(string, string, string) (*VaultProvider, error) { return nil, nil }
 		assert.IsType(t, funcType, NewVaultProvider)

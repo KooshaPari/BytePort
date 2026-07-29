@@ -16,7 +16,7 @@ func TestGetDeployment_Success(t *testing.T) {
 	handler, repo, svc := setupTestHandler()
 
 	dep, _ := domain.NewDeployment("test-dep", "test-owner", nil)
-	
+
 	repo.On("FindByUUID", mock.Anything, "test-uuid").Return(dep, nil)
 	svc.On("CanUserAccessDeployment", mock.Anything, "user-123", "test-uuid").Return(true, nil)
 
@@ -25,7 +25,7 @@ func TestGetDeployment_Success(t *testing.T) {
 	c.Request = httptest.NewRequest(http.MethodGet, "/deployments/test-uuid", nil)
 	c.Set("user_uuid", "user-123")
 	c.Params = gin.Params{{Key: "uuid", Value: "test-uuid"}}
-	
+
 	handler.GetDeployment(c)
 
 	assert.Equal(t, http.StatusOK, w.Code)
@@ -43,7 +43,7 @@ func TestGetDeployment_NotFound(t *testing.T) {
 	c.Request = httptest.NewRequest(http.MethodGet, "/deployments/nonexistent", nil)
 	c.Set("user_uuid", "user-123")
 	c.Params = gin.Params{{Key: "uuid", Value: "nonexistent"}}
-	
+
 	handler.GetDeployment(c)
 
 	assert.Equal(t, http.StatusNotFound, w.Code)
@@ -57,7 +57,7 @@ func TestGetDeployment_Unauthorized(t *testing.T) {
 	c, _ := gin.CreateTestContext(w)
 	c.Request = httptest.NewRequest(http.MethodGet, "/deployments/test-uuid", nil)
 	c.Params = gin.Params{{Key: "uuid", Value: "test-uuid"}}
-	
+
 	handler.GetDeployment(c)
 
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
@@ -67,7 +67,7 @@ func TestGetDeployment_Forbidden(t *testing.T) {
 	handler, repo, svc := setupTestHandler()
 
 	dep, _ := domain.NewDeployment("test-dep", "test-owner", nil)
-	
+
 	repo.On("FindByUUID", mock.Anything, "test-uuid").Return(dep, nil)
 	svc.On("CanUserAccessDeployment", mock.Anything, "user-123", "test-uuid").Return(false, nil)
 
@@ -76,7 +76,7 @@ func TestGetDeployment_Forbidden(t *testing.T) {
 	c.Request = httptest.NewRequest(http.MethodGet, "/deployments/test-uuid", nil)
 	c.Set("user_uuid", "user-123")
 	c.Params = gin.Params{{Key: "uuid", Value: "test-uuid"}}
-	
+
 	handler.GetDeployment(c)
 
 	assert.Equal(t, http.StatusForbidden, w.Code)
@@ -94,7 +94,7 @@ func TestGetDeployment_RepositoryError(t *testing.T) {
 	c.Request = httptest.NewRequest(http.MethodGet, "/deployments/test-uuid", nil)
 	c.Set("user_uuid", "user-123")
 	c.Params = gin.Params{{Key: "uuid", Value: "test-uuid"}}
-	
+
 	handler.GetDeployment(c)
 
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
@@ -105,7 +105,7 @@ func TestGetDeployment_AccessCheckError(t *testing.T) {
 	handler, repo, svc := setupTestHandler()
 
 	dep, _ := domain.NewDeployment("test-dep", "test-owner", nil)
-	
+
 	repo.On("FindByUUID", mock.Anything, "test-uuid").Return(dep, nil)
 	svc.On("CanUserAccessDeployment", mock.Anything, "user-123", "test-uuid").Return(false, errors.New("access check failed"))
 
@@ -114,7 +114,7 @@ func TestGetDeployment_AccessCheckError(t *testing.T) {
 	c.Request = httptest.NewRequest(http.MethodGet, "/deployments/test-uuid", nil)
 	c.Set("user_uuid", "user-123")
 	c.Params = gin.Params{{Key: "uuid", Value: "test-uuid"}}
-	
+
 	handler.GetDeployment(c)
 
 	assert.Equal(t, http.StatusInternalServerError, w.Code)

@@ -372,8 +372,8 @@ const (
 	SecretAzureSubscriptionID = "AZURE_SUBSCRIPTION_ID"
 
 	// GCP deployment target secrets
-	SecretGCPProjectID          = "GCP_PROJECT_ID"
-	SecretGCPServiceAccountKey  = "GCP_SERVICE_ACCOUNT_KEY"
+	SecretGCPProjectID         = "GCP_PROJECT_ID"
+	SecretGCPServiceAccountKey = "GCP_SERVICE_ACCOUNT_KEY"
 
 	// Vercel deployment target secrets
 	SecretVercelToken = "VERCEL_TOKEN"
@@ -388,9 +388,9 @@ const (
 	SecretFlyIOToken = "FLY_API_TOKEN"
 
 	// Supabase deployment target secrets
-	SecretSupabaseProjectID        = "SUPABASE_PROJECT_ID"
-	SecretSupabaseAPIKey           = "SUPABASE_API_KEY"
-	SecretSupabaseManagementToken  = "SUPABASE_MANAGEMENT_TOKEN"
+	SecretSupabaseProjectID       = "SUPABASE_PROJECT_ID"
+	SecretSupabaseAPIKey          = "SUPABASE_API_KEY"
+	SecretSupabaseManagementToken = "SUPABASE_MANAGEMENT_TOKEN"
 )
 
 // Service configuration helpers

@@ -117,7 +117,7 @@ func TestWorkOSAuthService_ValidateToken(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("fails when client not initialized", func(t *testing.T) {
-    userInfo, err := service.ValidateToken(ctx, "test-token")
+		userInfo, err := service.ValidateToken(ctx, "test-token")
 		assert.Error(t, err)
 		assert.Nil(t, userInfo)
 		assert.Contains(t, err.Error(), "WorkOS client not initialized")
@@ -138,7 +138,7 @@ func TestWorkOSAuthService_ValidateToken(t *testing.T) {
 	t.Run("strips Bearer prefix from token", func(t *testing.T) {
 		require.NoError(t, service.Initialize(ctx))
 
-    userInfo, err := service.ValidateToken(ctx, "Bearer test-token")
+		userInfo, err := service.ValidateToken(ctx, "Bearer test-token")
 		require.NoError(t, err)
 		assert.NotNil(t, userInfo)
 		assert.Equal(t, "token", userInfo.ID)

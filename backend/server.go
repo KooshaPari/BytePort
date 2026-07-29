@@ -54,6 +54,7 @@ func NewAPIServer(c *container.Container) *APIServer {
 
 			// NEW: Hexagonal architecture endpoints
 			c.DeploymentHandler.RegisterRoutes(protected)
+			c.MeshWorkloadHandler.RegisterRoutes(protected)
 
 			// LEGACY: Old deployment endpoints (will be removed)
 			legacyDeployments := protected.Group("/legacy/deployments")

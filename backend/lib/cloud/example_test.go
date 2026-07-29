@@ -458,7 +458,7 @@ func (m *MockProvider) Deploy(ctx context.Context, config DeploymentConfig) (*De
 	}
 
 	m.deployments[deployment.ID] = deployment
-	
+
 	// Simulate async deployment completion
 	go func() {
 		time.Sleep(200 * time.Millisecond)
@@ -466,7 +466,7 @@ func (m *MockProvider) Deploy(ctx context.Context, config DeploymentConfig) (*De
 		deployment.Progress = 100
 		deployment.UpdatedAt = time.Now()
 	}()
-	
+
 	return deployment, nil
 }
 

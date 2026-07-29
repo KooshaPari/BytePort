@@ -20,7 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-### Security
+- Mesh control plane PR: golangci/staticcheck lint sweep, credential validator test
+  assertions, workflow YAML merge-conflict cleanup, and pre-commit CI scoping
 
 ## [0.1.0] - 2026-06-14
 
