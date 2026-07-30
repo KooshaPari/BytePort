@@ -327,7 +327,7 @@ func (cv *CredentialValidator) ValidateRailwayCredentials(ctx context.Context, t
 		return fmt.Errorf("invalid Railway token (401 Unauthorized)")
 	}
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("Railway auth failed (%d)", resp.StatusCode)
+		return fmt.Errorf("railway auth failed (%d)", resp.StatusCode)
 	}
 	return nil
 }
@@ -336,7 +336,7 @@ func (cv *CredentialValidator) ValidateRailwayCredentials(ctx context.Context, t
 // wraps: Fly.io Machines API GET /v1/apps
 func (cv *CredentialValidator) ValidateFlyIOCredentials(ctx context.Context, token string) error {
 	if token == "" {
-		return fmt.Errorf("Fly.io token is required")
+		return fmt.Errorf("fly.io token is required")
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
 		"https://api.machines.dev/v1/apps?org_slug=personal", nil)
@@ -347,7 +347,7 @@ func (cv *CredentialValidator) ValidateFlyIOCredentials(ctx context.Context, tok
 
 	resp, err := cv.httpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("Fly.io API unreachable: %w", err)
+		return fmt.Errorf("fly.io API unreachable: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
@@ -356,7 +356,7 @@ func (cv *CredentialValidator) ValidateFlyIOCredentials(ctx context.Context, tok
 	}
 	// 200 or 403 (valid token, no personal org) are both "valid credential" signals.
 	if resp.StatusCode >= 500 {
-		return fmt.Errorf("Fly.io API server error (%d)", resp.StatusCode)
+		return fmt.Errorf("fly.io API server error (%d)", resp.StatusCode)
 	}
 	return nil
 }
@@ -365,7 +365,7 @@ func (cv *CredentialValidator) ValidateFlyIOCredentials(ctx context.Context, tok
 // wraps: Supabase Management API GET /v1/projects
 func (cv *CredentialValidator) ValidateSupabaseCredentials(ctx context.Context, managementToken string) error {
 	if managementToken == "" {
-		return fmt.Errorf("Supabase management token is required")
+		return fmt.Errorf("supabase management token is required")
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
 		"https://api.supabase.com/v1/projects", nil)
@@ -376,15 +376,15 @@ func (cv *CredentialValidator) ValidateSupabaseCredentials(ctx context.Context, 
 
 	resp, err := cv.httpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("Supabase API unreachable: %w", err)
+		return fmt.Errorf("supabase API unreachable: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusUnauthorized {
 		return fmt.Errorf("invalid Supabase management token (401 Unauthorized)")
 	}
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("Supabase API returned %d", resp.StatusCode)
+		return fmt.Errorf("supabase API returned %d", resp.StatusCode)
 	}
 	return nil
 }
@@ -392,10 +392,10 @@ func (cv *CredentialValidator) ValidateSupabaseCredentials(ctx context.Context, 
 // ValidatePortfolioAPI validates Portfolio API credentials using a health probe.
 func (cv *CredentialValidator) ValidatePortfolioAPI(ctx context.Context, endpoint, apiKey string) error {
 	if endpoint == "" {
-		return fmt.Errorf("Portfolio API endpoint is required")
+		return fmt.Errorf("portfolio API endpoint is required")
 	}
 	if apiKey == "" {
-		return fmt.Errorf("Portfolio API key is required")
+		return fmt.Errorf("portfolio API key is required")
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint+"/byteport", nil)
@@ -410,7 +410,7 @@ func (cv *CredentialValidator) ValidatePortfolioAPI(ctx context.Context, endpoin
 	if err != nil {
 		return fmt.Errorf("failed to connect to Portfolio API: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("invalid Portfolio API credentials, status: %d", resp.StatusCode)
@@ -467,7 +467,7 @@ func (cv *CredentialValidator) OllamaGenerate(ctx context.Context, baseURL, mode
 	if err != nil {
 		return "", fmt.Errorf("Ollama generate request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("Ollama generate returned status %d", resp.StatusCode)
@@ -581,7 +581,7 @@ func sendLLMChat(ctx context.Context, client httpDoer, baseURL, model, apiKey, p
 	if err != nil {
 		return "", fmt.Errorf("LLM chat request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		b, _ := io.ReadAll(resp.Body)
@@ -611,7 +611,7 @@ func ValidateLLMEndpoint(ctx context.Context, baseURL string, client httpDoer) e
 	if err != nil {
 		return fmt.Errorf("LLM server unreachable at %s: %w", baseURL, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("LLM server at %s returned %d", baseURL, resp.StatusCode)
 	}
