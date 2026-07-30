@@ -1,7 +1,7 @@
-# Trunk.io - Unified linting, formatting, and security
-# Docs: https://docs.trunk.io/check/reference
-
+# Trunk.io code-quality configuration.
+# Reference: https://docs.trunk.io/reference/trunk-yaml
 version: 0.1
+
 cli:
   version: 1.22.12
 
@@ -12,115 +12,60 @@ plugins:
     - id: trunk-fmt
       ref: v1.2.1
 
-linters:
-  - name: rustfmt
-    enabled: true
-    direct_configs:
-      - rustfmt.toml
-      - .rustfmt.toml
-  - name: clippy
-    enabled: true
-    direct_configs:
-      - clippy.toml
-      - .clippy.toml
-  - name: ruff
-    enabled: true
-    args: ["--config", "pyproject.toml"]
-    direct_configs:
-      - ruff.toml
-      - pyproject.toml
-  - name: mypy
-    enabled: true
-    direct_configs:
-      - mypy.ini
-      - setup.cfg
-      - pyproject.toml
-  - name: black
-    enabled: true
-    direct_configs:
-      - pyproject.toml
-  - name: golangci-lint
-    enabled: true
-    direct_configs:
-      - .golangci.yml
-      - .golangci.yaml
-      - golangci-lint.yaml
-  - name: gofmt
-    enabled: true
-  - name: goimports
-    enabled: true
-  - name: eslint
-    enabled: true
-    direct_configs:
-      - .eslintrc.js
-      - .eslintrc.json
-      - .eslintrc.yml
-      - eslint.config.js
-  - name: prettier
-    enabled: true
-    direct_configs:
-      - .prettierrc
-      - .prettierrc.json
-      - .prettierrc.yml
-      - prettier.config.js
-  - name: yamllint
-    enabled: true
-  - name: markdownlint
-    enabled: true
-    direct_configs:
-      - .markdownlint.json
-  - name: shellcheck
-    enabled: true
-  - name: actionlint
-    enabled: true
-  - name: trufflehog
-    enabled: true
-
-formatters:
-  - name: rustfmt
-    enabled: true
-    direct_configs:
-      - rustfmt.toml
-  - name: ruff
-    enabled: true
-    args: ["format"]
-    direct_configs:
-      - pyproject.toml
-  - name: black
-    enabled: true
-  - name: gofmt
-    enabled: true
-  - name: goimports
-    enabled: true
-  - name: prettier
-    enabled: true
-  - name: shfmt
-    enabled: true
-    args: ["-i", "2", "-ci"]
+lint:
+  enabled:
+    - actionlint
+    - black
+    - clippy
+    - eslint
+    - gofmt
+    - goimports
+    - golangci-lint
+    - markdownlint
+    - mypy
+    - prettier
+    - ruff
+    - rustfmt
+    - shellcheck
+    - taplo
+    - trufflehog
+    - yamllint
+  definitions:
+    - name: black
+      direct_configs:
+        - pyproject.toml
+    - name: golangci-lint
+      direct_configs:
+        - .golangci.yml
+        - .golangci.yaml
+        - golangci-lint.yaml
+    - name: mypy
+      direct_configs:
+        - mypy.ini
+        - setup.cfg
+        - pyproject.toml
+    - name: prettier
+      direct_configs:
+        - .prettierrc
+        - .prettierrc.json
+        - .prettierrc.yml
+        - prettier.config.js
+    - name: ruff
+      direct_configs:
+        - ruff.toml
+        - pyproject.toml
+    - name: rustfmt
+      direct_configs:
+        - rustfmt.toml
+        - .rustfmt.toml
 
 actions:
-  - name: checkout
-    type: git_clone
-  - name: install
-    type: plugin
-    path: trunk-install
+  enabled:
+    - trunk-check-pre-push
+    - trunk-fmt-pre-commit
+    - trunk-upgrade-available
 
-ignore:
-  - paths:
-      - node_modules/
-      - .venv/
-      - venv/
-      - __pycache__/
-      - target/
-      - dist/
-      - build/
-      - .git/
-      - vendor/
-      - "*.lock"
-      - "go.sum"
-    type: include
-
-ci:
-  enabled: true
-  notify:
-    - trunk-io
+tools:
+  enabled:
+    - jq@jq-1.7.1
+    - yq@4.44.1
