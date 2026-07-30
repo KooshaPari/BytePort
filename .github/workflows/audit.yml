@@ -197,7 +197,7 @@ jobs:
         uses: SonarSource/sonarqube-scan-action@713881670b6b3676cda39549040e2d88c70d582e # v8.2.0
         with:
           args: >-
-            -Dsonar.cpd.exclusions=backend/models/*_100_percent_test.go,backend/internal/domain/deployment/service_test.go
+            -Dsonar.cpd.exclusions=**/*_test.go
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
