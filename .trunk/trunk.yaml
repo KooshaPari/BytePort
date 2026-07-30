@@ -19,7 +19,7 @@ lint:
     - eslint
     - gofmt
     - goimports
-    - golangci-lint
+    - golangci-lint2
     - markdownlint
     - mypy
     - prettier
@@ -33,7 +33,7 @@ lint:
     - name: black
       direct_configs:
         - pyproject.toml
-    - name: golangci-lint
+    - name: golangci-lint2
       direct_configs:
         - .golangci.yml
         - .golangci.yaml
@@ -66,5 +66,6 @@ actions:
 
 tools:
   enabled:
+    - golangci-lint2@2.6.1
     - jq@jq-1.7.1
     - yq@4.44.1
