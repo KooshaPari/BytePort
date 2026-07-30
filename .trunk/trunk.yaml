@@ -10,9 +10,6 @@ plugins:
     - id: trunk
       uri: https://github.com/trunk-io/plugins
       ref: v1.10.2
-    - id: configs
-      uri: https://github.com/trunk-io/configs
-      ref: v1.2.1
 
 lint:
   enabled:
