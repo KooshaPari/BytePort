@@ -265,7 +265,7 @@ func (p *VercelProvider) GetLogs(ctx context.Context, resource *Resource, opts L
 		return nil, fmt.Errorf("vercel: log fetch failed: %w", err)
 	}
 	if resp.StatusCode != http.StatusOK {
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		return nil, fmt.Errorf("vercel: log endpoint returned %d", resp.StatusCode)
 	}
 	return &vercelLogStream{decoder: json.NewDecoder(resp.Body), closer: resp.Body}, nil
@@ -299,11 +299,11 @@ func (p *VercelProvider) GetActualCost(ctx context.Context, resource *Resource, 
 // ---------------------------------------------------------------------------
 
 type vercelProject struct {
-	ID        string    `json:"id"`
-	Name      string    `json:"name"`
-	Framework string    `json:"framework"`
-	CreatedAt int64     `json:"createdAt"`
-	UpdatedAt int64     `json:"updatedAt"`
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	Framework string `json:"framework"`
+	CreatedAt int64  `json:"createdAt"`
+	UpdatedAt int64  `json:"updatedAt"`
 }
 
 type vercelDeployment struct {
@@ -434,7 +434,7 @@ func (p *VercelProvider) doRequest(ctx context.Context, method, path string, bod
 	if err != nil {
 		return fmt.Errorf("vercel: %s %s — HTTP transport error: %w", method, path, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusUnauthorized {
 		return fmt.Errorf("vercel: 401 Unauthorized — check your token at https://vercel.com/account/tokens")
