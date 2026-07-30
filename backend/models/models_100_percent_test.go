@@ -16,7 +16,7 @@ func TestConnectDatabaseComprehensive(t *testing.T) {
 	t.Run("ConnectDatabase function exists and is callable", func(t *testing.T) {
 		// Test that the function exists and can be referenced
 		assert.NotNil(t, ConnectDatabase)
-		
+
 		// Test that it's a function
 		funcType := func() {}
 		assert.IsType(t, funcType, ConnectDatabase)
@@ -139,7 +139,7 @@ func TestFindOrCreateUserFromWorkOSCompleteCoverage(t *testing.T) {
 
 		// This should panic due to nil database
 		assert.Panics(t, func() {
-			FindOrCreateUserFromWorkOS(workosUserInfo)
+			_, _ = FindOrCreateUserFromWorkOS(workosUserInfo)
 		})
 	})
 
@@ -152,7 +152,7 @@ func TestFindOrCreateUserFromWorkOSCompleteCoverage(t *testing.T) {
 
 		// Close the database to simulate an error
 		if sqlDB, err := db.DB(); err == nil {
-			sqlDB.Close()
+			require.NoError(t, sqlDB.Close())
 		}
 
 		// Set the global DB variable for testing
@@ -227,7 +227,7 @@ func TestDatabaseFunctionsCompleteCoverage(t *testing.T) {
 
 		// This should panic due to nil database
 		assert.Panics(t, func() {
-			GetUserByWorkOSID("test-id")
+			_, _ = GetUserByWorkOSID("test-id")
 		})
 	})
 
@@ -248,7 +248,7 @@ func TestDatabaseFunctionsCompleteCoverage(t *testing.T) {
 
 		// This should panic due to nil database
 		assert.Panics(t, func() {
-			CreateUserFromWorkOS(workosUserInfo)
+			_, _ = CreateUserFromWorkOS(workosUserInfo)
 		})
 	})
 
@@ -261,7 +261,7 @@ func TestDatabaseFunctionsCompleteCoverage(t *testing.T) {
 
 		// Close the database to simulate an error
 		if sqlDB, err := db.DB(); err == nil {
-			sqlDB.Close()
+			require.NoError(t, sqlDB.Close())
 		}
 
 		// Set the global DB variable for testing
@@ -294,7 +294,7 @@ func TestEdgeCasesCompleteCoverage(t *testing.T) {
 
 		// This should not panic even with nil GORM DB
 		assert.NotPanics(t, func() {
-			project.BeforeSave(nil)
+			_ = project.BeforeSave(nil)
 		})
 		assert.NotEmpty(t, project.UUID)
 	})
@@ -413,7 +413,7 @@ func TestJSONMarshalingEdgeCases(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotEmpty(t, project.UUID)
 		assert.NotEmpty(t, project.DeploymentsJSON)
-		
+
 		// Verify the JSON is valid
 		var result map[string]Instance
 		err = json.Unmarshal([]byte(project.DeploymentsJSON), &result)
@@ -454,7 +454,7 @@ func TestJSONMarshalingEdgeCases(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotEmpty(t, project.UUID)
 		assert.NotEmpty(t, project.DeploymentsJSON)
-		
+
 		// Verify the JSON is valid
 		var result map[string]Instance
 		err = json.Unmarshal([]byte(project.DeploymentsJSON), &result)
@@ -471,13 +471,13 @@ func TestConnectDatabaseImplementation(t *testing.T) {
 		// Test that ConnectDatabase is a function that can be called
 		// We can't actually call it without a real database, but we can test its existence
 		assert.NotNil(t, ConnectDatabase)
-		
+
 		// Test that it's a function type
 		funcType := func() {}
 		assert.IsType(t, funcType, ConnectDatabase)
-		
+
 		// Test that it can be assigned to a variable
-		var dbFunc func() = ConnectDatabase
+		dbFunc := ConnectDatabase
 		assert.NotNil(t, dbFunc)
 	})
 }

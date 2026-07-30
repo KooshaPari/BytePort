@@ -23,7 +23,7 @@ func TestConnectDatabaseUltimate(t *testing.T) {
 		assert.IsType(t, funcType, ConnectDatabase)
 
 		// Test that it can be assigned to a variable
-		var dbFunc func() = ConnectDatabase
+		dbFunc := ConnectDatabase
 		assert.NotNil(t, dbFunc)
 	})
 
@@ -32,12 +32,12 @@ func TestConnectDatabaseUltimate(t *testing.T) {
 		// We can't actually call it without a real database, but we can test its existence
 
 		// Test with DATABASE_URL set
-		os.Setenv("DATABASE_URL", "test-database-url")
-		defer os.Unsetenv("DATABASE_URL")
+		require.NoError(t, os.Setenv("DATABASE_URL", "test-database-url"))
+		defer func() { require.NoError(t, os.Unsetenv("DATABASE_URL")) }()
 
 		// Test with GIN_MODE set
-		os.Setenv("GIN_MODE", "release")
-		defer os.Unsetenv("GIN_MODE")
+		require.NoError(t, os.Setenv("GIN_MODE", "release"))
+		defer func() { require.NoError(t, os.Unsetenv("GIN_MODE")) }()
 
 		// The function exists and can be referenced
 		assert.NotNil(t, ConnectDatabase)
@@ -48,8 +48,8 @@ func TestConnectDatabaseUltimate(t *testing.T) {
 		// We can't actually call it without a real database, but we can test its existence
 
 		// Clear environment variables
-		os.Unsetenv("DATABASE_URL")
-		os.Unsetenv("GIN_MODE")
+		require.NoError(t, os.Unsetenv("DATABASE_URL"))
+		require.NoError(t, os.Unsetenv("GIN_MODE"))
 
 		// The function exists and can be referenced
 		assert.NotNil(t, ConnectDatabase)
@@ -154,7 +154,7 @@ func TestBeforeSaveUltimateCoverage(t *testing.T) {
 
 		// This should not panic even with nil GORM DB
 		assert.NotPanics(t, func() {
-			project.BeforeSave(nil)
+			_ = project.BeforeSave(nil)
 		})
 		assert.NotEmpty(t, project.UUID)
 	})
@@ -219,7 +219,7 @@ func TestFindOrCreateUserFromWorkOSUltimateCoverage(t *testing.T) {
 
 		// Close the database to simulate an error
 		if sqlDB, err := db.DB(); err == nil {
-			sqlDB.Close()
+			require.NoError(t, sqlDB.Close())
 		}
 
 		// Set the global DB variable for testing
@@ -465,7 +465,7 @@ func TestDatabaseFunctionsUltimateCoverage(t *testing.T) {
 
 		// Close the database to simulate an error
 		if sqlDB, err := db.DB(); err == nil {
-			sqlDB.Close()
+			require.NoError(t, sqlDB.Close())
 		}
 
 		// Set the global DB variable for testing

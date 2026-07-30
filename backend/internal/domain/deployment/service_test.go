@@ -68,7 +68,7 @@ func TestNewDomainService(t *testing.T) {
 	}
 
 	// Verify it implements the Service interface
-	var _ Service = service
+	var _ = Service(service)
 }
 
 // TestValidateDeployment_Success tests successful validation
