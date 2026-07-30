@@ -61,7 +61,7 @@ jobs:
 
       - name: Install Playwright browsers
         working-directory: frontend/web
-        run: npm exec --no -- playwright install --with-deps chromium
+        run: npm exec --ignore-scripts --no -- playwright install --with-deps chromium
 
       - name: Build SvelteKit app
         working-directory: frontend/web
@@ -127,7 +127,7 @@ jobs:
 
       - name: Install Playwright browsers
         working-directory: frontend/web
-        run: npm exec --no -- playwright install --with-deps chromium
+        run: npm exec --ignore-scripts --no -- playwright install --with-deps chromium
 
       - name: Build SvelteKit app
         working-directory: frontend/web

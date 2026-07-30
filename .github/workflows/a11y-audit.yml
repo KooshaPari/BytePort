@@ -38,7 +38,7 @@ jobs:
         working-directory: frontend/web
         run: |
           nohup npm run preview -- --host 127.0.0.1 --port 4173 > /tmp/preview.log 2>&1 &
-          for i in $(seq 1 30); do
+          for _ in $(seq 1 30); do
             sleep 1
             curl -fs http://127.0.0.1:4173/ > /dev/null && break
           done
@@ -47,7 +47,7 @@ jobs:
         working-directory: frontend/web
         run: |
           npm install --ignore-scripts --no-save --package-lock=false @axe-core/playwright@4.12.1 playwright@1.61.1
-          npm exec --no -- playwright install --with-deps chromium
+          npm exec --ignore-scripts --no -- playwright install --with-deps chromium
 
       - name: Run a11y audit
         env:

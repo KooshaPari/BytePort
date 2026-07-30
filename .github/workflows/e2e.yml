@@ -36,7 +36,9 @@ jobs:
         run: npm ci --ignore-scripts
 
       - name: Install Playwright
-        run: npm exec --no -- playwright install --with-deps chromium
+        # Dependencies were installed with lifecycle scripts disabled; keep the
+        # browser bootstrap equally explicit so npm cannot execute package hooks.
+        run: npm exec --ignore-scripts --no -- playwright install --with-deps chromium
 
       - name: Build
         run: npm run build
