@@ -43,7 +43,7 @@ jobs:
 
       - name: Validate SBOM output exists and is non-empty
         run: |
-          sbom_file="$(ls *.cdx.json 2>/dev/null | head -1)"
+          sbom_file="$(find . -maxdepth 1 -type f -name '*.cdx.json' -print -quit)"
           if [ -z "$sbom_file" ]; then
             echo "❌ No .cdx.json file found after generation"
             ls -la
