@@ -12,7 +12,7 @@ type DeploymentModel struct {
 	// production schema. Keep it as the GORM primary key so inserts target the
 	// existing uuid-only table instead of asking PostgreSQL to return a legacy
 	// integer id column.
-	UUID         string  `gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
+	UUID         string  `gorm:"type:uuid;primaryKey"`
 	Name         string  `gorm:"not null"`
 	Owner        string  `gorm:"index;not null"`
 	ProjectUUID  *string `gorm:"index"`
