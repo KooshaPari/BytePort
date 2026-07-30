@@ -8,8 +8,11 @@ import (
 
 // DeploymentModel represents the GORM model for deployments
 type DeploymentModel struct {
-	ID           uint    `gorm:"primaryKey"`
-	UUID         string  `gorm:"uniqueIndex;not null"`
+	// UUID is the canonical deployment identity shared with the public model and
+	// production schema. Keep it as the GORM primary key so inserts target the
+	// existing uuid-only table instead of asking PostgreSQL to return a legacy
+	// integer id column.
+	UUID         string  `gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
 	Name         string  `gorm:"not null"`
 	Owner        string  `gorm:"index;not null"`
 	ProjectUUID  *string `gorm:"index"`
