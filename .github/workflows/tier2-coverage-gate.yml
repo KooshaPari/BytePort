@@ -63,6 +63,7 @@ jobs:
 
       - name: Generate lib coverage
         run: |
+          mkdir -p target/coverage
           cargo llvm-cov --package byteport-transport --lib \
             --fail-under-lines 71 \
             --lcov --output-path target/coverage/rust-lib.lcov

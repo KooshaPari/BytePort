@@ -39,6 +39,13 @@ func TestDesiredStateRejectsImpersonationAndUnsupportedBackend(t *testing.T) {
 	}
 }
 
+func TestValidationErrorExposesMessage(t *testing.T) {
+	err := (&ValidationError{Message: "invalid desired state"}).Error()
+	if err != "invalid desired state" {
+		t.Fatalf("unexpected validation error message: %q", err)
+	}
+}
+
 type recordingStore struct {
 	owner   string
 	request DesiredStateRequest
