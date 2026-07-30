@@ -8,8 +8,8 @@ import (
 	domain "github.com/byteport/api/internal/domain/deployment"
 )
 
-// DesiredStateStore persists owner-scoped mesh intent in the BytePort control plane.
-type DesiredStateStore interface {
+// DesiredStateSaver persists owner-scoped mesh intent in the BytePort control plane.
+type DesiredStateSaver interface {
 	Save(ctx context.Context, owner string, req DesiredStateRequest) error
 }
 
@@ -61,11 +61,11 @@ func (s *DeploymentStore) List(ctx context.Context, owner string) ([]DesiredStat
 
 // SubmitDesiredStateUseCase validates mesh intent and returns an acknowledgement.
 // Persistence and provider execution are deliberately separate control-plane concerns.
-type SubmitDesiredStateUseCase struct{ store DesiredStateStore }
+type SubmitDesiredStateUseCase struct{ store DesiredStateSaver }
 
 // NewSubmitDesiredStateUseCase constructs the stateless desired-state validator.
-func NewSubmitDesiredStateUseCase(stores ...DesiredStateStore) *SubmitDesiredStateUseCase {
-	var store DesiredStateStore
+func NewSubmitDesiredStateUseCase(stores ...DesiredStateSaver) *SubmitDesiredStateUseCase {
+	var store DesiredStateSaver
 	if len(stores) > 0 {
 		store = stores[0]
 	}
