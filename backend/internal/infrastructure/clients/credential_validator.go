@@ -75,12 +75,12 @@ func (cv *CredentialValidator) ValidateOllamaCredentials(ctx context.Context, ba
 
 	resp, err := cv.httpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("Ollama not reachable at %s — is `ollama serve` running? (%w)", baseURL, err)
+		return fmt.Errorf("ollama not reachable at %s — is `ollama serve` running? (%w)", baseURL, err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("Ollama /api/tags returned status %d", resp.StatusCode)
+		return fmt.Errorf("ollama /api/tags returned status %d", resp.StatusCode)
 	}
 
 	if model == "" {
@@ -212,7 +212,7 @@ func (cv *CredentialValidator) ValidateAzureCredentials(ctx context.Context, ten
 
 	resp, err := cv.httpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("Azure auth request failed: %w", err)
+		return fmt.Errorf("azure auth request failed: %w", err)
 	}
 	defer resp.Body.Close()
 

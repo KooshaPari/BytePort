@@ -188,10 +188,11 @@ func (d *Deployment) SetStatus(status Status) error {
 	d.updatedAt = time.Now().UTC()
 
 	// Set special timestamps
-	if status == StatusDeployed {
+	switch status {
+	case StatusDeployed:
 		now := time.Now().UTC()
 		d.deployedAt = &now
-	} else if status == StatusTerminated {
+	case StatusTerminated:
 		now := time.Now().UTC()
 		d.terminatedAt = &now
 	}
