@@ -1,113 +1,126 @@
-# =============================================================================
-# Trunk.io — Plugin versions for linting/formatting tools
-# =============================================================================
-# This file is auto-generated. Run `trunk upgrade` to update.
-# https://docs.trunk.io/check/reference
-# =============================================================================
+# Trunk.io - Unified linting, formatting, and security
+# Docs: https://docs.trunk.io/check/reference
+
+version: 0.1
+cli:
+  version: 1.22.12
 
 plugins:
   sources:
     - id: trunk
-      ref: v1.2.2
-    - id: community
-      ref: main
+      ref: v1.6.6
+    - id: trunk-fmt
+      ref: v1.2.1
 
-# Linters (auto-detected by file type)
 linters:
-  actionlint:
-    enabled: true
-    commands:
-      - name: actionlint
-        run: actionlint ${target}
-        direct_configs:
-          - .github/workflows/*.yml
-  black:
-    enabled: true
-    commands:
-      - name: black
-        run: black --check --line-length 100 ${target}
-        direct_configs:
-          - pyproject.toml
-          - ruff.toml
-  clippy:
-    enabled: true
-    commands:
-      - name: clippy
-        run: cargo clippy --all-targets --all-features -- -D warnings
-  eslint:
+  - name: rustfmt
     enabled: true
     direct_configs:
-      - .eslintrc.*
-      - eslint.config.*
-  golangci-lint:
+      - rustfmt.toml
+      - .rustfmt.toml
+  - name: clippy
+    enabled: true
+    direct_configs:
+      - clippy.toml
+      - .clippy.toml
+  - name: ruff
+    enabled: true
+    args: ["--config", "pyproject.toml"]
+    direct_configs:
+      - ruff.toml
+      - pyproject.toml
+  - name: mypy
+    enabled: true
+    direct_configs:
+      - mypy.ini
+      - setup.cfg
+      - pyproject.toml
+  - name: black
+    enabled: true
+    direct_configs:
+      - pyproject.toml
+  - name: golangci-lint
     enabled: true
     direct_configs:
       - .golangci.yml
       - .golangci.yaml
-  mypy:
+      - golangci-lint.yaml
+  - name: gofmt
     enabled: true
-    commands:
-      - name: mypy
-        run: mypy --ignore-missing-imports ${target}
-  ruff:
+  - name: goimports
     enabled: true
-    commands:
-      - name: ruff
-        run: ruff check --output-format=github ${target}
-        direct_configs:
-          - ruff.toml
-          - pyproject.toml
-  shellcheck:
+  - name: eslint
     enabled: true
-  taplo:
-    enabled: true
-  yamllint:
-    enabled: true
-
-# Formatters
-formatters:
-  black:
-    enabled: true
-    commands:
-      - name: black
-        run: black --line-length 100 ${target}
-        direct_configs:
-          - pyproject.toml
-  prettier:
+    direct_configs:
+      - .eslintrc.js
+      - .eslintrc.json
+      - .eslintrc.yml
+      - eslint.config.js
+  - name: prettier
     enabled: true
     direct_configs:
       - .prettierrc
-      - prettier.config.*
-  rustfmt:
+      - .prettierrc.json
+      - .prettierrc.yml
+      - prettier.config.js
+  - name: yamllint
     enabled: true
-    commands:
-      - name: rustfmt
-        run: rustfmt ${target}
+  - name: markdownlint
+    enabled: true
+    direct_configs:
+      - .markdownlint.json
+  - name: shellcheck
+    enabled: true
+  - name: actionlint
+    enabled: true
+  - name: trufflehog
+    enabled: true
 
-# Actions (CI optimization)
+formatters:
+  - name: rustfmt
+    enabled: true
+    direct_configs:
+      - rustfmt.toml
+  - name: ruff
+    enabled: true
+    args: ["format"]
+    direct_configs:
+      - pyproject.toml
+  - name: black
+    enabled: true
+  - name: gofmt
+    enabled: true
+  - name: goimports
+    enabled: true
+  - name: prettier
+    enabled: true
+  - name: shfmt
+    enabled: true
+    args: ["-i", "2", "-ci"]
+
 actions:
-  trunk-check:
-    enabled: true
-    size: 5GB
-    memory: 16GB
-    disk: 10GB
-  trunk-merge:
-    enabled: true
-    size: 5GB
-  trunk-push:
-    enabled: true
-    size: 5GB
+  - name: checkout
+    type: git_clone
+  - name: install
+    type: plugin
+    path: trunk-install
 
-# Caching
-cache:
+ignore:
+  - paths:
+      - node_modules/
+      - .venv/
+      - venv/
+      - __pycache__/
+      - target/
+      - dist/
+      - build/
+      - .git/
+      - vendor/
+      - "*.lock"
+      - "go.sum"
+    type: include
+
+ci:
   enabled: true
-  storage: local
-
-# CLI
-cli:
-  version: 1.22.2
-
-# Environment
-env:
-  variables:
-    EDITOR: vim
+  notify:
+    - trunk-io
