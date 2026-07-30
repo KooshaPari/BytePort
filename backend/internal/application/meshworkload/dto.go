@@ -14,10 +14,10 @@ var namePattern = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$`)
 // DesiredStateRequest is the provider-neutral request submitted by a composition client.
 // Owner is deliberately absent: it is always taken from the authenticated request context.
 type DesiredStateRequest struct {
-	Name              string   `json:"name" binding:"required"`
-	CompositionDigest string   `json:"composition_digest" binding:"required"`
-	ArtifactRef       string   `json:"artifact_ref" binding:"required"`
-	ExecutionBackend  string   `json:"execution_backend" binding:"required"`
+	Name              string    `json:"name" binding:"required"`
+	CompositionDigest string    `json:"composition_digest" binding:"required"`
+	ArtifactRef       string    `json:"artifact_ref" binding:"required"`
+	ExecutionBackend  string    `json:"execution_backend" binding:"required"`
 	Placement         Placement `json:"placement"`
 }
 
