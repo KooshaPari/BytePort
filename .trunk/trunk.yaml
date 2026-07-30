@@ -10,8 +10,8 @@ plugins:
     - id: trunk
       uri: https://github.com/trunk-io/plugins
       ref: v1.6.6
-    - id: trunk-fmt
-      uri: https://github.com/trunk-io/plugins
+    - id: configs
+      uri: https://github.com/trunk-io/configs
       ref: v1.2.1
 
 lint:
