@@ -28,7 +28,6 @@ concurrency:
 permissions:
   contents: read
   actions: read
-  security-events: write
 
 jobs:
   # ---------- CodeQL ----------
@@ -168,7 +167,7 @@ jobs:
       - name: Run govulncheck (backend)
         working-directory: backend
         run: |
-          go install golang.org/x/vuln/cmd/govulncheck@latest
+          go install golang.org/x/vuln/cmd/govulncheck@v1.6.0
           govulncheck ./...
       - name: Run govulncheck (nvms)
         working-directory: backend/nvms
@@ -226,7 +225,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install dependencies
-        run: pip install pyyaml
+        run: python3 -m pip install --disable-pip-version-check --no-input 'PyYAML==6.0.2'
       - name: Run legacy tooling scanner (WARN mode)
         if: ${{ steps.checkout-legacy-tools.outcome == 'success' }}
         run: |
