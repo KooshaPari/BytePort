@@ -194,7 +194,6 @@ jobs:
         with:
           fetch-depth: 0
       - name: SonarCloud Scan
-        if: ${{ vars.SONAR_CI_ANALYSIS_ENABLED == 'true' }}
         uses: SonarSource/sonarqube-scan-action@713881670b6b3676cda39549040e2d88c70d582e # v8.2.0
         with:
           args: >-
@@ -202,11 +201,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      - name: SonarCloud Scan (automatic analysis is authoritative)
-        if: ${{ vars.SONAR_CI_ANALYSIS_ENABLED != 'true' }}
-        run: |
-          echo "::notice::SonarCloud CI analysis is opt-in; the project currently uses SonarCloud Automatic Analysis."
-          echo "Set repository variable SONAR_CI_ANALYSIS_ENABLED=true only after disabling Automatic Analysis in SonarCloud."
 
   # ---------- Legacy tooling anti-pattern (WARN mode) ----------
   legacy-tooling:
