@@ -4,6 +4,9 @@ import (
 	"context"
 	"strings"
 	"testing"
+
+	"github.com/byteport/api/internal/domain/deployment"
+	postgres "github.com/byteport/api/internal/infrastructure/persistence/postgres"
 )
 
 func validRequest() DesiredStateRequest {
@@ -54,5 +57,75 @@ func TestSubmitDesiredStatePersistsOwnerScopedIntent(t *testing.T) {
 	}
 	if store.owner != "user-1" || store.request.Name != "demo" {
 		t.Fatalf("unexpected persisted intent: %+v", store)
+	}
+}
+
+type roundTripRepository struct {
+	deployment *deployment.Deployment
+}
+
+func (r *roundTripRepository) Create(_ context.Context, dep *deployment.Deployment) error {
+	model, err := postgres.DomainToModel(dep)
+	if err != nil {
+		return err
+	}
+	r.deployment, err = postgres.ModelToDomain(model)
+	return err
+}
+
+func (r *roundTripRepository) Update(context.Context, *deployment.Deployment) error { return nil }
+func (r *roundTripRepository) Delete(context.Context, string) error                 { return nil }
+func (r *roundTripRepository) FindByUUID(context.Context, string) (*deployment.Deployment, error) {
+	return r.deployment, nil
+}
+func (r *roundTripRepository) FindByOwner(context.Context, string) ([]*deployment.Deployment, error) {
+	if r.deployment == nil {
+		return nil, nil
+	}
+	return []*deployment.Deployment{r.deployment}, nil
+}
+func (r *roundTripRepository) FindByProject(context.Context, string) ([]*deployment.Deployment, error) {
+	return nil, nil
+}
+func (r *roundTripRepository) FindByStatus(context.Context, deployment.Status) ([]*deployment.Deployment, error) {
+	return nil, nil
+}
+func (r *roundTripRepository) List(context.Context, int, int) ([]*deployment.Deployment, error) {
+	return nil, nil
+}
+func (r *roundTripRepository) Count(context.Context) (int64, error) { return 0, nil }
+func (r *roundTripRepository) CountByOwner(context.Context, string) (int64, error) {
+	return 0, nil
+}
+
+func TestDesiredStatePlacementRoundTripsThroughPersistence(t *testing.T) {
+	request := validRequest()
+	request.Placement = Placement{
+		Region:      "us-west-2",
+		Zone:        "us-west-2b",
+		NodePool:    "gpu",
+		Labels:      map[string]string{"accelerator": "nvidia"},
+		Constraints: map[string]string{"arch": "arm64"},
+	}
+	repository := new(roundTripRepository)
+	store := NewDeploymentStore(repository)
+	if _, err := NewSubmitDesiredStateUseCase(store).Execute(context.Background(), "user-1", request); err != nil {
+		t.Fatalf("persisted request rejected: %v", err)
+	}
+	responses, err := store.List(context.Background(), "user-1")
+	if err != nil {
+		t.Fatalf("list failed: %v", err)
+	}
+	if len(responses) != 1 {
+		t.Fatalf("expected one persisted workload, got %d", len(responses))
+	}
+	if got := responses[0].Placement; got.Region != request.Placement.Region || got.Zone != request.Placement.Zone || got.NodePool != request.Placement.NodePool {
+		t.Fatalf("placement scalar fields did not round-trip: %+v", got)
+	}
+	if got := responses[0].Placement.Labels["accelerator"]; got != "nvidia" {
+		t.Fatalf("placement labels did not round-trip: %+v", responses[0].Placement.Labels)
+	}
+	if got := responses[0].Placement.Constraints["arch"]; got != "arm64" {
+		t.Fatalf("placement constraints did not round-trip: %+v", responses[0].Placement.Constraints)
 	}
 }

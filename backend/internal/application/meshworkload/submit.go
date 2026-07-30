@@ -2,6 +2,7 @@ package meshworkload
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 	"time"
 
@@ -54,9 +55,43 @@ func (s *DeploymentStore) List(ctx context.Context, owner string) ([]DesiredStat
 			continue
 		}
 		backend, _ := dep.Providers()["execution_backend"].(string)
-		responses = append(responses, DesiredStateResponse{Name: dep.Name(), Owner: dep.Owner(), CompositionDigest: metadata.Digest, ArtifactRef: metadata.ArtifactRef, ExecutionBackend: backend, Status: dep.Status().String(), AcceptedAt: dep.CreatedAt()})
+		responses = append(responses, DesiredStateResponse{Name: dep.Name(), Owner: dep.Owner(), CompositionDigest: metadata.Digest, ArtifactRef: metadata.ArtifactRef, ExecutionBackend: backend, Placement: placementFromProvider(dep.Providers()["placement"]), Status: dep.Status().String(), AcceptedAt: dep.CreatedAt()})
 	}
 	return responses, nil
+}
+
+// placementFromProvider decodes the portable scheduling intent after a persistence
+// round trip. JSON-backed provider configuration is reconstructed as
+// map[string]interface{}, while in-memory stores may retain the concrete type.
+// Keep this conversion here so provider adapters remain unaware of persistence
+// representation details.
+func placementFromProvider(value interface{}) Placement {
+	switch placement := value.(type) {
+	case Placement:
+		return placement
+	case map[string]string:
+		encoded, err := json.Marshal(placement)
+		if err != nil {
+			return Placement{}
+		}
+		var decoded Placement
+		if err := json.Unmarshal(encoded, &decoded); err != nil {
+			return Placement{}
+		}
+		return decoded
+	case map[string]interface{}:
+		encoded, err := json.Marshal(placement)
+		if err != nil {
+			return Placement{}
+		}
+		var decoded Placement
+		if err := json.Unmarshal(encoded, &decoded); err != nil {
+			return Placement{}
+		}
+		return decoded
+	default:
+		return Placement{}
+	}
 }
 
 // SubmitDesiredStateUseCase validates mesh intent and returns an acknowledgement.
