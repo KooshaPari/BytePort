@@ -167,13 +167,12 @@ jobs:
       - name: Run govulncheck (backend)
         working-directory: backend
         run: |
-          go install golang.org/x/vuln/cmd/govulncheck@v1.6.0
-          govulncheck ./...
+          go run golang.org/x/vuln/cmd/govulncheck@v1.6.0 ./...
       - name: Run govulncheck (nvms)
         working-directory: backend/nvms
         run: |
           if [ -f go.mod ]; then
-            govulncheck ./... || echo "::warning::govulncheck reported issues in backend/nvms"
+            go run golang.org/x/vuln/cmd/govulncheck@v1.6.0 ./... || echo "::warning::govulncheck reported issues in backend/nvms"
           else
             echo "backend/nvms has no go.mod; skipping"
           fi
