@@ -38,7 +38,7 @@ jobs:
 
       - name: Generate CycloneDX SBOM
         run: |
-          cargo cyclonedx --output-format json
+          cargo cyclonedx --format json
           echo "✅ SBOM generated"
 
       - name: Validate SBOM output exists and is non-empty
