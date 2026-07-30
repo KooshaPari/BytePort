@@ -465,12 +465,12 @@ func (cv *CredentialValidator) OllamaGenerate(ctx context.Context, baseURL, mode
 
 	resp, err := cv.httpClient.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("Ollama generate request failed: %w", err)
+		return "", fmt.Errorf("ollama generate request failed: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("Ollama generate returned status %d", resp.StatusCode)
+		return "", fmt.Errorf("ollama generate returned status %d", resp.StatusCode)
 	}
 
 	var result OllamaGenerateResponse
