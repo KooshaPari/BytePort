@@ -9,8 +9,6 @@ on:
 
 permissions:
   contents: read
-  security-events: write
-  pull-requests: write
 
 jobs:
   # ── Job 1: Security scan (cargo audit) ──────────────────────────────
@@ -19,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v6
-      - uses: rustsec/audit-check@v2
+      - uses: rustsec/audit-check@69366f33c96575abad1ee0dba8212993eecbe998 # v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -31,10 +29,10 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v6
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4 # stable
 
       - name: Install cargo-cyclonedx
-        uses: taiki-e/install-action@v2
+        uses: taiki-e/install-action@065d6a08a14e61e89fb0a4c10eecdbdef39c7d8e # v2
         with:
           tool: cargo-cyclonedx
 
@@ -60,7 +58,7 @@ jobs:
           echo "✅ SBOM is valid ($size bytes)"
 
       - name: Upload SBOM as artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: sbom-bomlet
           path: '*.cdx.json'

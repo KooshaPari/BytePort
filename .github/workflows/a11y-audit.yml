@@ -18,9 +18,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '20'
           cache: 'npm'
@@ -28,7 +28,7 @@ jobs:
 
       - name: Install deps
         working-directory: frontend/web
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Build preview
         working-directory: frontend/web
@@ -46,8 +46,8 @@ jobs:
       - name: Install axe-core runner
         working-directory: frontend/web
         run: |
-          npm install --no-save @axe-core/playwright@^4 playwright@^1
-          npx playwright install --with-deps chromium
+          npm install --ignore-scripts --no-save --package-lock=false @axe-core/playwright@^4 playwright@^1
+          npm exec --no -- playwright install --with-deps chromium
 
       - name: Run a11y audit
         env:
@@ -57,7 +57,7 @@ jobs:
 
       - name: Annotate PR (failure only)
         if: failure()
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         with:
           script: |
             await github.rest.issues.createComment({
