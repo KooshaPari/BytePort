@@ -7,6 +7,8 @@ import (
 	"strings"
 )
 
+const sha256Prefix = "sha256:"
+
 // WorkloadIntent is an owner-scoped desired-state request for the compute mesh.
 // Provider credentials and provider-specific state stay behind adapters.
 type WorkloadIntent struct {
@@ -26,10 +28,10 @@ func (i WorkloadIntent) Validate() error {
 	if strings.TrimSpace(i.CompositionName) == "" {
 		return fmt.Errorf("composition_name is required")
 	}
-	if !strings.HasPrefix(i.CompositionDigest, "sha256:") || len(i.CompositionDigest) != len("sha256:")+64 {
+	if !strings.HasPrefix(i.CompositionDigest, sha256Prefix) || len(i.CompositionDigest) != len(sha256Prefix)+64 {
 		return fmt.Errorf("composition_digest must be sha256:<64 hex>")
 	}
-	if _, err := hex.DecodeString(strings.TrimPrefix(i.CompositionDigest, "sha256:")); err != nil {
+	if _, err := hex.DecodeString(strings.TrimPrefix(i.CompositionDigest, sha256Prefix)); err != nil {
 		return fmt.Errorf("composition_digest must be sha256:<64 hex>")
 	}
 	if strings.TrimSpace(i.ArtifactRef) == "" {
