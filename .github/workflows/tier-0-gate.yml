@@ -147,7 +147,7 @@ jobs:
       - name: Cache cargo
         uses: Swatinem/rust-cache@42dc69e1aa15d09112580998cf2ef0119e2e91ae # v2
       - name: cargo build
-        run: cargo build --workspace
+        run: cargo build --workspace --locked
 
   rust-fmt:
     name: Rust fmt
