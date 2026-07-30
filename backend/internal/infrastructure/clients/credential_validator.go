@@ -77,7 +77,7 @@ func (cv *CredentialValidator) ValidateOllamaCredentials(ctx context.Context, ba
 	if err != nil {
 		return fmt.Errorf("ollama not reachable at %s — is `ollama serve` running? (%w)", baseURL, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("ollama /api/tags returned status %d", resp.StatusCode)
@@ -127,7 +127,7 @@ func (cv *CredentialValidator) ValidateOpenAICompatCredentials(ctx context.Conte
 	if err != nil {
 		return fmt.Errorf("failed to connect to LLM API at %s: %w", baseURL, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("LLM API returned status %d — check your API key", resp.StatusCode)
@@ -214,11 +214,11 @@ func (cv *CredentialValidator) ValidateAzureCredentials(ctx context.Context, ten
 	if err != nil {
 		return fmt.Errorf("azure auth request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("Azure auth failed (%d): %s", resp.StatusCode, string(respBody))
+		return fmt.Errorf("azure auth failed (%d): %s", resp.StatusCode, string(respBody))
 	}
 	return nil
 }
@@ -252,7 +252,7 @@ func (cv *CredentialValidator) ValidateGCPCredentials(ctx context.Context, servi
 // wraps: Vercel REST API GET /v2/user
 func (cv *CredentialValidator) ValidateVercelCredentials(ctx context.Context, token string) error {
 	if token == "" {
-		return fmt.Errorf("Vercel token is required")
+		return fmt.Errorf("vercel token is required")
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://api.vercel.com/v2/user", nil)
 	if err != nil {
@@ -262,15 +262,15 @@ func (cv *CredentialValidator) ValidateVercelCredentials(ctx context.Context, to
 
 	resp, err := cv.httpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("Vercel API unreachable: %w", err)
+		return fmt.Errorf("vercel API unreachable: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusUnauthorized {
 		return fmt.Errorf("invalid Vercel token (401 Unauthorized)")
 	}
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("Vercel API returned %d", resp.StatusCode)
+		return fmt.Errorf("vercel API returned %d", resp.StatusCode)
 	}
 	return nil
 }
@@ -279,7 +279,7 @@ func (cv *CredentialValidator) ValidateVercelCredentials(ctx context.Context, to
 // wraps: Netlify REST API GET /api/v1/user
 func (cv *CredentialValidator) ValidateNetlifyCredentials(ctx context.Context, token string) error {
 	if token == "" {
-		return fmt.Errorf("Netlify token is required")
+		return fmt.Errorf("netlify token is required")
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://api.netlify.com/api/v1/user", nil)
 	if err != nil {
@@ -289,15 +289,15 @@ func (cv *CredentialValidator) ValidateNetlifyCredentials(ctx context.Context, t
 
 	resp, err := cv.httpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("Netlify API unreachable: %w", err)
+		return fmt.Errorf("netlify API unreachable: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusUnauthorized {
 		return fmt.Errorf("invalid Netlify token (401 Unauthorized)")
 	}
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("Netlify auth failed (%d)", resp.StatusCode)
+		return fmt.Errorf("netlify auth failed (%d)", resp.StatusCode)
 	}
 	return nil
 }
@@ -306,7 +306,7 @@ func (cv *CredentialValidator) ValidateNetlifyCredentials(ctx context.Context, t
 // wraps: Railway GraphQL API POST /graphql/v2
 func (cv *CredentialValidator) ValidateRailwayCredentials(ctx context.Context, token string) error {
 	if token == "" {
-		return fmt.Errorf("Railway token is required")
+		return fmt.Errorf("railway token is required")
 	}
 	query := `{"query": "{ me { id email } }"}`
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost,
@@ -319,9 +319,9 @@ func (cv *CredentialValidator) ValidateRailwayCredentials(ctx context.Context, t
 
 	resp, err := cv.httpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("Railway API unreachable: %w", err)
+		return fmt.Errorf("railway API unreachable: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusUnauthorized {
 		return fmt.Errorf("invalid Railway token (401 Unauthorized)")
@@ -349,7 +349,7 @@ func (cv *CredentialValidator) ValidateFlyIOCredentials(ctx context.Context, tok
 	if err != nil {
 		return fmt.Errorf("Fly.io API unreachable: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusUnauthorized {
 		return fmt.Errorf("invalid Fly.io token (401 Unauthorized)")

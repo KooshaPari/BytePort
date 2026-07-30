@@ -26,7 +26,9 @@ func main() {
 	}
 
 	if orchestratorPort != "" {
-		os.Setenv("PORT", orchestratorPort)
+		if err := os.Setenv("PORT", orchestratorPort); err != nil {
+			log.Fatalf("failed to preserve orchestrator port: %v", err)
+		}
 	}
 
 	if err := lib.InitializeEncryptionKey(); err != nil {

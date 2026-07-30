@@ -206,7 +206,7 @@ func TestFindOrCreateUserFromWorkOSUltimateCoverage(t *testing.T) {
 
 		// This should panic due to nil database
 		assert.Panics(t, func() {
-			FindOrCreateUserFromWorkOS(workosUserInfo)
+			_, _ = FindOrCreateUserFromWorkOS(workosUserInfo)
 		})
 	})
 
@@ -431,7 +431,7 @@ func TestDatabaseFunctionsUltimateCoverage(t *testing.T) {
 
 		// This should panic due to nil database
 		assert.Panics(t, func() {
-			GetUserByWorkOSID("test-id")
+			_, _ = GetUserByWorkOSID("test-id")
 		})
 	})
 
@@ -452,7 +452,7 @@ func TestDatabaseFunctionsUltimateCoverage(t *testing.T) {
 
 		// This should panic due to nil database
 		assert.Panics(t, func() {
-			CreateUserFromWorkOS(workosUserInfo)
+			_, _ = CreateUserFromWorkOS(workosUserInfo)
 		})
 	})
 
