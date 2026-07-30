@@ -29,8 +29,7 @@ func TestDeploymentModel_UsesUUIDAsPrimaryKey(t *testing.T) {
 	var uuidPrimaryKey bool
 	for _, column := range columns {
 		if column.Name() == "uuid" {
-			uuidPrimaryKey, err = column.PrimaryKey()
-			require.NoError(t, err)
+			uuidPrimaryKey, _ = column.PrimaryKey()
 			break
 		}
 	}
