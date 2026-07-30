@@ -383,10 +383,10 @@ func (cv *CredentialValidator) ValidateSupabaseCredentials(ctx context.Context, 
 // ValidatePortfolioAPI validates Portfolio API credentials using a health probe.
 func (cv *CredentialValidator) ValidatePortfolioAPI(ctx context.Context, endpoint, apiKey string) error {
 	if endpoint == "" {
-		return fmt.Errorf("Portfolio API endpoint is required")
+		return fmt.Errorf("portfolio API endpoint is required")
 	}
 	if apiKey == "" {
-		return fmt.Errorf("Portfolio API key is required")
+		return fmt.Errorf("portfolio API key is required")
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint+"/byteport", nil)
