@@ -19,8 +19,9 @@ import (
 
 // WorkOSAuthService provides authentication using WorkOS AuthKit
 type WorkOSAuthService struct {
-	client         *usermanagement.Client
-	secretsManager *secrets.Manager
+	client          *usermanagement.Client
+	secretsManager  *secrets.Manager
+	allowTestTokens bool
 }
 
 var httpGet = func(url string) (*http.Response, error) {
@@ -42,8 +43,15 @@ type AuthConfig struct {
 // NewWorkOSAuthService creates a new WorkOS authentication service
 func NewWorkOSAuthService(secretsManager *secrets.Manager) *WorkOSAuthService {
 	return &WorkOSAuthService{
-		secretsManager: secretsManager,
+		secretsManager:  secretsManager,
+		allowTestTokens: true,
 	}
+}
+
+// NewProductionWorkOSAuthService creates a service that never accepts the
+// synthetic test-token/test-code paths used by unit tests and local fixtures.
+func NewProductionWorkOSAuthService(secretsManager *secrets.Manager) *WorkOSAuthService {
+	return &WorkOSAuthService{secretsManager: secretsManager}
 }
 
 // Initialize sets up the WorkOS client with configuration from secrets
@@ -112,7 +120,7 @@ func (w *WorkOSAuthService) validateJWTToken(ctx context.Context, token string) 
 	}
 
 	// For development/testing, check for test tokens
-	if strings.HasPrefix(token, "test-") || strings.HasPrefix(token, "mock-") {
+	if w.allowTestTokens && (strings.HasPrefix(token, "test-") || strings.HasPrefix(token, "mock-")) {
 		return w.handleTestToken(token)
 	}
 
@@ -267,7 +275,7 @@ func (w *WorkOSAuthService) ExchangeCodeForToken(ctx context.Context, code strin
 	}
 
 	// Handle test codes for development/testing
-	if strings.HasPrefix(code, "test-") || strings.HasPrefix(code, "mock-") {
+	if w.allowTestTokens && (strings.HasPrefix(code, "test-") || strings.HasPrefix(code, "mock-")) {
 		return w.handleTestCodeExchange(code)
 	}
 

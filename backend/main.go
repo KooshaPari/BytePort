@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/byteport/api/internal/container"
 	"github.com/byteport/api/lib"
@@ -55,7 +57,13 @@ func main() {
 	containerInst := container.NewContainer(models.DB)
 	log.Printf("✅ Dependency injection container initialized")
 
-	server := NewAPIServer(containerInst)
+	authCtx, cancelAuth := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancelAuth()
+	authMiddleware, err := lib.ProductionAuthMiddleware(authCtx)
+	if err != nil {
+		log.Fatalf("failed to initialise production authentication: %v", err)
+	}
+	server := NewAPIServerWithAuth(containerInst, authMiddleware)
 
 	addr := fmt.Sprintf(":%s", port)
 	log.Printf("🚀 BytePort API Server starting on %s", addr)
