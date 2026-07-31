@@ -3,7 +3,7 @@
 # Enforces code coverage thresholds across BytePort's three tiers:
 #   - Rust lib (crates/byteport-transport):  ≥71%
 #   - Go framework (backend):                ≥70%
-#   - Service/E2E (frontend/web integration): ≥60%
+#   - Frontend unit (frontend/web helpers):     ≥60%
 #
 # Trigger: every PR to main/master + push to main/master.
 # Concurrency: one run per ref; new commits cancel in-flight runs.
@@ -121,11 +121,11 @@ jobs:
           retention-days: 30
 
   # ─────────────────────────────────────────────────────────────────────
-  # Service/E2E coverage — frontend/web (Vitest)
+  # Frontend unit coverage — frontend/web (Vitest)
   # Threshold: ≥60%
   # ─────────────────────────────────────────────────────────────────────
   service-coverage:
-    name: Service/E2E coverage (≥60%)
+    name: Frontend unit coverage (≥60%)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -146,30 +146,25 @@ jobs:
       - name: Install dependencies
         run: npm ci --ignore-scripts --no-audit --no-fund
 
-      - name: Run service tests with coverage
-        run: npm exec --no -- vitest run --coverage --reporter=json --outputFile=target/coverage-service.json
+      - name: Prepare SvelteKit config
+        run: npm exec --no -- svelte-kit sync
 
-      - name: Check coverage threshold (≥60%)
+      - name: Run frontend unit tests with coverage
+        run: npm exec --no -- vitest run --coverage
+
+      - name: Verify coverage report (≥60%)
         run: |
-          if [ -f target/coverage-service.json ]; then
-            COVERAGE=$(node -e "const c = require('./target/coverage-service.json'); console.log(c.total?.lines?.pct || 0)")
-            echo "Service/E2E coverage: ${COVERAGE}%"
-            THRESHOLD=60.0
-            if (( $(echo "$COVERAGE < $THRESHOLD" | bc -l) )); then
-              echo "❌ Service/E2E coverage ${COVERAGE}% is below threshold ${THRESHOLD}%"
-              exit 1
-            fi
-            echo "✅ Service/E2E coverage ${COVERAGE}% meets threshold ${THRESHOLD}%"
-          else
-            echo "❌ No coverage report found; service coverage is required"
+          if [ ! -f target/coverage/coverage-summary.json ]; then
+            echo "❌ No coverage summary found"
             exit 1
           fi
+          node -e "const c = require('./target/coverage/coverage-summary.json'); const pct = c.total?.lines?.pct ?? 0; console.log('Frontend unit coverage:', pct + '%'); if (pct < 60) process.exit(1)"
 
-      - name: Upload service coverage artifact
+      - name: Upload frontend unit coverage artifact
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: coverage-service
+          name: coverage-frontend-unit
           path: frontend/web/target/
           retention-days: 30
 
@@ -219,11 +214,11 @@ jobs:
 
           # Service
           if [ "${{ needs.service-coverage.result }}" = "success" ]; then
-            echo "| Service/E2E (frontend/web) | ≥60% | ✅ Pass |" >> $GITHUB_STEP_SUMMARY
+            echo "| Frontend unit (frontend/web) | ≥60% | ✅ Pass |" >> $GITHUB_STEP_SUMMARY
           elif [ "${{ needs.service-coverage.result }}" = "skipped" ]; then
-            echo "| Service/E2E (frontend/web) | ≥60% | ⏭️ Skipped |" >> $GITHUB_STEP_SUMMARY
+            echo "| Frontend unit (frontend/web) | ≥60% | ⏭️ Skipped |" >> $GITHUB_STEP_SUMMARY
           else
-            echo "| Service/E2E (frontend/web) | ≥60% | ❌ Fail |" >> $GITHUB_STEP_SUMMARY
+            echo "| Frontend unit (frontend/web) | ≥60% | ❌ Fail |" >> $GITHUB_STEP_SUMMARY
           fi
 
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -246,7 +241,7 @@ jobs:
               '|------|-----------|--------|',
               `| Rust lib (byteport-transport) | ≥71% | ${{ needs.rust-lib-coverage.result == 'success' && '✅ Pass' || '❌ Fail' }} |`,
               `| Go framework (backend) | ≥70% | ${{ needs.go-framework-coverage.result == 'success' && '✅ Pass' || '❌ Fail' }} |`,
-              `| Service/E2E (frontend/web) | ≥60% | ${{ needs.service-coverage.result == 'success' && '✅ Pass' || '❌ Fail' }} |`,
+              `| Frontend unit (frontend/web) | ≥60% | ${{ needs.service-coverage.result == 'success' && '✅ Pass' || '❌ Fail' }} |`,
             ].join('\n');
 
             await github.rest.issues.createComment({
