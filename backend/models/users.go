@@ -3,24 +3,24 @@ package models
 import "time"
 
 type User struct {
-	UUID      string     `json:"uuid" gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
-	Name      string     `json:"name" gorm:"type:varchar(255);not null"`
-	Email     string     `json:"email" gorm:"type:varchar(255);uniqueIndex;not null"`
-	Password  string     `json:"password" gorm:"type:varchar(255);not null"`
-	AwsCreds    AwsCreds      `json:"awsCreds" gorm:"embedded;embeddedPrefix:aws_"`
-	AzureCreds  AzureCreds    `json:"azureCreds" gorm:"embedded;embeddedPrefix:azure_"`
-	GCPCreds    GCPCreds      `json:"gcpCreds" gorm:"embedded;embeddedPrefix:gcp_"`
-	VercelCreds VercelCreds   `json:"vercelCreds" gorm:"embedded;embeddedPrefix:vercel_"`
-	NetlifyCreds NetlifyCreds `json:"netlifyCreds" gorm:"embedded;embeddedPrefix:netlify_"`
-	RailwayCreds RailwayCreds `json:"railwayCreds" gorm:"embedded;embeddedPrefix:railway_"`
-	FlyIOCreds  FlyIOCreds    `json:"flyioCreds" gorm:"embedded;embeddedPrefix:flyio_"`
+	UUID          string        `json:"uuid" gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
+	Name          string        `json:"name" gorm:"type:varchar(255);not null"`
+	Email         string        `json:"email" gorm:"type:varchar(255);uniqueIndex;not null"`
+	Password      string        `json:"password" gorm:"type:varchar(255);not null"`
+	AwsCreds      AwsCreds      `json:"awsCreds" gorm:"embedded;embeddedPrefix:aws_"`
+	AzureCreds    AzureCreds    `json:"azureCreds" gorm:"embedded;embeddedPrefix:azure_"`
+	GCPCreds      GCPCreds      `json:"gcpCreds" gorm:"embedded;embeddedPrefix:gcp_"`
+	VercelCreds   VercelCreds   `json:"vercelCreds" gorm:"embedded;embeddedPrefix:vercel_"`
+	NetlifyCreds  NetlifyCreds  `json:"netlifyCreds" gorm:"embedded;embeddedPrefix:netlify_"`
+	RailwayCreds  RailwayCreds  `json:"railwayCreds" gorm:"embedded;embeddedPrefix:railway_"`
+	FlyIOCreds    FlyIOCreds    `json:"flyioCreds" gorm:"embedded;embeddedPrefix:flyio_"`
 	SupabaseCreds SupabaseCreds `json:"supabaseCreds" gorm:"embedded;embeddedPrefix:supabase_"`
-	LLMConfig   LLM           `json:"llmConfig" gorm:"embedded;embeddedPrefix:llm_"`
-	Portfolio   Portfolio     `json:"portfolio" gorm:"embedded;embeddedPrefix:portfolio_"`
-	Projects  []Project  `json:"projects" gorm:"foreignKey:Owner;references:UUID"`
-	Instances []Instance `json:"instances" gorm:"foreignKey:Owner;references:UUID"`
-	CreatedAt time.Time  `json:"created_at" gorm:"autoCreateTime"`
-	UpdatedAt time.Time  `json:"updated_at" gorm:"autoUpdateTime"`
+	LLMConfig     LLM           `json:"llmConfig" gorm:"embedded;embeddedPrefix:llm_"`
+	Portfolio     Portfolio     `json:"portfolio" gorm:"embedded;embeddedPrefix:portfolio_"`
+	Projects      []Project     `json:"projects" gorm:"foreignKey:Owner;references:UUID"`
+	Instances     []Instance    `json:"instances" gorm:"foreignKey:Owner;references:UUID"`
+	CreatedAt     time.Time     `json:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt     time.Time     `json:"updated_at" gorm:"autoUpdateTime"`
 }
 
 // LLM holds the user's LLM provider configuration.
@@ -104,14 +104,14 @@ type SignupRequest struct {
 
 // LinkRequest contains all credential and configuration fields settable after signup.
 type LinkRequest struct {
-	AwsCreds     AwsCreds      `gorm:"embedded;embeddedPrefix:aws_"`
-	AzureCreds   AzureCreds    `gorm:"embedded;embeddedPrefix:azure_"`
-	GCPCreds     GCPCreds      `gorm:"embedded;embeddedPrefix:gcp_"`
-	VercelCreds  VercelCreds   `gorm:"embedded;embeddedPrefix:vercel_"`
-	NetlifyCreds NetlifyCreds  `gorm:"embedded;embeddedPrefix:netlify_"`
-	RailwayCreds RailwayCreds  `gorm:"embedded;embeddedPrefix:railway_"`
-	FlyIOCreds   FlyIOCreds    `gorm:"embedded;embeddedPrefix:flyio_"`
+	AwsCreds      AwsCreds      `gorm:"embedded;embeddedPrefix:aws_"`
+	AzureCreds    AzureCreds    `gorm:"embedded;embeddedPrefix:azure_"`
+	GCPCreds      GCPCreds      `gorm:"embedded;embeddedPrefix:gcp_"`
+	VercelCreds   VercelCreds   `gorm:"embedded;embeddedPrefix:vercel_"`
+	NetlifyCreds  NetlifyCreds  `gorm:"embedded;embeddedPrefix:netlify_"`
+	RailwayCreds  RailwayCreds  `gorm:"embedded;embeddedPrefix:railway_"`
+	FlyIOCreds    FlyIOCreds    `gorm:"embedded;embeddedPrefix:flyio_"`
 	SupabaseCreds SupabaseCreds `gorm:"embedded;embeddedPrefix:supabase_"`
-	LLMConfig    LLM           `gorm:"embedded;embeddedPrefix:openai_"`
-	Portfolio    Portfolio     `gorm:"embedded;embeddedPrefix:portfolio_"`
+	LLMConfig     LLM           `gorm:"embedded;embeddedPrefix:openai_"`
+	Portfolio     Portfolio     `gorm:"embedded;embeddedPrefix:portfolio_"`
 }
