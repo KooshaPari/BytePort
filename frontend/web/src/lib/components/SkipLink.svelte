@@ -6,7 +6,7 @@
  *
  * PILLAR-TAXONOMY-v2.md v2.2 §L76 (accessibility).
  *
- * Usage: `<SkipLink />` inside `+layout.svelte`, immediately after `&lt;header&gt;`.
+ * Mount this component inside `+layout.svelte` immediately after the header.
  *
  * Design: link is offscreen until focused, then animates in with
  * prefers-reduced-motion respected (no transform when reduced).
@@ -14,10 +14,12 @@
 <script lang="ts">
   import { t } from '$lib/i18n';
 
+  export let href = '#main';
+  export let label: string | undefined;
   const tStore = t;
 </script>
 
-<a class="skip-link" href="#main">{$tStore('common.skipToMain')}</a>
+<a class="skip-link" {href}>{label ?? $tStore('common.skipToMain')}</a>
 
 <style>
   .skip-link {

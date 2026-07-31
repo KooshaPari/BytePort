@@ -3,7 +3,7 @@
  *
  * PILLAR-TAXONOMY-v2.md v2.2 §L76 (accessibility).
  *
- * Mount once in +layout.svelte as <LiveAnnouncer />. Screen-reader users
+ * Mount this component once in +layout.svelte. Screen-reader users
  * get a polite announcement whenever you call announce() from anywhere
  * via the exported function. Use it for:
  *   - SPA route changes (so the new page name is read out)
@@ -15,7 +15,7 @@
  *
  * The visible label is sr-only — only AT users perceive it.
  */
-<script lang="ts" context="module">
+<script lang="ts" module>
   let _instance: { announce: (msg: string, politeness?: 'polite' | 'assertive') => void } | null =
     null;
 
@@ -27,8 +27,8 @@
 </script>
 
 <script lang="ts">
-  let politeMsg = '';
-  let assertiveMsg = '';
+  let politeMsg = $state('');
+  let assertiveMsg = $state('');
 
   export function announce(msg: string, politeness: 'polite' | 'assertive' = 'polite'): void {
     if (politeness === 'polite') {
