@@ -277,6 +277,9 @@ jobs:
           fi
       - uses: trunk-io/trunk-action@04ba50e7658c81db7356da96657e6e77f220bfa3 # v1
         if: hashFiles('trunk.yaml', '.trunk/trunk.yaml') != ''
+        with:
+          post-init: |
+            "${TRUNK_PATH}" tools install --ci
 
   # ===========================================================================
   # STAGE 5: Aggregation gate for branch protection
