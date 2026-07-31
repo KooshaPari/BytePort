@@ -52,6 +52,13 @@ type ValidationError struct{ Message string }
 
 func (e *ValidationError) Error() string { return e.Message }
 
+// ConflictError describes an idempotency conflict for an existing workload
+// identity. It is kept separate from ValidationError so transports can map a
+// changed composition digest to HTTP 409 without changing existing clients.
+type ConflictError struct{ Message string }
+
+func (e *ConflictError) Error() string { return e.Message }
+
 // Validate checks the portable contract before any provider or runtime side effect.
 func (r DesiredStateRequest) Validate(owner string) error {
 	if strings.TrimSpace(owner) == "" {

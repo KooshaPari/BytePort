@@ -53,9 +53,12 @@ func (h *MeshWorkloadHandler) Submit(c *gin.Context) {
 	response, err := h.useCase.Execute(c.Request.Context(), owner, req)
 	if err != nil {
 		var validationErr *meshworkload.ValidationError
+		var conflictErr *meshworkload.ConflictError
 		switch {
 		case errors.As(err, &validationErr):
 			c.JSON(http.StatusBadRequest, ErrorResponse{Error: validationErr.Error(), Code: "VALIDATION_ERROR"})
+		case errors.As(err, &conflictErr):
+			c.JSON(http.StatusConflict, ErrorResponse{Error: conflictErr.Error(), Code: "CONFLICT"})
 		case errors.Is(err, context.Canceled):
 			c.JSON(http.StatusRequestTimeout, ErrorResponse{Error: "request canceled", Code: "REQUEST_CANCELED"})
 		default:

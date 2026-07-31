@@ -2,7 +2,9 @@ package meshworkload
 
 import (
 	"context"
+	"errors"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/byteport/api/internal/domain/deployment"
@@ -68,10 +70,12 @@ func TestSubmitDesiredStatePersistsOwnerScopedIntent(t *testing.T) {
 }
 
 type roundTripRepository struct {
-	deployment *deployment.Deployment
+	deployment  *deployment.Deployment
+	createCalls int
 }
 
 func (r *roundTripRepository) Create(_ context.Context, dep *deployment.Deployment) error {
+	r.createCalls++
 	model, err := postgres.DomainToModel(dep)
 	if err != nil {
 		return err
@@ -144,5 +148,88 @@ func TestDesiredStatePlacementRoundTripsThroughPersistence(t *testing.T) {
 	}
 	if got := responses[0].Placement.Constraints["arch"]; got != "arm64" {
 		t.Fatalf("placement constraints did not round-trip: %+v", responses[0].Placement.Constraints)
+	}
+}
+
+func TestDesiredStateReplayReturnsExistingIdentity(t *testing.T) {
+	repository := new(roundTripRepository)
+	store := NewDeploymentStore(repository)
+	useCase := NewSubmitDesiredStateUseCase(store)
+
+	first, err := useCase.Execute(context.Background(), "user-1", validRequest())
+	if err != nil {
+		t.Fatalf("first submit failed: %v", err)
+	}
+	second, err := useCase.Execute(context.Background(), "user-1", validRequest())
+	if err != nil {
+		t.Fatalf("replay submit failed: %v", err)
+	}
+	if second.ID != first.ID {
+		t.Fatalf("replay returned ID %q, want original ID %q", second.ID, first.ID)
+	}
+	if repository.createCalls != 1 {
+		t.Fatalf("replay created %d deployments, want exactly one", repository.createCalls)
+	}
+}
+
+func TestDesiredStateChangedDigestConflictsWithExistingIdentity(t *testing.T) {
+	repository := new(roundTripRepository)
+	store := NewDeploymentStore(repository)
+	useCase := NewSubmitDesiredStateUseCase(store)
+
+	if _, err := useCase.Execute(context.Background(), "user-1", validRequest()); err != nil {
+		t.Fatalf("first submit failed: %v", err)
+	}
+	changed := validRequest()
+	changed.CompositionDigest = "sha256:" + strings.Repeat("b", 64)
+	_, err := useCase.Execute(context.Background(), "user-1", changed)
+	var conflict *ConflictError
+	if !errors.As(err, &conflict) {
+		t.Fatalf("changed digest error = %v, want ConflictError", err)
+	}
+	if repository.createCalls != 1 {
+		t.Fatalf("changed digest created %d deployments, want exactly one", repository.createCalls)
+	}
+}
+
+func TestDesiredStateConcurrentReplayCreatesOneIdentity(t *testing.T) {
+	repository := new(roundTripRepository)
+	store := NewDeploymentStore(repository)
+	useCase := NewSubmitDesiredStateUseCase(store)
+
+	const attempts = 8
+	responses := make(chan *DesiredStateResponse, attempts)
+	errorsCh := make(chan error, attempts)
+	var waitGroup sync.WaitGroup
+	waitGroup.Add(attempts)
+	for i := 0; i < attempts; i++ {
+		go func() {
+			defer waitGroup.Done()
+			response, err := useCase.Execute(context.Background(), "user-1", validRequest())
+			if err != nil {
+				errorsCh <- err
+				return
+			}
+			responses <- response
+		}()
+	}
+	waitGroup.Wait()
+	close(responses)
+	close(errorsCh)
+	for err := range errorsCh {
+		t.Fatalf("concurrent replay failed: %v", err)
+	}
+	var stableID string
+	for response := range responses {
+		if stableID == "" {
+			stableID = response.ID
+			continue
+		}
+		if response.ID != stableID {
+			t.Fatalf("concurrent replay returned IDs %q and %q", stableID, response.ID)
+		}
+	}
+	if repository.createCalls != 1 {
+		t.Fatalf("concurrent replay created %d deployments, want exactly one", repository.createCalls)
 	}
 }

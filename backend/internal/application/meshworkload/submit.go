@@ -3,7 +3,9 @@ package meshworkload
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	domain "github.com/byteport/api/internal/domain/deployment"
@@ -30,7 +32,10 @@ type DesiredStateReader interface {
 
 // DeploymentStore adapts the existing deployment repository to mesh desired state.
 // Provider/runtime credentials are never stored; only portable metadata is recorded.
-type DeploymentStore struct{ repository domain.Repository }
+type DeploymentStore struct {
+	repository domain.Repository
+	mu         sync.Mutex
+}
 
 // NewDeploymentStore creates a persistent mesh store backed by deployments.
 func NewDeploymentStore(repository domain.Repository) *DeploymentStore {
@@ -45,6 +50,36 @@ func (s *DeploymentStore) Save(ctx context.Context, owner string, req DesiredSta
 
 // SaveWithID stores mesh identity and returns the stable deployment UUID.
 func (s *DeploymentStore) SaveWithID(ctx context.Context, owner string, req DesiredStateRequest) (string, error) {
+	// Serialize the read/create pair for callers sharing this process. A
+	// database-level uniqueness constraint or transaction can extend this
+	// guarantee across API instances without changing this contract.
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// The owner/name pair is the stable workload slot. A retry with the same
+	// composition digest replays the original control-plane identity, while a
+	// changed digest is rejected instead of silently creating a second workload
+	// under the same name.
+	existing, err := s.repository.FindByOwner(ctx, owner)
+	if err != nil {
+		return "", err
+	}
+	var replayID string
+	for _, candidate := range existing {
+		if candidate == nil || candidate.Name() != req.Name {
+			continue
+		}
+		metadata := candidate.CompositionMetadata()
+		if metadata != nil && metadata.Digest == req.CompositionDigest {
+			replayID = candidate.UUID()
+			continue
+		}
+		return "", &ConflictError{Message: fmt.Sprintf("mesh workload %q already exists with a different composition digest", req.Name)}
+	}
+	if replayID != "" {
+		return replayID, nil
+	}
+
 	dep, err := domain.NewDeployment(req.Name, owner, nil)
 	if err != nil {
 		return "", err
