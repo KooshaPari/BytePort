@@ -25,6 +25,7 @@
 		"test:visual:update": "playwright test --config=playwright.visual.config.ts --update-snapshots"
 	},
 	"devDependencies": {
+		"@axe-core/playwright": "^4.11.0",
 		"@chromatic-com/storybook": "^5.2.1",
 		"@iconify/svelte": "^5.2.1",
 		"@playwright/test": "^1.61.1",

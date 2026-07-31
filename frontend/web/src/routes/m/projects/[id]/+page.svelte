@@ -14,7 +14,9 @@
   import { t } from '$lib/i18n';
   import type { Readable } from 'svelte/store';
 
-  const projectId = $page.params.id;
+  // SvelteKit types route params as optional; retain a deterministic preview
+  // value for malformed deep links while keeping the route type-safe.
+  const projectId = $page.params.id ?? 'unknown';
 
   type Project = {
     id: string;
