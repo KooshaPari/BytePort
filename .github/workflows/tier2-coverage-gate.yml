@@ -147,7 +147,7 @@ jobs:
         run: npm ci --ignore-scripts --no-audit --no-fund
 
       - name: Run service tests with coverage
-        run: npm exec --no -- vitest run --coverage --reporter=json --outputFile=target/coverage-service.json || true
+        run: npm exec --no -- vitest run --coverage --reporter=json --outputFile=target/coverage-service.json
 
       - name: Check coverage threshold (≥60%)
         run: |
@@ -161,8 +161,8 @@ jobs:
             fi
             echo "✅ Service/E2E coverage ${COVERAGE}% meets threshold ${THRESHOLD}%"
           else
-            echo "⚠️ No coverage report found; frontend may not have tests yet"
-            echo "Coverage threshold check SKIPPED (no test suite)"
+            echo "❌ No coverage report found; service coverage is required"
+            exit 1
           fi
 
       - name: Upload service coverage artifact
@@ -228,7 +228,8 @@ jobs:
 
           echo "" >> $GITHUB_STEP_SUMMARY
           if [ "${{ needs.rust-lib-coverage.result }}" = "success" ] && \
-             [ "${{ needs.go-framework-coverage.result }}" = "success" ]; then
+             [ "${{ needs.go-framework-coverage.result }}" = "success" ] && \
+             [ "${{ needs.service-coverage.result }}" = "success" ]; then
             echo "**✅ All required coverage thresholds met.**" >> $GITHUB_STEP_SUMMARY
           else
             echo "**❌ One or more coverage thresholds not met.**" >> $GITHUB_STEP_SUMMARY
