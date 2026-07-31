@@ -9,10 +9,10 @@ import (
 
 // DeploymentHandler handles HTTP requests for deployments
 type DeploymentHandler struct {
-	createUseCase    *deployment.CreateDeploymentUseCase
-	getUseCase       *deployment.GetDeploymentUseCase
-	listUseCase      *deployment.ListDeploymentsUseCase
-	terminateUseCase *deployment.TerminateDeploymentUseCase
+	createUseCase       *deployment.CreateDeploymentUseCase
+	getUseCase          *deployment.GetDeploymentUseCase
+	listUseCase         *deployment.ListDeploymentsUseCase
+	terminateUseCase    *deployment.TerminateDeploymentUseCase
 	updateStatusUseCase *deployment.UpdateStatusUseCase
 }
 
@@ -25,10 +25,10 @@ func NewDeploymentHandler(
 	updateStatusUseCase *deployment.UpdateStatusUseCase,
 ) *DeploymentHandler {
 	return &DeploymentHandler{
-		createUseCase:    createUseCase,
-		getUseCase:       getUseCase,
-		listUseCase:      listUseCase,
-		terminateUseCase: terminateUseCase,
+		createUseCase:       createUseCase,
+		getUseCase:          getUseCase,
+		listUseCase:         listUseCase,
+		terminateUseCase:    terminateUseCase,
 		updateStatusUseCase: updateStatusUseCase,
 	}
 }
@@ -208,10 +208,14 @@ func handleApplicationError(c *gin.Context, err error) {
 
 // getUserUUID extracts user UUID from context (set by auth middleware)
 func getUserUUID(c *gin.Context) string {
-	// This would be set by authentication middleware
-	if userUUID, exists := c.Get("user_uuid"); exists {
-		if uuid, ok := userUUID.(string); ok {
-			return uuid
+	// Prefer the canonical mesh key, but accept the legacy key while callers
+	// migrate. Both keys are set by the verified auth middleware and never come
+	// from the request body.
+	for _, key := range []string{"user_uuid", "user_id"} {
+		if identity, exists := c.Get(key); exists {
+			if uuid, ok := identity.(string); ok {
+				return uuid
+			}
 		}
 	}
 	return ""

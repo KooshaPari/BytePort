@@ -419,6 +419,10 @@ func (w *WorkOSAuthService) Middleware() gin.HandlerFunc {
 		}
 
 		// Set user information in context
+		// Keep both identity keys during the auth-surface migration: mesh and
+		// deployment handlers consume user_uuid, while legacy callers consume
+		// user_id. Both values are the same verified WorkOS subject.
+		c.Set("user_uuid", userInfo.ID)
 		c.Set("user_id", userInfo.ID)
 		c.Set("user_email", userInfo.Email)
 		c.Set("user_info", userInfo)
@@ -436,6 +440,7 @@ func (w *WorkOSAuthService) OptionalMiddleware() gin.HandlerFunc {
 			if len(parts) == 2 && parts[0] == "Bearer" {
 				token := parts[1]
 				if userInfo, err := w.ValidateToken(c.Request.Context(), token); err == nil {
+					c.Set("user_uuid", userInfo.ID)
 					c.Set("user_id", userInfo.ID)
 					c.Set("user_email", userInfo.Email)
 					c.Set("user_info", userInfo)
