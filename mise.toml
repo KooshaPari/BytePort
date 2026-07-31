@@ -25,7 +25,8 @@ description = "BytePort — Phenotype-org infrastructure tooling"
 [env.rust_channel]
 description = "Rust toolchain channel for the Tauri + workspace crates."
 # Pin to the same channel BytePort's CI uses (see .github/workflows/*.yml).
-value = "1.82.0"
+# plist 1.10.0 (the quick-xml security remediation) requires Rust 1.88+.
+value = "1.88.0"
 
 # -- Go (backend + nvms backends) ---------------------------------------
 [env.go_version]
