@@ -116,8 +116,15 @@ func TestDesiredStatePlacementRoundTripsThroughPersistence(t *testing.T) {
 	}
 	repository := new(roundTripRepository)
 	store := NewDeploymentStore(repository)
-	if _, err := NewSubmitDesiredStateUseCase(store).Execute(context.Background(), "user-1", request); err != nil {
+	response, err := NewSubmitDesiredStateUseCase(store).Execute(context.Background(), "user-1", request)
+	if err != nil {
 		t.Fatalf("persisted request rejected: %v", err)
+	}
+	if response.ID == "" {
+		t.Fatal("submit response did not expose a stable workload ID")
+	}
+	if response.ID != repository.deployment.UUID() {
+		t.Fatalf("submit response ID %q did not match persisted deployment UUID %q", response.ID, repository.deployment.UUID())
 	}
 	responses, err := store.List(context.Background(), "user-1")
 	if err != nil {
@@ -125,6 +132,9 @@ func TestDesiredStatePlacementRoundTripsThroughPersistence(t *testing.T) {
 	}
 	if len(responses) != 1 {
 		t.Fatalf("expected one persisted workload, got %d", len(responses))
+	}
+	if responses[0].ID != response.ID {
+		t.Fatalf("list returned workload ID %q, want stable ID %q", responses[0].ID, response.ID)
 	}
 	if got := responses[0].Placement; got.Region != request.Placement.Region || got.Zone != request.Placement.Zone || got.NodePool != request.Placement.NodePool {
 		t.Fatalf("placement scalar fields did not round-trip: %+v", got)

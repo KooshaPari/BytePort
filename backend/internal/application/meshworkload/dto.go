@@ -33,6 +33,10 @@ type Placement struct {
 
 // DesiredStateResponse acknowledges validated intent without claiming provider deployment.
 type DesiredStateResponse struct {
+	// ID is the stable control-plane identity assigned to the persisted workload.
+	// It is the deployment UUID internally, and is intentionally separate from
+	// provider/runtime resource IDs.
+	ID                string    `json:"id,omitempty"`
 	Name              string    `json:"name"`
 	Owner             string    `json:"owner"`
 	CompositionDigest string    `json:"composition_digest"`

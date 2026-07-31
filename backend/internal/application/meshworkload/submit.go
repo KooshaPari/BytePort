@@ -14,6 +14,15 @@ type DesiredStateSaver interface {
 	Save(ctx context.Context, owner string, req DesiredStateRequest) error
 }
 
+// DesiredStateIdentitySaver is an additive extension for stores that can
+// return the stable control-plane identity assigned while saving. Keeping this
+// separate from DesiredStateSaver preserves compatibility with existing
+// in-memory/test savers that only need the original error result.
+type DesiredStateIdentitySaver interface {
+	DesiredStateSaver
+	SaveWithID(ctx context.Context, owner string, req DesiredStateRequest) (string, error)
+}
+
 // DesiredStateReader reads owner-scoped desired state for reconciliation.
 type DesiredStateReader interface {
 	List(ctx context.Context, owner string) ([]DesiredStateResponse, error)
@@ -30,16 +39,25 @@ func NewDeploymentStore(repository domain.Repository) *DeploymentStore {
 
 // Save stores mesh identity and portable placement as deployment metadata.
 func (s *DeploymentStore) Save(ctx context.Context, owner string, req DesiredStateRequest) error {
+	_, err := s.SaveWithID(ctx, owner, req)
+	return err
+}
+
+// SaveWithID stores mesh identity and returns the stable deployment UUID.
+func (s *DeploymentStore) SaveWithID(ctx context.Context, owner string, req DesiredStateRequest) (string, error) {
 	dep, err := domain.NewDeployment(req.Name, owner, nil)
 	if err != nil {
-		return err
+		return "", err
 	}
 	dep.SetCompositionMetadata(domain.CompositionMetadata{Digest: req.CompositionDigest, ArtifactRef: req.ArtifactRef})
 	dep.SetProvider("execution_backend", req.ExecutionBackend)
 	if len(req.Placement.Labels)+len(req.Placement.Constraints) > 0 {
 		dep.SetProvider("placement", req.Placement)
 	}
-	return s.repository.Create(ctx, dep)
+	if err := s.repository.Create(ctx, dep); err != nil {
+		return "", err
+	}
+	return dep.UUID(), nil
 }
 
 // List returns persisted mesh intents owned by the authenticated principal.
@@ -55,7 +73,7 @@ func (s *DeploymentStore) List(ctx context.Context, owner string) ([]DesiredStat
 			continue
 		}
 		backend, _ := dep.Providers()["execution_backend"].(string)
-		responses = append(responses, DesiredStateResponse{Name: dep.Name(), Owner: dep.Owner(), CompositionDigest: metadata.Digest, ArtifactRef: metadata.ArtifactRef, ExecutionBackend: backend, Placement: placementFromProvider(dep.Providers()["placement"]), Status: dep.Status().String(), AcceptedAt: dep.CreatedAt()})
+		responses = append(responses, DesiredStateResponse{ID: dep.UUID(), Name: dep.Name(), Owner: dep.Owner(), CompositionDigest: metadata.Digest, ArtifactRef: metadata.ArtifactRef, ExecutionBackend: backend, Placement: placementFromProvider(dep.Providers()["placement"]), Status: dep.Status().String(), AcceptedAt: dep.CreatedAt()})
 	}
 	return responses, nil
 }
@@ -117,12 +135,20 @@ func (uc *SubmitDesiredStateUseCase) Execute(ctx context.Context, owner string, 
 		return nil, ctx.Err()
 	default:
 	}
+	var id string
 	if uc.store != nil {
-		if err := uc.store.Save(ctx, owner, req); err != nil {
+		if identitySaver, ok := uc.store.(DesiredStateIdentitySaver); ok {
+			var err error
+			id, err = identitySaver.SaveWithID(ctx, owner, req)
+			if err != nil {
+				return nil, err
+			}
+		} else if err := uc.store.Save(ctx, owner, req); err != nil {
 			return nil, err
 		}
 	}
 	return &DesiredStateResponse{
+		ID:                id,
 		Name:              req.Name,
 		Owner:             owner,
 		CompositionDigest: req.CompositionDigest,
