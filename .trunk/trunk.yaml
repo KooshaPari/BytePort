@@ -66,6 +66,5 @@ actions:
 
 tools:
   enabled:
-    - golangci-lint2@2.6.1
     - jq@jq-1.7.1
     - yq@4.44.1
