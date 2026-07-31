@@ -38,30 +38,32 @@ jobs:
 
       - name: Generate CycloneDX SBOM
         run: |
-          cargo cyclonedx --format json
+          cargo cyclonedx --format json --override-filename byteport-sbom.cdx.json
           echo "✅ SBOM generated"
 
       - name: Validate SBOM output exists and is non-empty
         run: |
-          sbom_file="$(find . -maxdepth 1 -type f -name '*.cdx.json' -print -quit)"
-          if [ -z "$sbom_file" ]; then
-            echo "❌ No .cdx.json file found after generation"
+          sbom_files="$(find . -type f -name 'byteport-sbom.cdx.json' -print)"
+          if [ -z "$sbom_files" ]; then
+            echo "❌ No byteport-sbom.cdx.json file found after generation"
             ls -la
             exit 1
           fi
-          echo "✅ SBOM file: $sbom_file"
-          size=$(wc -c < "$sbom_file")
-          if [ "$size" -lt 100 ]; then
-            echo "❌ SBOM file suspiciously small ($size bytes)"
-            exit 1
-          fi
-          echo "✅ SBOM is valid ($size bytes)"
+          while IFS= read -r sbom_file; do
+            echo "✅ SBOM file: $sbom_file"
+            size=$(wc -c < "$sbom_file")
+            if [ "$size" -lt 100 ]; then
+              echo "❌ SBOM file suspiciously small ($size bytes)"
+              exit 1
+            fi
+            echo "✅ SBOM is valid ($size bytes)"
+          done <<< "$sbom_files"
 
       - name: Upload SBOM as artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: sbom-bomlet
-          path: './*.cdx.json'
+          path: '**/byteport-sbom.cdx.json'
           retention-days: 60
 
   # ── Job 3: LICENSE presence & content check ─────────────────────────
