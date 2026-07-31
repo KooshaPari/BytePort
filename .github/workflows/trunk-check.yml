@@ -38,6 +38,7 @@ jobs:
         with:
           post-init: |
             "${TRUNK_PATH}" tools install --ci
+          save-annotations: true
 
       - name: Trunk Upgrade (on schedule only)
         if: github.event_name == 'schedule'

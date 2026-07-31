@@ -280,6 +280,7 @@ jobs:
         with:
           post-init: |
             "${TRUNK_PATH}" tools install --ci
+          save-annotations: true
 
   # ===========================================================================
   # STAGE 5: Aggregation gate for branch protection
