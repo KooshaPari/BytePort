@@ -21,7 +21,11 @@ import (
 type WorkOSAuthService struct {
 	client          *usermanagement.Client
 	secretsManager  *secrets.Manager
-	allowTestTokens bool
+	allowTestTokens *bool
+}
+
+func boolPointer(value bool) *bool {
+	return &value
 }
 
 var httpGet = func(url string) (*http.Response, error) {
@@ -44,14 +48,23 @@ type AuthConfig struct {
 func NewWorkOSAuthService(secretsManager *secrets.Manager) *WorkOSAuthService {
 	return &WorkOSAuthService{
 		secretsManager:  secretsManager,
-		allowTestTokens: true,
+		allowTestTokens: boolPointer(true),
 	}
 }
 
 // NewProductionWorkOSAuthService creates a service that never accepts the
 // synthetic test-token/test-code paths used by unit tests and local fixtures.
 func NewProductionWorkOSAuthService(secretsManager *secrets.Manager) *WorkOSAuthService {
-	return &WorkOSAuthService{secretsManager: secretsManager}
+	return &WorkOSAuthService{
+		secretsManager:  secretsManager,
+		allowTestTokens: boolPointer(false),
+	}
+}
+
+func (w *WorkOSAuthService) acceptsTestTokens() bool {
+	// Preserve the zero-value service used by package-local unit tests while
+	// keeping production construction explicitly fail-closed.
+	return w.allowTestTokens == nil || *w.allowTestTokens
 }
 
 // Initialize sets up the WorkOS client with configuration from secrets
@@ -120,7 +133,7 @@ func (w *WorkOSAuthService) validateJWTToken(ctx context.Context, token string) 
 	}
 
 	// For development/testing, check for test tokens
-	if w.allowTestTokens && (strings.HasPrefix(token, "test-") || strings.HasPrefix(token, "mock-")) {
+	if w.acceptsTestTokens() && (strings.HasPrefix(token, "test-") || strings.HasPrefix(token, "mock-")) {
 		return w.handleTestToken(token)
 	}
 
@@ -275,7 +288,7 @@ func (w *WorkOSAuthService) ExchangeCodeForToken(ctx context.Context, code strin
 	}
 
 	// Handle test codes for development/testing
-	if w.allowTestTokens && (strings.HasPrefix(code, "test-") || strings.HasPrefix(code, "mock-")) {
+	if w.acceptsTestTokens() && (strings.HasPrefix(code, "test-") || strings.HasPrefix(code, "mock-")) {
 		return w.handleTestCodeExchange(code)
 	}
 
