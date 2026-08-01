@@ -48,6 +48,7 @@ jobs:
 
       - name: Run Rust tests with coverage
         run: |
+          mkdir -p target/coverage
           cargo llvm-cov \
             --all-features \
             --fail-under-lines 50 \

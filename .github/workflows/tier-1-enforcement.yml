@@ -28,42 +28,34 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v6
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4 # stable
-
-      - name: Install cargo-cyclonedx
-        uses: taiki-e/install-action@065d6a08a14e61e89fb0a4c10eecdbdef39c7d8e # v2
-        with:
-          tool: cargo-cyclonedx
-
       - name: Generate CycloneDX SBOM
-        run: |
-          cargo cyclonedx --format json --override-filename byteport-sbom.cdx.json
-          echo "✅ SBOM generated"
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.18.0
+        with:
+          path: .
+          format: cyclonedx-json
+          output-file: byteport-sbom.cdx.json
+          upload-artifact: false
 
       - name: Validate SBOM output exists and is non-empty
         run: |
-          sbom_files="$(find . -type f -name 'byteport-sbom.cdx.json' -print)"
-          if [ -z "$sbom_files" ]; then
-            echo "❌ No byteport-sbom.cdx.json file found after generation"
-            ls -la
+          sbom_file="byteport-sbom.cdx.json"
+          if [ ! -s "$sbom_file" ]; then
+            echo "❌ No non-empty byteport-sbom.cdx.json file found after generation"
+            find . -type f -name '*.cdx.json' -print
             exit 1
           fi
-          while IFS= read -r sbom_file; do
-            echo "✅ SBOM file: $sbom_file"
-            size=$(wc -c < "$sbom_file")
-            if [ "$size" -lt 100 ]; then
-              echo "❌ SBOM file suspiciously small ($size bytes)"
-              exit 1
-            fi
-            echo "✅ SBOM is valid ($size bytes)"
-          done <<< "$sbom_files"
+          size=$(wc -c < "$sbom_file")
+          if [ "$size" -lt 100 ]; then
+            echo "❌ SBOM file suspiciously small ($size bytes)"
+            exit 1
+          fi
+          echo "✅ SBOM is valid ($size bytes)"
 
       - name: Upload SBOM as artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: sbom-bomlet
-          path: '**/byteport-sbom.cdx.json'
+          path: byteport-sbom.cdx.json
           retention-days: 60
 
   # ── Job 3: LICENSE presence & content check ─────────────────────────
