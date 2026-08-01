@@ -1,5 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+
 /**
  * Visual-regression suite for BytePort UI surface (L60).
  *
@@ -53,7 +55,7 @@ export default defineConfig({
   webServer: process.env.PLAYWRIGHT_BASE_URL
     ? undefined
     : {
-        command: 'npm run build && npm run preview -- --port 4173',
+        command: `${npm} run build && ${npm} run preview -- --port 4173`,
         url: 'http://127.0.0.1:4173',
         reuseExistingServer: !process.env.CI,
         timeout: 120_000,

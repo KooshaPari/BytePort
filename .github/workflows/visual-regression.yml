@@ -45,6 +45,7 @@ jobs:
     timeout-minutes: 20
     env:
       PLAYWRIGHT: '1'
+      VITE_PLAYWRIGHT: '1'
       NODE_VERSION: '22'
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -111,6 +112,7 @@ jobs:
     timeout-minutes: 20
     env:
       PLAYWRIGHT: '1'
+      VITE_PLAYWRIGHT: '1'
       NODE_VERSION: '22'
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4

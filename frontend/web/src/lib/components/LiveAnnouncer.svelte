@@ -1,4 +1,4 @@
-/**
+<!--
  * Live-region announcer for SPA navigation + dynamic state changes.
  *
  * PILLAR-TAXONOMY-v2.md v2.2 §L76 (accessibility).
@@ -14,7 +14,7 @@
  *             'assertive' interrupts (use sparingly, e.g. errors)
  *
  * The visible label is sr-only — only AT users perceive it.
- */
+ -->
 <script lang="ts" module>
   let _instance: { announce: (msg: string, politeness?: 'polite' | 'assertive') => void } | null =
     null;

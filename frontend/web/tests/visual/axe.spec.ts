@@ -37,6 +37,14 @@ for (const route of ROUTES) {
 
     await page.goto(route.path);
 
+    // EmptyState uses a spring entrance animation.  Wait for the settled
+    // state before measuring contrast; sampling its initial 0->1 opacity
+    // produces blended colors and false WCAG failures.
+    const emptyState = page.locator('.empty-state');
+    if (await emptyState.count()) {
+      await expect(emptyState).toHaveCSS('opacity', '1');
+    }
+
     const results = await new AxeBuilder({ page })
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
       .analyze();
