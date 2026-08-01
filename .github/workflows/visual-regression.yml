@@ -135,7 +135,7 @@ jobs:
 
       - name: Run axe-core WCAG-AA audit
         working-directory: frontend/web
-        run: npm exec --no -- playwright test tests/visual/axe.spec.ts --reporter=list,html
+        run: npm exec --no -- playwright test --config=playwright.visual.config.ts tests/visual/axe.spec.ts --reporter=list,html
 
       - name: Upload a11y report on failure
         if: failure()
