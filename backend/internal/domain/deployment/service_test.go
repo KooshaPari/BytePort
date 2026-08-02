@@ -12,6 +12,13 @@ type MockServiceRepository struct {
 	FindByUUIDFunc  func(ctx context.Context, uuid string) (*Deployment, error)
 }
 
+func addTestService(t *testing.T, deployment *Deployment, name, serviceType, provider string) {
+	t.Helper()
+	if err := deployment.AddService(DeploymentService{Name: name, Type: serviceType, Provider: provider}); err != nil {
+		t.Fatalf("failed to add %s service: %v", name, err)
+	}
+}
+
 func (m *MockServiceRepository) Create(ctx context.Context, deployment *Deployment) error {
 	return nil
 }
@@ -86,13 +93,7 @@ func TestValidateDeployment_Success(t *testing.T) {
 	}
 
 	// Add required service
-	if err := deployment.AddService(DeploymentService{
-		Name:     "web",
-		Type:     "frontend",
-		Provider: "vercel",
-	}); err != nil {
-		t.Fatalf("Failed to add service: %v", err)
-	}
+	addTestService(t, deployment, "web", "frontend", "vercel")
 
 	err = service.ValidateDeployment(context.Background(), deployment)
 	if err != nil {
@@ -144,13 +145,7 @@ func TestValidateDeployment_InvalidDeployment(t *testing.T) {
 func TestValidateDeployment_NameConflict(t *testing.T) {
 	existingDeployment, _ := NewDeployment("existing-name", "owner-123", nil)
 	existingDeployment.uuid = "existing-uuid"
-	if err := existingDeployment.AddService(DeploymentService{
-		Name:     "web",
-		Type:     "frontend",
-		Provider: "vercel",
-	}); err != nil {
-		t.Fatalf("failed to add existing service: %v", err)
-	}
+	addTestService(t, existingDeployment, "web", "frontend", "vercel")
 
 	repo := &MockServiceRepository{
 		FindByOwnerFunc: func(ctx context.Context, ownerUUID string) ([]*Deployment, error) {
@@ -161,13 +156,7 @@ func TestValidateDeployment_NameConflict(t *testing.T) {
 
 	newDeployment, _ := NewDeployment("existing-name", "owner-123", nil)
 	newDeployment.uuid = "new-uuid"
-	if err := newDeployment.AddService(DeploymentService{
-		Name:     "web",
-		Type:     "frontend",
-		Provider: "vercel",
-	}); err != nil {
-		t.Fatalf("failed to add new service: %v", err)
-	}
+	addTestService(t, newDeployment, "web", "frontend", "vercel")
 
 	err := service.ValidateDeployment(context.Background(), newDeployment)
 	if err == nil {
@@ -186,13 +175,7 @@ func TestValidateDeployment_NameConflict(t *testing.T) {
 func TestValidateDeployment_SameDeploymentUpdate(t *testing.T) {
 	existingDeployment, _ := NewDeployment("test-name", "owner-123", nil)
 	existingDeployment.uuid = "same-uuid"
-	if err := existingDeployment.AddService(DeploymentService{
-		Name:     "web",
-		Type:     "frontend",
-		Provider: "vercel",
-	}); err != nil {
-		t.Fatalf("failed to add existing service: %v", err)
-	}
+	addTestService(t, existingDeployment, "web", "frontend", "vercel")
 
 	repo := &MockServiceRepository{
 		FindByOwnerFunc: func(ctx context.Context, ownerUUID string) ([]*Deployment, error) {
@@ -220,13 +203,7 @@ func TestValidateDeployment_RepositoryError(t *testing.T) {
 	service := NewDomainService(repo)
 
 	deployment, _ := NewDeployment("test-deploy", "owner-123", nil)
-	if err := deployment.AddService(DeploymentService{
-		Name:     "web",
-		Type:     "frontend",
-		Provider: "vercel",
-	}); err != nil {
-		t.Fatalf("failed to add service: %v", err)
-	}
+	addTestService(t, deployment, "web", "frontend", "vercel")
 
 	err := service.ValidateDeployment(context.Background(), deployment)
 	if err == nil {
@@ -376,20 +353,8 @@ func TestCalculateEstimatedCost_Success(t *testing.T) {
 	service := NewDomainService(repo)
 
 	deployment, _ := NewDeployment("test-deploy", "owner-123", nil)
-	if err := deployment.AddService(DeploymentService{
-		Name:     "backend",
-		Type:     "backend",
-		Provider: "render",
-	}); err != nil {
-		t.Fatalf("failed to add backend service: %v", err)
-	}
-	if err := deployment.AddService(DeploymentService{
-		Name:     "database",
-		Type:     "database",
-		Provider: "supabase",
-	}); err != nil {
-		t.Fatalf("failed to add database service: %v", err)
-	}
+	addTestService(t, deployment, "backend", "backend", "render")
+	addTestService(t, deployment, "database", "database", "supabase")
 
 	costInfo, err := service.CalculateEstimatedCost(context.Background(), deployment)
 	if err != nil {
@@ -440,20 +405,8 @@ func TestCalculateEstimatedCost_MultipleProviders(t *testing.T) {
 	service := NewDomainService(repo)
 
 	deployment, _ := NewDeployment("test-deploy", "owner-123", nil)
-	if err := deployment.AddService(DeploymentService{
-		Name:     "api",
-		Type:     "backend",
-		Provider: "render",
-	}); err != nil {
-		t.Fatalf("failed to add api service: %v", err)
-	}
-	if err := deployment.AddService(DeploymentService{
-		Name:     "worker",
-		Type:     "backend",
-		Provider: "railway",
-	}); err != nil {
-		t.Fatalf("failed to add worker service: %v", err)
-	}
+	addTestService(t, deployment, "api", "backend", "render")
+	addTestService(t, deployment, "worker", "backend", "railway")
 
 	costInfo, err := service.CalculateEstimatedCost(context.Background(), deployment)
 	if err != nil {

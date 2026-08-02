@@ -138,9 +138,7 @@ func TestFindOrCreateUserFromWorkOSCompleteCoverage(t *testing.T) {
 		}
 
 		// This should panic due to nil database
-		assert.Panics(t, func() {
-			_, _ = FindOrCreateUserFromWorkOS(workosUserInfo)
-		})
+		assertFindOrCreatePanics(t, workosUserInfo)
 	})
 
 	t.Run("FindOrCreateUserFromWorkOS with database error", func(t *testing.T) {
@@ -151,9 +149,7 @@ func TestFindOrCreateUserFromWorkOSCompleteCoverage(t *testing.T) {
 		require.NoError(t, err)
 
 		// Close the database to simulate an error
-		if sqlDB, err := db.DB(); err == nil {
-			require.NoError(t, sqlDB.Close())
-		}
+		closeTestDatabase(t, db)
 
 		// Set the global DB variable for testing
 		originalDB := DB
@@ -226,9 +222,7 @@ func TestDatabaseFunctionsCompleteCoverage(t *testing.T) {
 		}()
 
 		// This should panic due to nil database
-		assert.Panics(t, func() {
-			_, _ = GetUserByWorkOSID("test-id")
-		})
+		assertGetUserPanics(t, "test-id")
 	})
 
 	t.Run("CreateUserFromWorkOS with nil database", func(t *testing.T) {
@@ -247,9 +241,7 @@ func TestDatabaseFunctionsCompleteCoverage(t *testing.T) {
 		}
 
 		// This should panic due to nil database
-		assert.Panics(t, func() {
-			_, _ = CreateUserFromWorkOS(workosUserInfo)
-		})
+		assertCreateUserPanics(t, workosUserInfo)
 	})
 
 	t.Run("CreateUserFromWorkOS with database error", func(t *testing.T) {
@@ -260,9 +252,7 @@ func TestDatabaseFunctionsCompleteCoverage(t *testing.T) {
 		require.NoError(t, err)
 
 		// Close the database to simulate an error
-		if sqlDB, err := db.DB(); err == nil {
-			require.NoError(t, sqlDB.Close())
-		}
+		closeTestDatabase(t, db)
 
 		// Set the global DB variable for testing
 		originalDB := DB
@@ -293,9 +283,7 @@ func TestEdgeCasesCompleteCoverage(t *testing.T) {
 		}
 
 		// This should not panic even with nil GORM DB
-		assert.NotPanics(t, func() {
-			_ = project.BeforeSave(nil)
-		})
+		assertBeforeSaveDoesNotPanic(t, project)
 		assert.NotEmpty(t, project.UUID)
 	})
 
