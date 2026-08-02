@@ -9,8 +9,6 @@ on:
 
 permissions:
   contents: read
-  security-events: write
-  pull-requests: write
 
 jobs:
   # ── Job 1: Security scan (cargo audit) ──────────────────────────────
@@ -18,7 +16,8 @@ jobs:
     name: Security Audit (cargo-audit)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v6      - uses: rustsec/audit-check@v2
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v6
+      - uses: rustsec/audit-check@69366f33c96575abad1ee0dba8212993eecbe998 # v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -27,29 +26,24 @@ jobs:
     name: SBOM Generation & Validation
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v6
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install cargo-cyclonedx
-        uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-cyclonedx
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v6
 
       - name: Generate CycloneDX SBOM
-        run: |
-          cargo cyclonedx --output-format json
-          echo "✅ SBOM generated"
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.18.0
+        with:
+          path: .
+          format: cyclonedx-json
+          output-file: byteport-sbom.cdx.json
+          upload-artifact: false
 
       - name: Validate SBOM output exists and is non-empty
         run: |
-          sbom_file="$(ls *.cdx.json 2>/dev/null | head -1)"
-          if [ -z "$sbom_file" ]; then
-            echo "❌ No .cdx.json file found after generation"
-            ls -la
+          sbom_file="byteport-sbom.cdx.json"
+          if [ ! -s "$sbom_file" ]; then
+            echo "❌ No non-empty byteport-sbom.cdx.json file found after generation"
+            find . -type f -name '*.cdx.json' -print
             exit 1
           fi
-          echo "✅ SBOM file: $sbom_file"
           size=$(wc -c < "$sbom_file")
           if [ "$size" -lt 100 ]; then
             echo "❌ SBOM file suspiciously small ($size bytes)"
@@ -58,10 +52,10 @@ jobs:
           echo "✅ SBOM is valid ($size bytes)"
 
       - name: Upload SBOM as artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: sbom-bomlet
-          path: '*.cdx.json'
+          path: byteport-sbom.cdx.json
           retention-days: 60
 
   # ── Job 3: LICENSE presence & content check ─────────────────────────
@@ -69,32 +63,30 @@ jobs:
     name: LICENSE Presence Check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v6
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v6
+
       - name: Verify LICENSE file exists
         run: |
           if [ -f LICENSE ]; then
             echo "✅ LICENSE file present"
             head -5 LICENSE
-            lic_file="LICENSE"
+            echo "lic_file=LICENSE" >> "$GITHUB_ENV"
           elif [ -f LICENSE-MIT ]; then
             echo "✅ LICENSE-MIT file present"
             head -5 LICENSE-MIT
-            lic_file="LICENSE-MIT"
+            echo "lic_file=LICENSE-MIT" >> "$GITHUB_ENV"
           elif [ -f LICENSE.md ]; then
             echo "✅ LICENSE.md file present"
             head -5 LICENSE.md
-            lic_file="LICENSE.md"
-<<<<<<< HEAD
+            echo "lic_file=LICENSE.md" >> "$GITHUB_ENV"
           elif [ -f LICENSE-Apache-2.0 ]; then
             echo "✅ LICENSE-Apache-2.0 file present"
             head -5 LICENSE-Apache-2.0
-            lic_file="LICENSE-Apache-2.0"
+            echo "lic_file=LICENSE-Apache-2.0" >> "$GITHUB_ENV"
           elif [ -f LICENSE.txt ]; then
             echo "✅ LICENSE.txt file present"
             head -5 LICENSE.txt
-            lic_file="LICENSE.txt"
-=======
->>>>>>> ed412378 (feat(ci): add Tier-1 enforcement workflow on PR)
+            echo "lic_file=LICENSE.txt" >> "$GITHUB_ENV"
           else
             echo "❌ No LICENSE file found"
             exit 1
@@ -114,7 +106,8 @@ jobs:
     name: CHANGELOG Update Check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v6        with:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v6
+        with:
           fetch-depth: 0
 
       - name: Check CHANGELOG.md was modified

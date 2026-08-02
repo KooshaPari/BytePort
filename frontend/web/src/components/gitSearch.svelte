@@ -2,7 +2,7 @@
 	import { Input } from '$lib/components/ui/input';
 	import * as Command from '$lib/components/ui/command';
 	import * as Popover from '$lib/components/ui/popover';
-	import { Button } from '$lib/components/ui/button';
+	import { buttonVariants } from '$lib/components/ui/button';
 	import Icon from '@iconify/svelte';
 	import type { Repository } from '$lib/git';
 	import { onMount } from 'svelte';
@@ -81,23 +81,19 @@
 	<label for="git-search" class="text-sm font-medium text-white block mb-2">Select Repository</label>
 
 	<Popover.Root bind:open={isOpen}>
-		<Popover.Trigger asChild let:builder>
-			<Button
-				builders={[builder]}
-				variant="outline"
-				role="combobox"
-				class="w-full justify-between"
-			>
-				{#if selectedRepo}
-					<span class="flex items-center gap-2">
-						<Icon icon="mdi:github" />
-						{selectedRepo.name}
-					</span>
-				{:else}
-					<span class="text-gray-400">Search or select a repository...</span>
-				{/if}
-				<Icon icon="mdi:chevron-down" class="ml-2" />
-			</Button>
+		<Popover.Trigger
+			role="combobox"
+			class={`${buttonVariants({ variant: 'outline' })} w-full justify-between`}
+		>
+			{#if selectedRepo}
+				<span class="flex items-center gap-2">
+					<Icon icon="mdi:github" />
+					{selectedRepo.name}
+				</span>
+			{:else}
+				<span class="text-gray-400">Search or select a repository...</span>
+			{/if}
+			<Icon icon="mdi:chevron-down" class="ml-2" />
 		</Popover.Trigger>
 
 		<Popover.Content class="w-full p-0" side="bottom" align="start">

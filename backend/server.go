@@ -19,6 +19,20 @@ type APIServer struct {
 
 // NewAPIServer creates a new API server instance
 func NewAPIServer(c *container.Container) *APIServer {
+	return newAPIServer(c, lib.AuthMiddleware())
+}
+
+// NewAPIServerWithAuth wires an explicitly initialized authentication
+// middleware. Production startup uses this constructor so a missing WorkOS
+// configuration fails before protected routes are served.
+func NewAPIServerWithAuth(c *container.Container, authMiddleware gin.HandlerFunc) *APIServer {
+	if authMiddleware == nil {
+		panic("BytePort requires an authentication middleware")
+	}
+	return newAPIServer(c, authMiddleware)
+}
+
+func newAPIServer(c *container.Container, authMiddleware gin.HandlerFunc) *APIServer {
 	r := gin.Default()
 
 	// Legacy store for backward compatibility during migration
@@ -47,13 +61,14 @@ func NewAPIServer(c *container.Container) *APIServer {
 		v1.POST("/auth/workos/callback", handleWorkOSCallback)
 
 		protected := v1.Group("/")
-		protected.Use(lib.AuthMiddleware())
+		protected.Use(authMiddleware)
 		{
 			// Protected endpoints - require AuthKit authentication
 			protected.GET("/user/:id", handleGetUser)
 
 			// NEW: Hexagonal architecture endpoints
 			c.DeploymentHandler.RegisterRoutes(protected)
+			c.MeshWorkloadHandler.RegisterRoutes(protected)
 
 			// LEGACY: Old deployment endpoints (will be removed)
 			legacyDeployments := protected.Group("/legacy/deployments")

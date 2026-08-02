@@ -15,7 +15,10 @@
   import EmptyState from '$lib/components/EmptyState.svelte';
   import type { Readable } from 'svelte/store';
 
-  const deployId = $page.params.id;
+  // SvelteKit types route params as optional; the `[id]` route itself is
+  // guaranteed at runtime, while this fallback keeps the scaffold total in
+  // type-check and in malformed deep-link previews.
+  const deployId = $page.params.id ?? 'unknown';
 
   // In a real app: $page.params.id → fetch from /api/mobile/deploys/:id
   // For this scaffold we synthesize a plausible record matching the data shape

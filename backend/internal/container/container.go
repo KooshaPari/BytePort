@@ -2,6 +2,7 @@ package container
 
 import (
 	"github.com/byteport/api/internal/application/deployment"
+	"github.com/byteport/api/internal/application/meshworkload"
 	domaindep "github.com/byteport/api/internal/domain/deployment"
 	"github.com/byteport/api/internal/infrastructure/http/handlers"
 	"github.com/byteport/api/internal/infrastructure/persistence/postgres"
@@ -27,7 +28,8 @@ type Container struct {
 	UpdateStatusUseCase        *deployment.UpdateStatusUseCase
 
 	// HTTP Handlers
-	DeploymentHandler *handlers.DeploymentHandler
+	DeploymentHandler   *handlers.DeploymentHandler
+	MeshWorkloadHandler *handlers.MeshWorkloadHandler
 }
 
 // NewContainer creates a new dependency injection container
@@ -90,5 +92,8 @@ func (c *Container) initHandlers() {
 		c.ListDeploymentsUseCase,
 		c.TerminateDeploymentUseCase,
 		c.UpdateStatusUseCase,
+	)
+	c.MeshWorkloadHandler = handlers.NewMeshWorkloadHandler(
+		meshworkload.NewSubmitDesiredStateUseCase(meshworkload.NewDeploymentStore(c.DeploymentRepository)),
 	)
 }

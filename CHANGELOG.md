@@ -14,6 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Mesh desired-state submissions now expose stable workload IDs and replay the
+  same owner/name/composition digest while rejecting changed-digest conflicts.
+
 ### Deprecated
 
 ### Removed

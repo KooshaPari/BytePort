@@ -64,8 +64,9 @@ func newAWSProviderWithHandler(t *testing.T, handler awsHandlerFunc) (*AWSSecret
 			"access", "secret", "",
 		)),
 		HTTPClient: server.Client(),
+		//nolint:staticcheck // AWS SDK v2 exposes this resolver for custom test endpoints.
 		EndpointResolverWithOptions: aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
-			return aws.Endpoint{
+			return aws.Endpoint{ //nolint:staticcheck // required by EndpointResolverWithOptions.
 				URL:               server.URL,
 				SigningRegion:     region,
 				HostnameImmutable: true,
@@ -278,8 +279,8 @@ func TestEnvironmentProvider(t *testing.T) {
 	ctx := context.Background()
 
 	// Set environment variable
-	os.Setenv("TEST_SECRET", "test-value")
-	defer os.Unsetenv("TEST_SECRET")
+	require.NoError(t, os.Setenv("TEST_SECRET", "test-value"))
+	defer func() { require.NoError(t, os.Unsetenv("TEST_SECRET")) }()
 
 	// Get the secret
 	val, err := provider.GetSecret(ctx, "TEST_SECRET")
@@ -512,7 +513,7 @@ func TestEnvironmentProvider_SetSecret(t *testing.T) {
 	assert.Equal(t, "test-value", val)
 
 	// Cleanup
-	os.Unsetenv("TEST_SET_SECRET")
+	require.NoError(t, os.Unsetenv("TEST_SET_SECRET"))
 }
 
 func TestJSONSecret_ErrorPaths(t *testing.T) {
@@ -828,8 +829,8 @@ func TestProvider_EdgeCaseSecretValues(t *testing.T) {
 	provider := NewEnvironmentProvider()
 
 	// Test empty secret value
-	os.Setenv("EMPTY_SECRET", "")
-	defer os.Unsetenv("EMPTY_SECRET")
+	require.NoError(t, os.Setenv("EMPTY_SECRET", ""))
+	defer func() { require.NoError(t, os.Unsetenv("EMPTY_SECRET")) }()
 
 	// Environment provider treats empty strings as "not found"
 	_, err := provider.GetSecret(ctx, "EMPTY_SECRET")
@@ -838,8 +839,8 @@ func TestProvider_EdgeCaseSecretValues(t *testing.T) {
 
 	// Test secret with special characters
 	specialValue := "secret!@#$%^&*(){}[]|\\:;\"'<>?,./_+-="
-	os.Setenv("SPECIAL_SECRET", specialValue)
-	defer os.Unsetenv("SPECIAL_SECRET")
+	require.NoError(t, os.Setenv("SPECIAL_SECRET", specialValue))
+	defer func() { require.NoError(t, os.Unsetenv("SPECIAL_SECRET")) }()
 
 	val, err := provider.GetSecret(ctx, "SPECIAL_SECRET")
 	require.NoError(t, err)
@@ -847,8 +848,8 @@ func TestProvider_EdgeCaseSecretValues(t *testing.T) {
 
 	// Test very long secret value
 	longValue := strings.Repeat("a", 10000)
-	os.Setenv("LONG_SECRET", longValue)
-	defer os.Unsetenv("LONG_SECRET")
+	require.NoError(t, os.Setenv("LONG_SECRET", longValue))
+	defer func() { require.NoError(t, os.Unsetenv("LONG_SECRET")) }()
 
 	val, err = provider.GetSecret(ctx, "LONG_SECRET")
 	require.NoError(t, err)
@@ -1128,7 +1129,7 @@ func TestVaultProvider_SuccessOperations(t *testing.T) {
 			}
 			if !ok {
 				w.WriteHeader(http.StatusNotFound)
-				fmt.Fprint(w, `{"errors":["not found"]}`)
+				require.NoError(t, func() error { _, err := fmt.Fprint(w, `{"errors":["not found"]}`); return err }())
 				return
 			}
 			resp := map[string]any{
@@ -1148,14 +1149,14 @@ func TestVaultProvider_SuccessOperations(t *testing.T) {
 			secrets[key] = payload.Data["value"]
 			mu.Unlock()
 			w.WriteHeader(http.StatusOK)
-			fmt.Fprint(w, `{}`)
+			require.NoError(t, func() error { _, err := fmt.Fprint(w, `{}`); return err }())
 		case r.Method == http.MethodDelete && strings.HasPrefix(r.URL.Path, "/v1/secret/data/"):
 			key := strings.TrimPrefix(r.URL.Path, "/v1/secret/data/")
 			mu.Lock()
 			delete(secrets, key)
 			mu.Unlock()
 			w.WriteHeader(http.StatusOK)
-			fmt.Fprint(w, `{}`)
+			require.NoError(t, func() error { _, err := fmt.Fprint(w, `{}`); return err }())
 		case r.Method == "LIST" && strings.HasPrefix(r.URL.Path, "/v1/secret/metadata"),
 			(r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/v1/secret") && r.URL.Query().Get("list") == "true"):
 			mu.Lock()
@@ -1173,7 +1174,7 @@ func TestVaultProvider_SuccessOperations(t *testing.T) {
 			require.NoError(t, json.NewEncoder(w).Encode(resp))
 		default:
 			w.WriteHeader(http.StatusBadRequest)
-			fmt.Fprint(w, `{"errors":["unexpected request"]}`)
+			require.NoError(t, func() error { _, err := fmt.Fprint(w, `{"errors":["unexpected request"]}`); return err }())
 		}
 	}
 
@@ -1200,7 +1201,7 @@ func TestVaultProvider_SuccessOperations(t *testing.T) {
 func TestVaultProvider_ErrorResponses(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprint(w, `{"errors":["boom"]}`)
+		require.NoError(t, func() error { _, err := fmt.Fprint(w, `{"errors":["boom"]}`); return err }())
 	}
 	provider, cleanup := newVaultProviderWithServer(t, handler)
 	defer cleanup()

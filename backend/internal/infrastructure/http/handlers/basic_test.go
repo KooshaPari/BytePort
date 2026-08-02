@@ -20,7 +20,7 @@ func TestNewDeploymentHandler(t *testing.T) {
 func TestRegisterRoutes(t *testing.T) {
 	router := setupTestRouter()
 	handler, _, _ := setupTestHandler()
-	
+
 	v1 := router.Group("/api/v1")
 	handler.RegisterRoutes(v1)
 

@@ -11,6 +11,31 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestDeploymentModel_UsesUUIDAsPrimaryKey(t *testing.T) {
+	testDB := setupTestDB(t)
+	require.NoError(t, testDB.MigrateModels(&DeploymentModel{}))
+
+	columns, err := testDB.DB.Migrator().ColumnTypes(&DeploymentModel{})
+	require.NoError(t, err)
+	require.NotEmpty(t, columns)
+
+	seen := make(map[string]bool, len(columns))
+	for _, column := range columns {
+		seen[column.Name()] = true
+	}
+	assert.True(t, seen["uuid"], "deployments must expose the canonical uuid column")
+	assert.False(t, seen["id"], "deployments must not depend on a legacy id column")
+
+	var uuidPrimaryKey bool
+	for _, column := range columns {
+		if column.Name() == "uuid" {
+			uuidPrimaryKey, _ = column.PrimaryKey()
+			break
+		}
+	}
+	assert.True(t, uuidPrimaryKey, "uuid must be the deployments primary key")
+}
+
 func TestDeploymentRepository_Create(t *testing.T) {
 	testDB := setupTestDB(t)
 	require.NoError(t, testDB.MigrateModels(&DeploymentModel{}))

@@ -3,7 +3,6 @@ package models
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -23,7 +22,7 @@ func TestConnectDatabaseUltimate(t *testing.T) {
 		assert.IsType(t, funcType, ConnectDatabase)
 
 		// Test that it can be assigned to a variable
-		var dbFunc func() = ConnectDatabase
+		dbFunc := ConnectDatabase
 		assert.NotNil(t, dbFunc)
 	})
 
@@ -32,12 +31,10 @@ func TestConnectDatabaseUltimate(t *testing.T) {
 		// We can't actually call it without a real database, but we can test its existence
 
 		// Test with DATABASE_URL set
-		os.Setenv("DATABASE_URL", "test-database-url")
-		defer os.Unsetenv("DATABASE_URL")
+		defer setTestEnvironment(t, "DATABASE_URL", "test-database-url")()
 
 		// Test with GIN_MODE set
-		os.Setenv("GIN_MODE", "release")
-		defer os.Unsetenv("GIN_MODE")
+		defer setTestEnvironment(t, "GIN_MODE", "release")()
 
 		// The function exists and can be referenced
 		assert.NotNil(t, ConnectDatabase)
@@ -48,8 +45,8 @@ func TestConnectDatabaseUltimate(t *testing.T) {
 		// We can't actually call it without a real database, but we can test its existence
 
 		// Clear environment variables
-		os.Unsetenv("DATABASE_URL")
-		os.Unsetenv("GIN_MODE")
+		defer setTestEnvironment(t, "DATABASE_URL", "")()
+		defer setTestEnvironment(t, "GIN_MODE", "")()
 
 		// The function exists and can be referenced
 		assert.NotNil(t, ConnectDatabase)
@@ -153,9 +150,7 @@ func TestBeforeSaveUltimateCoverage(t *testing.T) {
 		}
 
 		// This should not panic even with nil GORM DB
-		assert.NotPanics(t, func() {
-			project.BeforeSave(nil)
-		})
+		assertBeforeSaveDoesNotPanic(t, project)
 		assert.NotEmpty(t, project.UUID)
 	})
 
@@ -205,9 +200,7 @@ func TestFindOrCreateUserFromWorkOSUltimateCoverage(t *testing.T) {
 		}
 
 		// This should panic due to nil database
-		assert.Panics(t, func() {
-			FindOrCreateUserFromWorkOS(workosUserInfo)
-		})
+		assertFindOrCreatePanics(t, workosUserInfo)
 	})
 
 	t.Run("FindOrCreateUserFromWorkOS with database error", func(t *testing.T) {
@@ -218,9 +211,7 @@ func TestFindOrCreateUserFromWorkOSUltimateCoverage(t *testing.T) {
 		require.NoError(t, err)
 
 		// Close the database to simulate an error
-		if sqlDB, err := db.DB(); err == nil {
-			sqlDB.Close()
-		}
+		closeTestDatabase(t, db)
 
 		// Set the global DB variable for testing
 		originalDB := DB
@@ -430,9 +421,7 @@ func TestDatabaseFunctionsUltimateCoverage(t *testing.T) {
 		}()
 
 		// This should panic due to nil database
-		assert.Panics(t, func() {
-			GetUserByWorkOSID("test-id")
-		})
+		assertGetUserPanics(t, "test-id")
 	})
 
 	t.Run("CreateUserFromWorkOS with nil database", func(t *testing.T) {
@@ -451,9 +440,7 @@ func TestDatabaseFunctionsUltimateCoverage(t *testing.T) {
 		}
 
 		// This should panic due to nil database
-		assert.Panics(t, func() {
-			CreateUserFromWorkOS(workosUserInfo)
-		})
+		assertCreateUserPanics(t, workosUserInfo)
 	})
 
 	t.Run("CreateUserFromWorkOS with database error", func(t *testing.T) {
@@ -465,7 +452,7 @@ func TestDatabaseFunctionsUltimateCoverage(t *testing.T) {
 
 		// Close the database to simulate an error
 		if sqlDB, err := db.DB(); err == nil {
-			sqlDB.Close()
+			require.NoError(t, sqlDB.Close())
 		}
 
 		// Set the global DB variable for testing

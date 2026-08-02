@@ -19,8 +19,13 @@ import (
 
 // WorkOSAuthService provides authentication using WorkOS AuthKit
 type WorkOSAuthService struct {
-	client         *usermanagement.Client
-	secretsManager *secrets.Manager
+	client          *usermanagement.Client
+	secretsManager  *secrets.Manager
+	allowTestTokens *bool
+}
+
+func boolPointer(value bool) *bool {
+	return &value
 }
 
 var httpGet = func(url string) (*http.Response, error) {
@@ -42,8 +47,24 @@ type AuthConfig struct {
 // NewWorkOSAuthService creates a new WorkOS authentication service
 func NewWorkOSAuthService(secretsManager *secrets.Manager) *WorkOSAuthService {
 	return &WorkOSAuthService{
-		secretsManager: secretsManager,
+		secretsManager:  secretsManager,
+		allowTestTokens: boolPointer(true),
 	}
+}
+
+// NewProductionWorkOSAuthService creates a service that never accepts the
+// synthetic test-token/test-code paths used by unit tests and local fixtures.
+func NewProductionWorkOSAuthService(secretsManager *secrets.Manager) *WorkOSAuthService {
+	return &WorkOSAuthService{
+		secretsManager:  secretsManager,
+		allowTestTokens: boolPointer(false),
+	}
+}
+
+func (w *WorkOSAuthService) acceptsTestTokens() bool {
+	// Preserve the zero-value service used by package-local unit tests while
+	// keeping production construction explicitly fail-closed.
+	return w.allowTestTokens == nil || *w.allowTestTokens
 }
 
 // Initialize sets up the WorkOS client with configuration from secrets
@@ -112,7 +133,7 @@ func (w *WorkOSAuthService) validateJWTToken(ctx context.Context, token string) 
 	}
 
 	// For development/testing, check for test tokens
-	if strings.HasPrefix(token, "test-") || strings.HasPrefix(token, "mock-") {
+	if w.acceptsTestTokens() && (strings.HasPrefix(token, "test-") || strings.HasPrefix(token, "mock-")) {
 		return w.handleTestToken(token)
 	}
 
@@ -197,7 +218,7 @@ func (w *WorkOSAuthService) getWorkOSPublicKey(ctx context.Context, kid string) 
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch JWKS: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("JWKS request failed with status: %d", resp.StatusCode)
@@ -267,7 +288,7 @@ func (w *WorkOSAuthService) ExchangeCodeForToken(ctx context.Context, code strin
 	}
 
 	// Handle test codes for development/testing
-	if strings.HasPrefix(code, "test-") || strings.HasPrefix(code, "mock-") {
+	if w.acceptsTestTokens() && (strings.HasPrefix(code, "test-") || strings.HasPrefix(code, "mock-")) {
 		return w.handleTestCodeExchange(code)
 	}
 
@@ -343,7 +364,7 @@ func (w *WorkOSAuthService) exchangeWithWorkOS(ctx context.Context, code, client
 	if err != nil {
 		return nil, fmt.Errorf("failed to make request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -419,6 +440,10 @@ func (w *WorkOSAuthService) Middleware() gin.HandlerFunc {
 		}
 
 		// Set user information in context
+		// Keep both identity keys during the auth-surface migration: mesh and
+		// deployment handlers consume user_uuid, while legacy callers consume
+		// user_id. Both values are the same verified WorkOS subject.
+		c.Set("user_uuid", userInfo.ID)
 		c.Set("user_id", userInfo.ID)
 		c.Set("user_email", userInfo.Email)
 		c.Set("user_info", userInfo)
@@ -436,6 +461,7 @@ func (w *WorkOSAuthService) OptionalMiddleware() gin.HandlerFunc {
 			if len(parts) == 2 && parts[0] == "Bearer" {
 				token := parts[1]
 				if userInfo, err := w.ValidateToken(c.Request.Context(), token); err == nil {
+					c.Set("user_uuid", userInfo.ID)
 					c.Set("user_id", userInfo.ID)
 					c.Set("user_email", userInfo.Email)
 					c.Set("user_info", userInfo)
