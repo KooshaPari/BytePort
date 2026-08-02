@@ -6,14 +6,14 @@ no bundle transform. ~80 lines of TS in `src/lib/i18n/index.ts` and 6 JSON local
 
 ## Supported locales
 
-| Code | Language | Native | Flag |
-|------|----------|--------|------|
-| `en` | English  | English  | 🇬🇧 |
-| `es` | Spanish  | Español  | 🇪🇸 |
-| `fr` | French   | Français | 🇫🇷 |
-| `de` | German   | Deutsch  | 🇩🇪 |
-| `ja` | Japanese | 日本語   | 🇯🇵 |
-| `zh` | Chinese  | 中文     | 🇨🇳 |
+| Code | Language | Native   | Flag |
+| ---- | -------- | -------- | ---- |
+| `en` | English  | English  | 🇬🇧   |
+| `es` | Spanish  | Español  | 🇪🇸   |
+| `fr` | French   | Français | 🇫🇷   |
+| `de` | German   | Deutsch  | 🇩🇪   |
+| `ja` | Japanese | 日本語   | 🇯🇵   |
+| `zh` | Chinese  | 中文     | 🇨🇳   |
 
 ## How it works
 
@@ -73,13 +73,13 @@ Top-level groups:
 // In any .svelte component
 import { t } from '$lib/i18n';
 
-const label = $t('settings.saved');  // "Settings saved"
+const label = $t('settings.saved'); // "Settings saved"
 ```
 
 ```jsonc
 // src/lib/i18n/locales/en.json
 {
-  "settings": { "saved": "Settings saved" }
+	"settings": { "saved": "Settings saved" }
 }
 ```
 
@@ -88,11 +88,11 @@ English too, the key itself is rendered (and a console warning fires in dev).
 
 ## Why custom?
 
-| Library | Bundle cost | Build transform | Notes |
-|---------|-------------|-----------------|-------|
-| `svelte-i18n` 0.21 | ~9 kB gz | yes | Mature but pulls `svelte/store` deeply |
-| `paraglide-js` 2.x | ~5 kB gz + compile step | yes (mandatory) | Great DX, requires compile |
-| **BytePort i18n** | **0 kB** (just JSON) | no | Full control over persistence + interpolation |
+| Library            | Bundle cost             | Build transform | Notes                                         |
+| ------------------ | ----------------------- | --------------- | --------------------------------------------- |
+| `svelte-i18n` 0.21 | ~9 kB gz                | yes             | Mature but pulls `svelte/store` deeply        |
+| `paraglide-js` 2.x | ~5 kB gz + compile step | yes (mandatory) | Great DX, requires compile                    |
+| **BytePort i18n**  | **0 kB** (just JSON)    | no              | Full control over persistence + interpolation |
 
 ## CI lint
 

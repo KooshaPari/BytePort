@@ -1,164 +1,164 @@
 {
-  "nav": {
-    "home": "ホーム",
-    "instances": "インスタンス",
-    "projects": "プロジェクト",
-    "monitor": "モニター",
-    "settings": "設定",
-    "integrations": "連携",
-    "profile": "プロフィール",
-    "search": "検索",
-    "logout": "ログアウト"
-  },
-  "common": {
-    "loading": "読み込み中…",
-    "save": "保存",
-    "cancel": "キャンセル",
-    "delete": "削除",
-    "edit": "編集",
-    "create": "作成",
-    "submit": "送信",
-    "search": "検索",
-    "filter": "フィルター",
-    "next": "次へ",
-    "previous": "戻る",
-    "yes": "はい",
-    "no": "いいえ",
-    "open": "開く",
-    "close": "閉じる",
-    "retry": "再試行",
-    "copied": "コピーしました",
-    "copy": "コピー",
-    "required": "必須",
-    "optional": "任意"
-  },
-  "auth": {
-    "loginTitle": "おかえりなさい",
-    "loginSubtitle": "BytePortアカウントにサインイン",
-    "signupTitle": "アカウントを作成",
-    "signupSubtitle": "1分以内でデプロイを開始",
-    "email": "メールアドレス",
-    "password": "パスワード",
-    "emailPlaceholder": "you@example.com",
-    "passwordPlaceholder": "パスワード",
-    "name": "名前",
-    "namePlaceholder": "Ada Lovelace",
-    "submitLogin": "サインイン",
-    "submitSignup": "アカウント作成",
-    "switchToSignup": "アカウントがありませんか？登録",
-    "switchToLogin": "アカウントをお持ちですか？サインイン",
-    "forgotPassword": "パスワードを忘れた？",
-    "registerPrompt": "下記から登録して始めましょう",
-    "orContinueWith": "またはこちらで続行"
-  },
-  "home": {
-    "welcome": "こんにちは。",
-    "instances": "インスタンス",
-    "projects": "プロジェクト",
-    "viewAll": "すべて表示",
-    "noInstances": "インスタンスがまだありません",
-    "noInstancesHint": "プロジェクトタブから最初のVMを作成してください。",
-    "noProjects": "プロジェクトがまだありません",
-    "noProjectsHint": "「新規プロジェクト」をクリックして始めましょう。"
-  },
-  "projects": {
-    "title": "プロジェクト",
-    "new": "新規プロジェクト",
-    "name": "プロジェクト名",
-    "description": "説明",
-    "framework": "フレームワーク",
-    "create": "プロジェクトを作成",
-    "deploy": "デプロイ",
-    "lastDeployed": "最終デプロイ: {when}",
-    "status": {
-      "running": "実行中",
-      "stopped": "停止",
-      "building": "ビルド中",
-      "failed": "失敗",
-      "deploying": "デプロイ中"
-    }
-  },
-  "instances": {
-    "title": "インスタンス",
-    "new": "新規インスタンス",
-    "name": "インスタンス名",
-    "region": "リージョン",
-    "size": "サイズ",
-    "status": "ステータス",
-    "ip": "IPアドレス",
-    "ssh": "SSH",
-    "console": "コンソール",
-    "destroy": "破棄",
-    "confirmDestroy": "このインスタンスを破棄しますか？元に戻せません。"
-  },
-  "monitor": {
-    "title": "モニター",
-    "cpu": "CPU",
-    "memory": "メモリ",
-    "disk": "ディスク",
-    "network": "ネットワーク",
-    "lastHour": "過去1時間",
-    "lastDay": "過去1日",
-    "lastWeek": "過去1週間"
-  },
-  "settings": {
-    "title": "設定",
-    "language": "言語",
-    "theme": "テーマ",
-    "themeLight": "ライト",
-    "themeDark": "ダーク",
-    "themeSystem": "システム",
-    "notifications": "通知",
-    "account": "アカウント",
-    "security": "セキュリティ",
-    "saved": "設定を保存しました",
-    "error": "設定を保存できませんでした"
-  },
-  "errors": {
-    "generic": "問題が発生しました",
-    "network": "ネットワークエラー — 再試行してください",
-    "unauthorized": "続行するにはサインインしてください",
-    "forbidden": "権限がありません",
-    "notFound": "見つかりませんでした",
-    "validation": "強調表示された項目を確認してください",
-    "serverError": "サーバーで予期しないエラーが発生しました"
-  },
-  "emptyStates": {
-    "noData": {
-      "title": "まだ何もありません",
-      "hint": "何かを作成すると、ここに表示されます。"
-    },
-    "noResults": {
-      "title": "結果がありません",
-      "hint": "別の検索語をお試しください。"
-    },
-    "error": {
-      "title": "問題が発生しました",
-      "hint": "問題をログに記録しました。再読み込みしてください。"
-    },
-    "mascot": {
-      "title": "BytePortへようこそ",
-      "hint": "セルフホストプラットフォームがここにあります。"
-    }
-  },
-  "integrations": {
-    "awsAccessKeyId": "AWSアクセスキーID",
-    "awsSecretAccessKey": "AWSシークレットアクセスキー",
-    "openaiApiKey": "OpenAI APIキー",
-    "portfolioRoot": "ポートフォリオルートエンドポイントURL",
-    "portfolioApiKey": "ポートフォリオAPIキー",
-    "save": "連携を保存",
-    "saved": "連携を保存しました",
-    "test": "接続をテスト",
-    "testing": "テスト中…",
-    "lastTested": "最終テスト: {when}"
-  },
-  "splash": {
-    "loading": "BytePortを読み込み中…",
-    "ready": "準備完了"
-  },
-  "footer": {
-    "copyright": "© {year} BytePort",
-    "version": "バージョン {version}"
-  }
+	"nav": {
+		"home": "ホーム",
+		"instances": "インスタンス",
+		"projects": "プロジェクト",
+		"monitor": "モニター",
+		"settings": "設定",
+		"integrations": "連携",
+		"profile": "プロフィール",
+		"search": "検索",
+		"logout": "ログアウト"
+	},
+	"common": {
+		"loading": "読み込み中…",
+		"save": "保存",
+		"cancel": "キャンセル",
+		"delete": "削除",
+		"edit": "編集",
+		"create": "作成",
+		"submit": "送信",
+		"search": "検索",
+		"filter": "フィルター",
+		"next": "次へ",
+		"previous": "戻る",
+		"yes": "はい",
+		"no": "いいえ",
+		"open": "開く",
+		"close": "閉じる",
+		"retry": "再試行",
+		"copied": "コピーしました",
+		"copy": "コピー",
+		"required": "必須",
+		"optional": "任意"
+	},
+	"auth": {
+		"loginTitle": "おかえりなさい",
+		"loginSubtitle": "BytePortアカウントにサインイン",
+		"signupTitle": "アカウントを作成",
+		"signupSubtitle": "1分以内でデプロイを開始",
+		"email": "メールアドレス",
+		"password": "パスワード",
+		"emailPlaceholder": "you@example.com",
+		"passwordPlaceholder": "パスワード",
+		"name": "名前",
+		"namePlaceholder": "Ada Lovelace",
+		"submitLogin": "サインイン",
+		"submitSignup": "アカウント作成",
+		"switchToSignup": "アカウントがありませんか？登録",
+		"switchToLogin": "アカウントをお持ちですか？サインイン",
+		"forgotPassword": "パスワードを忘れた？",
+		"registerPrompt": "下記から登録して始めましょう",
+		"orContinueWith": "またはこちらで続行"
+	},
+	"home": {
+		"welcome": "こんにちは。",
+		"instances": "インスタンス",
+		"projects": "プロジェクト",
+		"viewAll": "すべて表示",
+		"noInstances": "インスタンスがまだありません",
+		"noInstancesHint": "プロジェクトタブから最初のVMを作成してください。",
+		"noProjects": "プロジェクトがまだありません",
+		"noProjectsHint": "「新規プロジェクト」をクリックして始めましょう。"
+	},
+	"projects": {
+		"title": "プロジェクト",
+		"new": "新規プロジェクト",
+		"name": "プロジェクト名",
+		"description": "説明",
+		"framework": "フレームワーク",
+		"create": "プロジェクトを作成",
+		"deploy": "デプロイ",
+		"lastDeployed": "最終デプロイ: {when}",
+		"status": {
+			"running": "実行中",
+			"stopped": "停止",
+			"building": "ビルド中",
+			"failed": "失敗",
+			"deploying": "デプロイ中"
+		}
+	},
+	"instances": {
+		"title": "インスタンス",
+		"new": "新規インスタンス",
+		"name": "インスタンス名",
+		"region": "リージョン",
+		"size": "サイズ",
+		"status": "ステータス",
+		"ip": "IPアドレス",
+		"ssh": "SSH",
+		"console": "コンソール",
+		"destroy": "破棄",
+		"confirmDestroy": "このインスタンスを破棄しますか？元に戻せません。"
+	},
+	"monitor": {
+		"title": "モニター",
+		"cpu": "CPU",
+		"memory": "メモリ",
+		"disk": "ディスク",
+		"network": "ネットワーク",
+		"lastHour": "過去1時間",
+		"lastDay": "過去1日",
+		"lastWeek": "過去1週間"
+	},
+	"settings": {
+		"title": "設定",
+		"language": "言語",
+		"theme": "テーマ",
+		"themeLight": "ライト",
+		"themeDark": "ダーク",
+		"themeSystem": "システム",
+		"notifications": "通知",
+		"account": "アカウント",
+		"security": "セキュリティ",
+		"saved": "設定を保存しました",
+		"error": "設定を保存できませんでした"
+	},
+	"errors": {
+		"generic": "問題が発生しました",
+		"network": "ネットワークエラー — 再試行してください",
+		"unauthorized": "続行するにはサインインしてください",
+		"forbidden": "権限がありません",
+		"notFound": "見つかりませんでした",
+		"validation": "強調表示された項目を確認してください",
+		"serverError": "サーバーで予期しないエラーが発生しました"
+	},
+	"emptyStates": {
+		"noData": {
+			"title": "まだ何もありません",
+			"hint": "何かを作成すると、ここに表示されます。"
+		},
+		"noResults": {
+			"title": "結果がありません",
+			"hint": "別の検索語をお試しください。"
+		},
+		"error": {
+			"title": "問題が発生しました",
+			"hint": "問題をログに記録しました。再読み込みしてください。"
+		},
+		"mascot": {
+			"title": "BytePortへようこそ",
+			"hint": "セルフホストプラットフォームがここにあります。"
+		}
+	},
+	"integrations": {
+		"awsAccessKeyId": "AWSアクセスキーID",
+		"awsSecretAccessKey": "AWSシークレットアクセスキー",
+		"openaiApiKey": "OpenAI APIキー",
+		"portfolioRoot": "ポートフォリオルートエンドポイントURL",
+		"portfolioApiKey": "ポートフォリオAPIキー",
+		"save": "連携を保存",
+		"saved": "連携を保存しました",
+		"test": "接続をテスト",
+		"testing": "テスト中…",
+		"lastTested": "最終テスト: {when}"
+	},
+	"splash": {
+		"loading": "BytePortを読み込み中…",
+		"ready": "準備完了"
+	},
+	"footer": {
+		"copyright": "© {year} BytePort",
+		"version": "バージョン {version}"
+	}
 }

@@ -13,6 +13,7 @@ tracing = "0.1"
 
 [dependencies.byteport-dag]
 path = "../byteport-dag"
+version = "0.1.0"
 
 [dependencies.serde]
 version = "1"
@@ -20,7 +21,7 @@ features = [ "derive",]
 
 [dependencies.uuid]
 version = "1"
-features = [ "v4",]
+features = [ "serde", "v4",]
 
 [dependencies.chrono]
 version = "0.4"

@@ -17,7 +17,7 @@ func TestApplicationError_Error_WithWrappedError(t *testing.T) {
 	}
 
 	errorString := appErr.Error()
-	
+
 	if !strings.Contains(errorString, "TEST_CODE") {
 		t.Errorf("Expected error to contain code 'TEST_CODE', got: %s", errorString)
 	}
@@ -40,7 +40,7 @@ func TestApplicationError_Error_WithoutWrappedError(t *testing.T) {
 
 	errorString := appErr.Error()
 	expected := "TEST_CODE: test message"
-	
+
 	if errorString != expected {
 		t.Errorf("Expected error '%s', got: %s", expected, errorString)
 	}
@@ -80,7 +80,7 @@ func TestApplicationError_Unwrap_Nil(t *testing.T) {
 // TestNewValidationError tests validation error constructor
 func TestNewValidationError(t *testing.T) {
 	err := NewValidationError("invalid input")
-	
+
 	if err == nil {
 		t.Fatal("Expected error to be created, got nil")
 	}
@@ -101,7 +101,7 @@ func TestNewValidationError(t *testing.T) {
 // TestNewNotFoundError tests not found error constructor
 func TestNewNotFoundError(t *testing.T) {
 	err := NewNotFoundError("deployment")
-	
+
 	if err == nil {
 		t.Fatal("Expected error to be created, got nil")
 	}
@@ -122,7 +122,7 @@ func TestNewNotFoundError(t *testing.T) {
 // TestNewUnauthorizedError tests unauthorized error constructor
 func TestNewUnauthorizedError(t *testing.T) {
 	err := NewUnauthorizedError("authentication required")
-	
+
 	if err == nil {
 		t.Fatal("Expected error to be created, got nil")
 	}
@@ -143,7 +143,7 @@ func TestNewUnauthorizedError(t *testing.T) {
 // TestNewForbiddenError tests forbidden error constructor
 func TestNewForbiddenError(t *testing.T) {
 	err := NewForbiddenError("access denied")
-	
+
 	if err == nil {
 		t.Fatal("Expected error to be created, got nil")
 	}
@@ -164,7 +164,7 @@ func TestNewForbiddenError(t *testing.T) {
 // TestNewConflictError tests conflict error constructor
 func TestNewConflictError(t *testing.T) {
 	err := NewConflictError("resource already exists")
-	
+
 	if err == nil {
 		t.Fatal("Expected error to be created, got nil")
 	}
@@ -186,7 +186,7 @@ func TestNewConflictError(t *testing.T) {
 func TestNewInternalError(t *testing.T) {
 	innerErr := errors.New("database connection failed")
 	err := NewInternalError("internal server error", innerErr)
-	
+
 	if err == nil {
 		t.Fatal("Expected error to be created, got nil")
 	}

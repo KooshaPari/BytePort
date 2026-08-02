@@ -9,3 +9,6 @@ yarn.lock
 node_modules/
 build/
 dist/
+
+# Vendored upstream sources are preserved as-is and are not application code.
+src-tauri/vendor/

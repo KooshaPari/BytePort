@@ -12,7 +12,7 @@ export const config = {
 	deployment: {
 		// Windows-specific deployment settings
 		platform: 'windows',
-		containerRuntime: 'docker',
+		containerRuntime: 'podman',
 		tunnelProvider: 'cloudflare',
 
 		// Default ports for services
@@ -36,8 +36,8 @@ export const config = {
 		// Deployment status messages
 		statusMessages: {
 			initializing: 'Initializing deployment...',
-			building: 'Building Docker container...',
-			deploying: 'Starting container...',
+			building: 'Building OCI container...',
+			deploying: 'Starting OCI container...',
 			networking: 'Setting up tunnel...',
 			completed: 'Deployment completed successfully!',
 			failed: 'Deployment failed',
@@ -47,8 +47,8 @@ export const config = {
 
 		// Windows-specific status indicators
 		windowsStatuses: {
-			'container-building': 'Building Docker image',
-			'container-starting': 'Starting container',
+			'container-building': 'Building Podman image',
+			'container-starting': 'Starting Podman container',
 			'tunnel-creating': 'Creating Cloudflare tunnel',
 			'tunnel-starting': 'Starting tunnel',
 			ready: 'Project is live'
@@ -58,7 +58,8 @@ export const config = {
 	// Feature flags for Windows deployment
 	features: {
 		// Enable Windows-specific features
-		dockerDeployment: true,
+		podmanDeployment: true,
+		dockerDeployment: false, // Deprecated compatibility flag; Docker is not a foundation dependency.
 		cloudflareTunnels: true,
 		localStorage: true,
 
@@ -75,8 +76,8 @@ export const config = {
 
 	// Windows deployment specific settings
 	windows: {
-		// Docker settings
-		docker: {
+		// Podman settings
+		podman: {
 			network: 'byteport-network',
 			imagePrefix: 'byteport-',
 			containerPrefix: 'byteport-'

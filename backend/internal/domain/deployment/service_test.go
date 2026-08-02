@@ -12,6 +12,13 @@ type MockServiceRepository struct {
 	FindByUUIDFunc  func(ctx context.Context, uuid string) (*Deployment, error)
 }
 
+func addTestService(t *testing.T, deployment *Deployment, name, serviceType, provider string) {
+	t.Helper()
+	if err := deployment.AddService(DeploymentService{Name: name, Type: serviceType, Provider: provider}); err != nil {
+		t.Fatalf("failed to add %s service: %v", name, err)
+	}
+}
+
 func (m *MockServiceRepository) Create(ctx context.Context, deployment *Deployment) error {
 	return nil
 }
@@ -68,7 +75,7 @@ func TestNewDomainService(t *testing.T) {
 	}
 
 	// Verify it implements the Service interface
-	var _ Service = service
+	var _ = Service(service)
 }
 
 // TestValidateDeployment_Success tests successful validation
@@ -86,13 +93,7 @@ func TestValidateDeployment_Success(t *testing.T) {
 	}
 
 	// Add required service
-	if err := deployment.AddService(DeploymentService{
-		Name:     "web",
-		Type:     "frontend",
-		Provider: "vercel",
-	}); err != nil {
-		t.Fatalf("Failed to add service: %v", err)
-	}
+	addTestService(t, deployment, "web", "frontend", "vercel")
 
 	err = service.ValidateDeployment(context.Background(), deployment)
 	if err != nil {
@@ -125,12 +126,12 @@ func TestValidateDeployment_InvalidDeployment(t *testing.T) {
 
 	// Create deployment with invalid data that will fail deployment.Validate()
 	deployment := &Deployment{
-		uuid:  "", // Empty UUID will cause validation to fail
-		name:  "test-name",
-		owner: "owner-123",
+		uuid:   "", // Empty UUID will cause validation to fail
+		name:   "test-name",
+		owner:  "owner-123",
 		status: StatusPending,
 	}
-	
+
 	err := service.ValidateDeployment(context.Background(), deployment)
 	if err == nil {
 		t.Error("Expected validation error for invalid deployment, got nil")
@@ -144,11 +145,7 @@ func TestValidateDeployment_InvalidDeployment(t *testing.T) {
 func TestValidateDeployment_NameConflict(t *testing.T) {
 	existingDeployment, _ := NewDeployment("existing-name", "owner-123", nil)
 	existingDeployment.uuid = "existing-uuid"
-	existingDeployment.AddService(DeploymentService{
-		Name:     "web",
-		Type:     "frontend",
-		Provider: "vercel",
-	})
+	addTestService(t, existingDeployment, "web", "frontend", "vercel")
 
 	repo := &MockServiceRepository{
 		FindByOwnerFunc: func(ctx context.Context, ownerUUID string) ([]*Deployment, error) {
@@ -159,11 +156,7 @@ func TestValidateDeployment_NameConflict(t *testing.T) {
 
 	newDeployment, _ := NewDeployment("existing-name", "owner-123", nil)
 	newDeployment.uuid = "new-uuid"
-	newDeployment.AddService(DeploymentService{
-		Name:     "web",
-		Type:     "frontend",
-		Provider: "vercel",
-	})
+	addTestService(t, newDeployment, "web", "frontend", "vercel")
 
 	err := service.ValidateDeployment(context.Background(), newDeployment)
 	if err == nil {
@@ -182,11 +175,7 @@ func TestValidateDeployment_NameConflict(t *testing.T) {
 func TestValidateDeployment_SameDeploymentUpdate(t *testing.T) {
 	existingDeployment, _ := NewDeployment("test-name", "owner-123", nil)
 	existingDeployment.uuid = "same-uuid"
-	existingDeployment.AddService(DeploymentService{
-		Name:     "web",
-		Type:     "frontend",
-		Provider: "vercel",
-	})
+	addTestService(t, existingDeployment, "web", "frontend", "vercel")
 
 	repo := &MockServiceRepository{
 		FindByOwnerFunc: func(ctx context.Context, ownerUUID string) ([]*Deployment, error) {
@@ -214,11 +203,7 @@ func TestValidateDeployment_RepositoryError(t *testing.T) {
 	service := NewDomainService(repo)
 
 	deployment, _ := NewDeployment("test-deploy", "owner-123", nil)
-	deployment.AddService(DeploymentService{
-		Name:     "web",
-		Type:     "frontend",
-		Provider: "vercel",
-	})
+	addTestService(t, deployment, "web", "frontend", "vercel")
 
 	err := service.ValidateDeployment(context.Background(), deployment)
 	if err == nil {
@@ -244,7 +229,7 @@ func TestEstimateServiceCost_AllCases(t *testing.T) {
 		},
 		{
 			name:         "valid backend render",
-			serviceType:  "backend", 
+			serviceType:  "backend",
 			provider:     "render",
 			expectedCost: 7.0,
 		},
@@ -368,16 +353,8 @@ func TestCalculateEstimatedCost_Success(t *testing.T) {
 	service := NewDomainService(repo)
 
 	deployment, _ := NewDeployment("test-deploy", "owner-123", nil)
-	deployment.AddService(DeploymentService{
-		Name:     "backend",
-		Type:     "backend",
-		Provider: "render",
-	})
-	deployment.AddService(DeploymentService{
-		Name:     "database",
-		Type:     "database",
-		Provider: "supabase",
-	})
+	addTestService(t, deployment, "backend", "backend", "render")
+	addTestService(t, deployment, "database", "database", "supabase")
 
 	costInfo, err := service.CalculateEstimatedCost(context.Background(), deployment)
 	if err != nil {
@@ -428,22 +405,14 @@ func TestCalculateEstimatedCost_MultipleProviders(t *testing.T) {
 	service := NewDomainService(repo)
 
 	deployment, _ := NewDeployment("test-deploy", "owner-123", nil)
-	deployment.AddService(DeploymentService{
-		Name:     "api",
-		Type:     "backend",
-		Provider: "render",
-	})
-	deployment.AddService(DeploymentService{
-		Name:     "worker",
-		Type:     "backend",
-		Provider: "railway",
-	})
+	addTestService(t, deployment, "api", "backend", "render")
+	addTestService(t, deployment, "worker", "backend", "railway")
 
 	costInfo, err := service.CalculateEstimatedCost(context.Background(), deployment)
 	if err != nil {
 		t.Errorf("Expected no error, got: %v", err)
 	}
-	
+
 	// render $7 + railway $5 = $12
 	expectedTotal := 12.0
 	if costInfo.Monthly != expectedTotal {

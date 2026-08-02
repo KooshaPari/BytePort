@@ -10,20 +10,20 @@ import (
 // Deployment represents the core deployment domain entity
 // Contains only business logic, no infrastructure dependencies
 type Deployment struct {
-	uuid        string
-	name        string
-	owner       string
-	projectUUID *string
-	status      Status
-	providers   map[string]interface{}
-	services    []DeploymentService
-	costInfo    *CostInfo
-	metadata    map[string]interface{}
-	envVars     map[string]string
-	buildConfig *BuildConfig
-	createdAt   time.Time
-	updatedAt   time.Time
-	deployedAt  *time.Time
+	uuid         string
+	name         string
+	owner        string
+	projectUUID  *string
+	status       Status
+	providers    map[string]interface{}
+	services     []DeploymentService
+	costInfo     *CostInfo
+	metadata     map[string]interface{}
+	envVars      map[string]string
+	buildConfig  *BuildConfig
+	createdAt    time.Time
+	updatedAt    time.Time
+	deployedAt   *time.Time
 	terminatedAt *time.Time
 }
 
@@ -50,6 +50,23 @@ type BuildConfig struct {
 	InstallCommand string
 }
 
+// CompositionMetadata identifies the immutable composition handoff for a deployment.
+type CompositionMetadata struct {
+	Digest      string `json:"composition_digest,omitempty"`
+	ArtifactRef string `json:"artifact_ref,omitempty"`
+	// Source identifies the authoritative composition or plan source for the
+	// cross-repository handoff. It must not contain credentials or provider
+	// handles.
+	Source string `json:"source,omitempty"`
+	// Verified records whether BytePort validated the immutable handoff
+	// metadata before persisting desired state. AcceptedAt remains the
+	// timestamp for the verification event in the API response.
+	Verified bool `json:"verified,omitempty"`
+	// Evidence is a stable runbook, CI, receipt, or incident locator supporting
+	// the handoff. Mutable runtime state does not belong here.
+	Evidence string `json:"evidence,omitempty"`
+}
+
 // NewDeployment creates a new deployment with validation
 func NewDeployment(name, owner string, projectUUID *string) (*Deployment, error) {
 	if name == "" {
@@ -58,22 +75,22 @@ func NewDeployment(name, owner string, projectUUID *string) (*Deployment, error)
 	if owner == "" {
 		return nil, errors.New("owner cannot be empty")
 	}
-	
+
 	now := time.Now().UTC()
-	
-		return &Deployment{
-			uuid:        uuid.New().String(),
-			name:        name,
-			owner:       owner,
-			projectUUID: projectUUID,
-			status:      StatusPending,
-			providers:   make(map[string]interface{}),
-			services:    make([]DeploymentService, 0),
-			metadata:    make(map[string]interface{}),
-			envVars:     make(map[string]string),
-			createdAt:   now,
-			updatedAt:   now,
-		}, nil
+
+	return &Deployment{
+		uuid:        uuid.New().String(),
+		name:        name,
+		owner:       owner,
+		projectUUID: projectUUID,
+		status:      StatusPending,
+		providers:   make(map[string]interface{}),
+		services:    make([]DeploymentService, 0),
+		metadata:    make(map[string]interface{}),
+		envVars:     make(map[string]string),
+		createdAt:   now,
+		updatedAt:   now,
+	}, nil
 }
 
 // ReconstructDeployment reconstructs a deployment from persistence
@@ -85,21 +102,21 @@ func ReconstructDeployment(
 	createdAt, updatedAt time.Time,
 	deployedAt, terminatedAt *time.Time,
 ) *Deployment {
-		return &Deployment{
-			uuid:         uuid,
-			name:         name,
-			owner:        owner,
-			projectUUID:  projectUUID,
-			status:       status,
-			providers:    make(map[string]interface{}),
-			services:     make([]DeploymentService, 0),
-			metadata:     make(map[string]interface{}),
-			envVars:      make(map[string]string),
-			createdAt:    createdAt,
-			updatedAt:    updatedAt,
-			deployedAt:   deployedAt,
-			terminatedAt: terminatedAt,
-		}
+	return &Deployment{
+		uuid:         uuid,
+		name:         name,
+		owner:        owner,
+		projectUUID:  projectUUID,
+		status:       status,
+		providers:    make(map[string]interface{}),
+		services:     make([]DeploymentService, 0),
+		metadata:     make(map[string]interface{}),
+		envVars:      make(map[string]string),
+		createdAt:    createdAt,
+		updatedAt:    updatedAt,
+		deployedAt:   deployedAt,
+		terminatedAt: terminatedAt,
+	}
 }
 
 // UUID returns the deployment UUID
@@ -177,19 +194,20 @@ func (d *Deployment) SetStatus(status Status) error {
 	if !d.CanTransitionTo(status) {
 		return NewInvalidStatusTransitionError(d.status, status)
 	}
-	
+
 	d.status = status
 	d.updatedAt = time.Now().UTC()
-	
+
 	// Set special timestamps
-	if status == StatusDeployed {
+	switch status {
+	case StatusDeployed:
 		now := time.Now().UTC()
 		d.deployedAt = &now
-	} else if status == StatusTerminated {
+	case StatusTerminated:
 		now := time.Now().UTC()
 		d.terminatedAt = &now
 	}
-	
+
 	return nil
 }
 
@@ -202,16 +220,16 @@ func (d *Deployment) CanTransitionTo(newStatus Status) bool {
 		StatusDeploying:    {StatusDeployed, StatusFailed, StatusTerminated},
 		StatusDeployed:     {StatusDeploying, StatusTerminated}, // Allow redeployment
 		StatusFailed:       {StatusDeploying, StatusTerminated}, // Allow retry
-		StatusTerminated:   {}, // Terminal state
+		StatusTerminated:   {},                                  // Terminal state
 	}
-	
+
 	allowed := validTransitions[d.status]
 	for _, s := range allowed {
 		if s == newStatus {
 			return true
 		}
 	}
-	
+
 	return false
 }
 
@@ -226,17 +244,17 @@ func (d *Deployment) AddService(service DeploymentService) error {
 	if service.Provider == "" {
 		return errors.New("service provider cannot be empty")
 	}
-	
+
 	// Check for duplicate service names
 	for _, existing := range d.services {
 		if existing.Name == service.Name {
 			return errors.New("service with this name already exists")
 		}
 	}
-	
+
 	d.services = append(d.services, service)
 	d.updatedAt = time.Now().UTC()
-	
+
 	return nil
 }
 
@@ -249,7 +267,7 @@ func (d *Deployment) RemoveService(serviceName string) error {
 			return nil
 		}
 	}
-	
+
 	return errors.New("service not found")
 }
 
@@ -280,6 +298,24 @@ func (d *Deployment) SetBuildConfig(config *BuildConfig) {
 	d.updatedAt = time.Now().UTC()
 }
 
+// SetCompositionMetadata records the composition render handoff metadata.
+func (d *Deployment) SetCompositionMetadata(metadata CompositionMetadata) {
+	if d.metadata == nil {
+		d.metadata = make(map[string]interface{})
+	}
+	d.metadata["composition"] = metadata
+	d.updatedAt = time.Now().UTC()
+}
+
+// CompositionMetadata returns the composition render handoff metadata, if present.
+func (d *Deployment) CompositionMetadata() *CompositionMetadata {
+	value, ok := d.metadata["composition"].(CompositionMetadata)
+	if !ok {
+		return nil
+	}
+	return &value
+}
+
 // IsActive checks if deployment is in an active state
 func (d *Deployment) IsActive() bool {
 	return d.status == StatusDeploying || d.status == StatusDeployed
@@ -300,12 +336,12 @@ func (d *Deployment) CalculateTotalCost() float64 {
 	if d.costInfo == nil || d.costInfo.Breakdown == nil {
 		return 0.0
 	}
-	
+
 	total := 0.0
 	for _, cost := range d.costInfo.Breakdown {
 		total += cost
 	}
-	
+
 	return total
 }
 
@@ -323,6 +359,6 @@ func (d *Deployment) Validate() error {
 	if !d.status.IsValid() {
 		return errors.New("invalid deployment status")
 	}
-	
+
 	return nil
 }

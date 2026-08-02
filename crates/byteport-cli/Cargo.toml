@@ -11,12 +11,15 @@ tracing = "0.1"
 
 [dependencies.byteport-dag]
 path = "../byteport-dag"
+version = "0.1.0"
 
 [dependencies.byteport-otel]
 path = "../byteport-otel"
+version = "0.1.0"
 
 [dependencies.byteport-transport]
 path = "../byteport-transport"
+version = "0.1.0"
 
 [dependencies.clap]
 version = "4"

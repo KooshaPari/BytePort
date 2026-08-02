@@ -95,21 +95,22 @@ func TestDeployment_StatusTransitions(t *testing.T) {
 			// Reset to from status
 			dep, _ = NewDeployment("test", "owner", nil)
 			// Chain transitions to reach fromStatus
-			if tt.fromStatus == StatusDetecting {
+			switch tt.fromStatus {
+			case StatusDetecting:
 				_ = dep.SetStatus(StatusDetecting)
-			} else if tt.fromStatus == StatusProvisioning {
+			case StatusProvisioning:
 				_ = dep.SetStatus(StatusDetecting)
 				_ = dep.SetStatus(StatusProvisioning)
-			} else if tt.fromStatus == StatusDeploying {
+			case StatusDeploying:
 				_ = dep.SetStatus(StatusDetecting)
 				_ = dep.SetStatus(StatusProvisioning)
 				_ = dep.SetStatus(StatusDeploying)
-			} else if tt.fromStatus == StatusDeployed {
+			case StatusDeployed:
 				_ = dep.SetStatus(StatusDetecting)
 				_ = dep.SetStatus(StatusProvisioning)
 				_ = dep.SetStatus(StatusDeploying)
 				_ = dep.SetStatus(StatusDeployed)
-			} else if tt.fromStatus == StatusTerminated {
+			case StatusTerminated:
 				_ = dep.SetStatus(StatusTerminated)
 			}
 			// fromStatus is now set properly
@@ -383,7 +384,7 @@ func TestDeployment_Validate(t *testing.T) {
 		name    string
 		setup   func() *Deployment
 		wantErr bool
-		errMsg   string
+		errMsg  string
 	}{
 		{
 			name: "valid deployment",
@@ -427,7 +428,7 @@ func TestDeployment_Validate(t *testing.T) {
 				return dep
 			},
 			wantErr: true,
-			errMsg:   "UUID cannot be empty",
+			errMsg:  "UUID cannot be empty",
 		},
 		{
 			name: "empty name",
@@ -446,7 +447,7 @@ func TestDeployment_Validate(t *testing.T) {
 				return dep
 			},
 			wantErr: true,
-			errMsg:   "name cannot be empty",
+			errMsg:  "name cannot be empty",
 		},
 		{
 			name: "empty owner",
@@ -465,7 +466,7 @@ func TestDeployment_Validate(t *testing.T) {
 				return dep
 			},
 			wantErr: true,
-			errMsg:   "owner cannot be empty",
+			errMsg:  "owner cannot be empty",
 		},
 		{
 			name: "invalid status",
@@ -484,7 +485,7 @@ func TestDeployment_Validate(t *testing.T) {
 				return dep
 			},
 			wantErr: true,
-			errMsg:   "invalid deployment status",
+			errMsg:  "invalid deployment status",
 		},
 	}
 
@@ -524,18 +525,18 @@ func TestDeployment_SetEnvVar_NilMap(t *testing.T) {
 	)
 	// Ensure envVars is nil
 	dep.envVars = nil
-	
+
 	// Should initialize the map
 	dep.SetEnvVar("TEST_KEY", "test_value")
-	
+
 	if dep.EnvVars() == nil {
 		t.Error("EnvVars() should not be nil after SetEnvVar")
 	}
-	
+
 	if len(dep.EnvVars()) != 1 {
 		t.Errorf("EnvVars() length = %d, want 1", len(dep.EnvVars()))
 	}
-	
+
 	if dep.EnvVars()["TEST_KEY"] != "test_value" {
 		t.Errorf("EnvVars()[TEST_KEY] = %s, want 'test_value'", dep.EnvVars()["TEST_KEY"])
 	}

@@ -6,6 +6,7 @@
 	import { user, initializeUser } from '../stores/user';
 	import { goto } from '$app/navigation';
 	import { platform } from '@tauri-apps/plugin-os';
+	import byteLogo from '../assets/img/Byte.png';
 
 	const getBaseUrl = async () => {
 		if ((window as any).__TAURI_INTERNALS__) {
@@ -67,7 +68,7 @@
 		id="sideBar"
 	>
 		<button on:click={() => goto('/home')}>
-			<img class="py-10" alt="BytePort" src="/src/assets/img/byte.png" />
+			<img class="py-10" alt="BytePort" src={byteLogo} />
 		</button>
 		<div id="sideBarProfileCont"></div>
 		<ul class="" id="menuList">

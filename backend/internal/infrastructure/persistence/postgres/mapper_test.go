@@ -3,6 +3,7 @@ package postgres
 import (
 	"errors"
 	"math"
+	"strings"
 	"testing"
 	"time"
 
@@ -112,6 +113,24 @@ func TestDomainToModel_AssignsNullsForEmptyCollections(t *testing.T) {
 	assert.Equal(t, "null", model.EnvVars)
 	assert.Equal(t, "null", model.BuildConfig)
 	assert.Equal(t, "null", model.CostInfo)
+}
+
+func TestCompositionMetadataRoundTripsThroughPersistenceMapper(t *testing.T) {
+	dep, err := deployment.NewDeployment("composition", "owner", nil)
+	require.NoError(t, err)
+	dep.SetCompositionMetadata(deployment.CompositionMetadata{
+		Digest:      "sha256:" + strings.Repeat("a", 64),
+		ArtifactRef: "oci://registry.example/app@sha256:" + strings.Repeat("b", 64),
+	})
+
+	model, err := DomainToModel(dep)
+	require.NoError(t, err)
+	require.NotEqual(t, "null", model.Metadata)
+
+	decoded, err := ModelToDomain(model)
+	require.NoError(t, err)
+	require.NotNil(t, decoded.CompositionMetadata())
+	assert.Equal(t, dep.CompositionMetadata(), decoded.CompositionMetadata())
 }
 
 func TestModelToDomain_ErrorPaths(t *testing.T) {
