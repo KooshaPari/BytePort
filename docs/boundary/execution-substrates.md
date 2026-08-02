@@ -23,4 +23,6 @@ provider adapters remain replaceable.
 
 PhenoCompose still owns composition validation/rendering, and NanoVMS owns runtime
 selection/lifecycle. All substrate handoffs must carry a verified composition
-digest and artifact reference; runtime adapters never become BytePort state owners.
+digest and artifact reference plus the source and evidence locator for the handoff.
+The authenticated owner is supplied by BytePort's identity boundary, not by a
+request body. Runtime adapters never become BytePort state owners.

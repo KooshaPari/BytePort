@@ -17,6 +17,8 @@ func validRequest() DesiredStateRequest {
 		CompositionDigest: "sha256:" + strings.Repeat("a", 64),
 		ArtifactRef:       "oci://registry/demo",
 		ExecutionBackend:  "podman",
+		Source:            "git://github.com/KooshaPari/PhenoCompose/examples/composition-v0.yaml",
+		Evidence:          "run://phenocompose/69b4f35f",
 	}
 }
 
@@ -28,6 +30,9 @@ func TestSubmitDesiredStateUsesAuthenticatedOwner(t *testing.T) {
 	if response.Owner != "user-1" || response.Status != "accepted" {
 		t.Fatalf("unexpected response: %+v", response)
 	}
+	if response.Source != validRequest().Source || !response.Verified || response.Evidence != validRequest().Evidence {
+		t.Fatalf("traceability was not returned: %+v", response)
+	}
 }
 
 func TestDesiredStateRejectsImpersonationAndUnsupportedBackend(t *testing.T) {
@@ -38,6 +43,19 @@ func TestDesiredStateRejectsImpersonationAndUnsupportedBackend(t *testing.T) {
 	request.ExecutionBackend = "aws"
 	if err := request.Validate("user-1"); err == nil {
 		t.Fatal("unknown execution backend accepted")
+	}
+}
+
+func TestDesiredStateRejectsMissingTraceability(t *testing.T) {
+	request := validRequest()
+	request.Source = ""
+	if err := request.Validate("user-1"); err == nil {
+		t.Fatal("missing source accepted")
+	}
+	request = validRequest()
+	request.Evidence = ""
+	if err := request.Validate("user-1"); err == nil {
+		t.Fatal("missing evidence accepted")
 	}
 }
 
@@ -149,6 +167,9 @@ func TestDesiredStatePlacementRoundTripsThroughPersistence(t *testing.T) {
 	if got := responses[0].Placement.Constraints["arch"]; got != "arm64" {
 		t.Fatalf("placement constraints did not round-trip: %+v", responses[0].Placement.Constraints)
 	}
+	if responses[0].Source != request.Source || !responses[0].Verified || responses[0].Evidence != request.Evidence {
+		t.Fatalf("traceability did not round-trip: %+v", responses[0])
+	}
 }
 
 func TestDesiredStateReplayReturnsExistingIdentity(t *testing.T) {
@@ -189,6 +210,23 @@ func TestDesiredStateChangedDigestConflictsWithExistingIdentity(t *testing.T) {
 	}
 	if repository.createCalls != 1 {
 		t.Fatalf("changed digest created %d deployments, want exactly one", repository.createCalls)
+	}
+}
+
+func TestDesiredStateChangedEvidenceConflictsWithExistingIdentity(t *testing.T) {
+	repository := new(roundTripRepository)
+	store := NewDeploymentStore(repository)
+	useCase := NewSubmitDesiredStateUseCase(store)
+
+	if _, err := useCase.Execute(context.Background(), "user-1", validRequest()); err != nil {
+		t.Fatalf("first submit failed: %v", err)
+	}
+	changed := validRequest()
+	changed.Evidence = "run://different-receipt"
+	_, err := useCase.Execute(context.Background(), "user-1", changed)
+	var conflict *ConflictError
+	if !errors.As(err, &conflict) {
+		t.Fatalf("changed evidence error = %v, want ConflictError", err)
 	}
 }
 

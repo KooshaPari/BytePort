@@ -54,6 +54,17 @@ type BuildConfig struct {
 type CompositionMetadata struct {
 	Digest      string `json:"composition_digest,omitempty"`
 	ArtifactRef string `json:"artifact_ref,omitempty"`
+	// Source identifies the authoritative composition or plan source for the
+	// cross-repository handoff. It must not contain credentials or provider
+	// handles.
+	Source string `json:"source,omitempty"`
+	// Verified records whether BytePort validated the immutable handoff
+	// metadata before persisting desired state. AcceptedAt remains the
+	// timestamp for the verification event in the API response.
+	Verified bool `json:"verified,omitempty"`
+	// Evidence is a stable runbook, CI, receipt, or incident locator supporting
+	// the handoff. Mutable runtime state does not belong here.
+	Evidence string `json:"evidence,omitempty"`
 }
 
 // NewDeployment creates a new deployment with validation

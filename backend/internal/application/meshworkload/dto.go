@@ -14,11 +14,15 @@ var namePattern = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$`)
 // DesiredStateRequest is the provider-neutral request submitted by a composition client.
 // Owner is deliberately absent: it is always taken from the authenticated request context.
 type DesiredStateRequest struct {
-	Name              string    `json:"name" binding:"required"`
-	CompositionDigest string    `json:"composition_digest" binding:"required"`
-	ArtifactRef       string    `json:"artifact_ref" binding:"required"`
-	ExecutionBackend  string    `json:"execution_backend" binding:"required"`
-	Placement         Placement `json:"placement"`
+	Name              string `json:"name" binding:"required"`
+	CompositionDigest string `json:"composition_digest" binding:"required"`
+	ArtifactRef       string `json:"artifact_ref" binding:"required"`
+	ExecutionBackend  string `json:"execution_backend" binding:"required"`
+	// Source and Evidence make the cross-repository handoff auditable without
+	// allowing provider credentials or mutable runtime state into the request.
+	Source    string    `json:"source" binding:"required"`
+	Evidence  string    `json:"evidence" binding:"required"`
+	Placement Placement `json:"placement"`
 }
 
 // Placement contains portable scheduling intent. It must not contain provider credentials
@@ -42,6 +46,9 @@ type DesiredStateResponse struct {
 	CompositionDigest string    `json:"composition_digest"`
 	ArtifactRef       string    `json:"artifact_ref"`
 	ExecutionBackend  string    `json:"execution_backend"`
+	Source            string    `json:"source"`
+	Verified          bool      `json:"verified"`
+	Evidence          string    `json:"evidence"`
 	Placement         Placement `json:"placement"`
 	Status            string    `json:"status"`
 	AcceptedAt        time.Time `json:"accepted_at"`
@@ -73,10 +80,32 @@ func (r DesiredStateRequest) Validate(owner string) error {
 	if strings.TrimSpace(r.ArtifactRef) == "" {
 		return &ValidationError{Message: "artifact_ref is required"}
 	}
+	if err := validateReference("source", r.Source); err != nil {
+		return err
+	}
+	if err := validateReference("evidence", r.Evidence); err != nil {
+		return err
+	}
 	if !supportedBackend(r.ExecutionBackend) {
 		return &ValidationError{Message: fmt.Sprintf("unsupported execution_backend %q", r.ExecutionBackend)}
 	}
 	return validatePlacement(r.Placement)
+}
+
+func validateReference(field, value string) error {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return &ValidationError{Message: fmt.Sprintf("%s is required", field)}
+	}
+	if len(value) > 1024 {
+		return &ValidationError{Message: fmt.Sprintf("%s is too long", field)}
+	}
+	for _, char := range value {
+		if char < 0x20 || char == 0x7f {
+			return &ValidationError{Message: fmt.Sprintf("%s contains a control character", field)}
+		}
+	}
+	return nil
 }
 
 func supportedBackend(backend string) bool {

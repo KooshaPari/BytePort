@@ -25,3 +25,22 @@ submit intents and observe status, but cannot create competing state stores.
 Every workload handoff carries an immutable composition digest, artifact reference,
 owner, source, verification result, and evidence locator. Provider credentials stay
 inside the provider adapter boundary.
+
+The `POST /api/v1/mesh/workloads` contract requires the upstream handoff to include
+`source` and `evidence`; `owner` is taken from the authenticated principal and can
+never be supplied by the request body. BytePort validates the digest and references
+before accepting the intent, returns `verified: true`, and persists the trace fields
+alongside the composition metadata. A replay with the same owner, name, digest, and
+trace fields returns the original workload identity. A changed digest or trace
+locator is a conflict, never an implicit replacement.
+
+```json
+{
+  "name": "phenotype-lab",
+  "composition_digest": "sha256:<64-hex-digits>",
+  "artifact_ref": "oci://registry/example",
+  "execution_backend": "podman",
+  "source": "git://github.com/KooshaPari/PhenoCompose/examples/composition-v0.yaml",
+  "evidence": "run://phenocompose/<receipt>"
+}
+```

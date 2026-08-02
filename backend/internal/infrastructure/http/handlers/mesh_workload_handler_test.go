@@ -42,7 +42,7 @@ func submitMeshWorkload(t *testing.T, identityKey, digest, owner string, store m
 	handler := NewMeshWorkloadHandler(useCase)
 	router.POST("/mesh/workloads", func(c *gin.Context) { c.Set(identityKey, "auth-user"); handler.Submit(c) })
 
-	body := `{"owner":"` + owner + `","name":"demo","composition_digest":"sha256:` + strings.Repeat(digest, 64) + `","artifact_ref":"oci://registry/demo","execution_backend":"podman"}`
+	body := `{"owner":"` + owner + `","name":"demo","composition_digest":"sha256:` + strings.Repeat(digest, 64) + `","artifact_ref":"oci://registry/demo","execution_backend":"podman","source":"git://github.com/KooshaPari/PhenoCompose/examples/composition-v0.yaml","evidence":"run://phenocompose/69b4f35f"}`
 	req := httptest.NewRequest("POST", "/mesh/workloads", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
