@@ -76,7 +76,9 @@
 				{:else if selectedSection === 'integrations'}
 					<div class="space-y-4">
 						<h3 class="font-semibold text-white">Integrations</h3>
-						<p class="text-gray-400">Connect external services like GitHub, AWS, etc.</p>
+						<p class="text-gray-400">
+							Connect external services like GitHub, AWS, etc.
+						</p>
 					</div>
 				{:else if selectedSection === 'notifications'}
 					<div class="space-y-4">

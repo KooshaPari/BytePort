@@ -40,7 +40,9 @@
 	</div>
 
 	<div class="form-group">
-		<label for="description" class="text-sm font-medium text-white block mb-2">Description</label>
+		<label for="description" class="text-sm font-medium text-white block mb-2"
+			>Description</label
+		>
 		<textarea
 			id="description"
 			name="description"

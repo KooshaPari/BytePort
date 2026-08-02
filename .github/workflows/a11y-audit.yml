@@ -52,11 +52,15 @@ jobs:
       - name: Run a11y audit
         env:
           A11Y_URLS: 'http://localhost:4173/,http://localhost:4173/login,http://localhost:4173/signup,http://localhost:4173/home,http://localhost:4173/m/deploys,http://localhost:4173/m/projects,http://localhost:4173/m/settings'
+          # The audit lives at the repository root while dependencies are
+          # installed in the frontend workspace.
+          NODE_PATH: ${{ github.workspace }}/frontend/web/node_modules
         working-directory: frontend/web
         run: npx --no-install tsx ../../tests/a11y/audit.ts
 
       - name: Annotate PR (failure only)
         if: failure()
+        continue-on-error: true
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         with:
           script: |

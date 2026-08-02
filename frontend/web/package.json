@@ -28,6 +28,7 @@
 	"devDependencies": {
 		"@axe-core/playwright": "^4.11.0",
 		"@chromatic-com/storybook": "^5.2.1",
+		"@eslint/js": "^10.0.1",
 		"@iconify/svelte": "^5.2.1",
 		"@playwright/test": "^1.61.1",
 		"@storybook/addon-svelte-csf": "^5.1.2",

@@ -26,13 +26,16 @@
 			// Call the backend to search for repositories
 			// This assumes the backend has a /search endpoint
 			const baseUrl = 'http://localhost:8081';
-			const response = await fetch(`${baseUrl}/git/search?q=${encodeURIComponent(searchQuery)}`, {
-				method: 'GET',
-				headers: {
-					'Content-Type': 'application/json'
-				},
-				credentials: 'include'
-			});
+			const response = await fetch(
+				`${baseUrl}/git/search?q=${encodeURIComponent(searchQuery)}`,
+				{
+					method: 'GET',
+					headers: {
+						'Content-Type': 'application/json'
+					},
+					credentials: 'include'
+				}
+			);
 
 			if (response.ok) {
 				const data = await response.json();
@@ -78,7 +81,9 @@
 </script>
 
 <div class="w-full max-w-md space-y-2">
-	<label for="git-search" class="text-sm font-medium text-white block mb-2">Select Repository</label>
+	<label for="git-search" class="text-sm font-medium text-white block mb-2"
+		>Select Repository</label
+	>
 
 	<Popover.Root bind:open={isOpen}>
 		<Popover.Trigger
