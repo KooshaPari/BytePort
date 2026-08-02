@@ -21,11 +21,11 @@ TEMPLATES:
 
 SERVICES:
   backend:
-    PATH: ./backend/byteport
+    PATH: ./backend
     BUILD: go run main.go
     PORT: 8081
     ENV:
-      - ENCRYPTION_KEY=t1rSGxkBSy38s8+JNLvHkvJAax4zO/KRsli27VSu6Ks=
+      # Supply ENCRYPTION_KEY through the runtime secret manager; never commit it.
       - DB_PATH=/data/byteport.db
 
     RESOURCES: ${template:low}

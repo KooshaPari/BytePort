@@ -141,7 +141,7 @@
   }
   .btn.primary {
     background: var(--accent, #5a7dff);
-    color: #fff;
+    color: var(--accent-foreground, #fff);
   }
   .btn.primary:hover {
     background: var(--accent-hover, #4a6dff);

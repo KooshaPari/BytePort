@@ -49,7 +49,7 @@ jobs:
   qgate:
     name: Quality Gate
     needs: coverage
-    uses: KooshaPari/phenotype-tooling/.github/workflows/reusable/quality-gate.yml@main
+    uses: KooshaPari/phenotype-tooling/.github/workflows/reusable/quality-gate.yml@587805e38800be98e49f363738ffe314beb52782 # main
     permissions:
       contents: read
     with:

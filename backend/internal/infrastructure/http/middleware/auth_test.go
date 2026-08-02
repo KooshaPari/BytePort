@@ -178,4 +178,3 @@ func TestValidateTokenWithFallback(t *testing.T) {
 	_, err = validateTokenWithFallback(ctx, "real-token")
 	require.Error(t, err)
 }
-

@@ -9,16 +9,22 @@ type CreateDeploymentRequest struct {
 	ProjectUUID *string                `json:"project_uuid,omitempty"`
 	EnvVars     map[string]string      `json:"env_vars,omitempty"`
 	Config      map[string]interface{} `json:"config,omitempty"`
+	// CompositionDigest identifies the immutable PhenoCompose render used for this deployment.
+	CompositionDigest string `json:"composition_digest,omitempty"`
+	// ArtifactRef optionally identifies the registry/artifact handoff for the render.
+	ArtifactRef string `json:"artifact_ref,omitempty"`
 }
 
 // CreateDeploymentResponse represents the output after creating a deployment
 type CreateDeploymentResponse struct {
-	UUID      string    `json:"uuid"`
-	Name      string    `json:"name"`
-	Owner     string    `json:"owner"`
-	Status    string    `json:"status"`
-	CreatedAt time.Time `json:"created_at"`
-	Message   string    `json:"message"`
+	UUID              string    `json:"uuid"`
+	Name              string    `json:"name"`
+	Owner             string    `json:"owner"`
+	Status            string    `json:"status"`
+	CreatedAt         time.Time `json:"created_at"`
+	Message           string    `json:"message"`
+	CompositionDigest string    `json:"composition_digest,omitempty"`
+	ArtifactRef       string    `json:"artifact_ref,omitempty"`
 }
 
 // GetDeploymentResponse represents a deployment detail response
@@ -55,14 +61,14 @@ type ListDeploymentsResponse struct {
 
 // DeploymentSummaryDTO is a lightweight deployment representation for lists
 type DeploymentSummaryDTO struct {
-	UUID        string     `json:"uuid"`
-	Name        string     `json:"name"`
-	Owner       string     `json:"owner"`
-	Status      string     `json:"status"`
-	ServiceCount int       `json:"service_count"`
-	MonthlyCost float64    `json:"monthly_cost"`
-	CreatedAt   time.Time  `json:"created_at"`
-	DeployedAt  *time.Time `json:"deployed_at,omitempty"`
+	UUID         string     `json:"uuid"`
+	Name         string     `json:"name"`
+	Owner        string     `json:"owner"`
+	Status       string     `json:"status"`
+	ServiceCount int        `json:"service_count"`
+	MonthlyCost  float64    `json:"monthly_cost"`
+	CreatedAt    time.Time  `json:"created_at"`
+	DeployedAt   *time.Time `json:"deployed_at,omitempty"`
 }
 
 // UpdateStatusRequest represents a status update request
@@ -96,8 +102,8 @@ type CostInfoDTO struct {
 
 // TerminateDeploymentResponse represents the result of terminating a deployment
 type TerminateDeploymentResponse struct {
-	UUID      string    `json:"uuid"`
-	Status    string    `json:"status"`
-	Message   string    `json:"message"`
+	UUID       string    `json:"uuid"`
+	Status     string    `json:"status"`
+	Message    string    `json:"message"`
 	Terminated time.Time `json:"terminated_at"`
 }

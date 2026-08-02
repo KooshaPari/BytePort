@@ -2,6 +2,7 @@
 name = "byteport-dag"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
 description = "DAG foundation for Phenotype compute/infra automation (epic F)"
 
 [dependencies]

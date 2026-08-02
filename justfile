@@ -23,7 +23,7 @@ workspace:
         2>/dev/null || cargo metadata --no-deps --format-version 1 | head -c 200
 
 # ----- go -----
-go_dir  := "backend/byteport"
+go_dir  := "backend"
 
 # go build ./...
 go-build:
@@ -39,7 +39,7 @@ go-vet:
 
 # gofmt -l . (advisory; CI runs the same)
 go-fmt:
-    @unformatted=$(gofmt -l backend/byteport backend/nvms); \
+    @unformatted=$(gofmt -l backend backend/nvms); \
     if [ -n "$unformatted" ]; then \
         echo "The following files are not gofmt-clean:"; \
         echo "$unformatted"; \
@@ -54,7 +54,7 @@ go-lint:
 
 # Format all Go in place
 go-fmt-fix:
-    gofmt -w backend/byteport backend/nvms
+    gofmt -w backend backend/nvms
 
 # ----- rust -----
 # cargo build --workspace

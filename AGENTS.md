@@ -37,8 +37,8 @@ cargo test  --workspace
 cargo clippy --workspace -- -D warnings
 cargo fmt   --all -- --check
 
-# Go backend (backend/byteport + backend/nvms)
-cd backend/byteport && go build ./... && go test ./... && go vet ./...
+# Go backend (backend + backend/nvms)
+cd backend && go build ./... && go test ./... && go vet ./...
 
 # SvelteKit frontend (frontend/web)
 cd frontend/web && pnpm install --frozen-lockfile && pnpm build
@@ -54,7 +54,7 @@ cargo audit
 
 | Path | Purpose |
 |------|---------|
-| `backend/byteport/` | Go 1.25 deployment engine (Gin + GORM + SQLite, PASETO auth, AWS SDK) |
+| `backend/` | Go 1.25 deployment engine (Gin + GORM + SQLite, PASETO auth, AWS SDK) |
 | `backend/bytebridge/` | Bridge / integration layer (legacy; in-process glue) |
 | `backend/nvms/` | MicroVM runtime (Spin / `nvms` Go service) |
 | `frontend/web/` | SvelteKit 2 + Svelte 5 + Tailwind 4 web frontend |
@@ -132,10 +132,10 @@ the primary web frontend; Rust (Tauri) is the desktop/mobile shell.
 
 ## 5. Common tasks
 
-### Add a Go dep to `backend/byteport`
+### Add a Go dep to `backend`
 
 ```bash
-cd backend/byteport
+cd backend
 go get github.com/<owner>/<repo>@<version>
 go mod tidy
 go build ./... && go test ./...
@@ -161,7 +161,7 @@ pnpm install --frozen-lockfile
 
 - **Go unit test** — co-located `*_test.go`. Use stdlib `testing` plus
   `testify` (or `gomock` for interface mocks).
-- **Go integration** — `backend/byteport/tests/integration/<topic>_test.go`.
+- **Go integration** — `backend/internal/integration/<topic>_test.go`.
   Use `testcontainers-go` for ephemeral infra.
 - **Rust unit** — `#[cfg(test)] mod tests` at the bottom of the file.
 - **Svelte component test** — `*.test.ts` next to the component, runner
@@ -174,7 +174,7 @@ pnpm install --frozen-lockfile
 
 ```bash
 # Go
-cd backend/byteport && go test -bench=. -benchmem ./...
+cd backend && go test -bench=. -benchmem ./...
 
 # Rust (when added)
 cargo bench --workspace
@@ -219,7 +219,7 @@ cargo bench --workspace
 - `Cargo.toml [workspace.members]` — adding/removing members is an L2 SOTA task.
 - `rust-toolchain.toml` — toolchain pin is contractual.
 - `deny.toml`, `clippy.toml`, `golangci.yml` — version pins / rule sets are intentional.
-- `backend/byteport/go.mod` `go` directive — Go 1.25+ is contractual.
+- `backend/go.mod` `go` directive — Go 1.25+ is contractual.
 - `odin.nvms` schema — the NVMS manifest is the single source of truth
   for the IaC contract; changing the schema is a breaking change.
 - `frontend/web/src-tauri/Cargo.toml` `[lib] crate-type` — Tauri requires

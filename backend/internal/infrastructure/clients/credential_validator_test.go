@@ -248,14 +248,14 @@ func TestCredentialValidator_ValidatePortfolioAPI(t *testing.T) {
 		validator := NewCredentialValidator()
 		err := validator.ValidatePortfolioAPI(ctx, "", "api-key")
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "Portfolio API endpoint is required")
+		assert.Contains(t, err.Error(), "portfolio API endpoint is required")
 	})
 
 	t.Run("fails with empty API key", func(t *testing.T) {
 		validator := NewCredentialValidator()
 		err := validator.ValidatePortfolioAPI(ctx, "https://api.example.com", "")
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "Portfolio API key is required")
+		assert.Contains(t, err.Error(), "portfolio API key is required")
 	})
 
 	t.Run("validates with successful response", func(t *testing.T) {

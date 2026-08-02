@@ -1,12 +1,15 @@
 package lib
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
 	"os"
 
+	byteportauth "github.com/byteport/api/internal/infrastructure/auth"
 	httpmiddleware "github.com/byteport/api/internal/infrastructure/http/middleware"
+	"github.com/byteport/api/internal/infrastructure/secrets"
 	"github.com/gin-gonic/gin"
 )
 
@@ -38,4 +41,18 @@ func InitAuthSystem() error {
 // AuthMiddleware returns the API's legacy-compatible Gin auth middleware.
 func AuthMiddleware() gin.HandlerFunc {
 	return httpmiddleware.AuthMiddlewareWithFallback(nil)
+}
+
+// ProductionAuthMiddleware constructs fail-closed WorkOS authentication from
+// the configured secrets provider. It intentionally does not use the legacy
+// synthetic-token fallback.
+func ProductionAuthMiddleware(ctx context.Context) (gin.HandlerFunc, error) {
+	manager := secrets.New(secrets.Config{})
+	manager.RegisterProvider("environment", secrets.NewEnvironmentProvider())
+
+	service := byteportauth.NewProductionWorkOSAuthService(manager)
+	if err := service.Initialize(ctx); err != nil {
+		return nil, fmt.Errorf("initialize production WorkOS authentication: %w", err)
+	}
+	return service.Middleware(), nil
 }
