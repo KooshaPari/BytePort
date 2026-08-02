@@ -29,16 +29,20 @@ runs:
       run: |
         set -euo pipefail
 
-        prettier_bin="$(
-          find "${HOME}/.cache/trunk/tools/prettier" \
-            -path '*/node_modules/.bin/prettier' -print -quit
+        trunk_cache="${INPUT_CACHE_PATH:-${HOME}/.cache/trunk}"
+        if [[ "${trunk_cache}" == '~/'* ]]; then
+          trunk_cache="${HOME}/${trunk_cache#~/}"
+        fi
+        prettier_modules="$(
+          find "${trunk_cache}/tools/prettier" \
+            -mindepth 2 -maxdepth 2 -type d -name node_modules \
+            -print -quit 2>/dev/null
         )"
-        if [[ -z "${prettier_bin}" || ! -x "${prettier_bin}" ]]; then
-          echo "::error::Trunk Prettier executable not found after tools install" >&2
+        if [[ -z "${prettier_modules}" ]]; then
+          echo "::error::Trunk Prettier tool directory not found" >&2
           exit 1
         fi
-
-        prettier_root="$(cd "$(dirname "${prettier_bin}")/../.." && pwd)"
+        prettier_root="$(cd "${prettier_modules}/.." && pwd)"
         npm install \
           --prefix "${prettier_root}" \
           --no-save \
