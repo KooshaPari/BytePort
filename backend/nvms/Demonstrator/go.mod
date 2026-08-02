@@ -10,12 +10,13 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/julienschmidt/httprouter v1.3.0 // indirect
 	github.com/zalando/go-keyring v0.2.8 // indirect
-	golang.org/x/crypto v0.50.0 // indirect
-	golang.org/x/sys v0.43.0 // indirect
+	golang.org/x/crypto v0.52.0 // indirect
+	golang.org/x/sys v0.45.0 // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
 
 require (
-	github.com/fermyon/spin-go-sdk v0.0.0-20240918180601-c2d4ef2e0904
+	github.com/fermyon/spin/sdk/go/v2 v2.2.0
 	nvms v0.0.0-00010101000000-000000000000
 )
 

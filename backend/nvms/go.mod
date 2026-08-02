@@ -1,8 +1,6 @@
 module nvms
 
-go 1.24.0
-
-toolchain go1.24.3
+go 1.25.0
 
 require (
 	aidanwoods.dev/go-paseto v1.6.0
@@ -17,6 +15,6 @@ require (
 	aidanwoods.dev/go-result v0.3.1 // indirect
 	github.com/danieljoos/wincred v1.2.3 // indirect
 	github.com/godbus/dbus/v5 v5.2.2 // indirect
-	golang.org/x/crypto v0.48.0 // indirect
-	golang.org/x/sys v0.41.0 // indirect
+	golang.org/x/crypto v0.52.0 // indirect
+	golang.org/x/sys v0.45.0 // indirect
 )
