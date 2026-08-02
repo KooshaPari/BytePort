@@ -61,6 +61,8 @@ Thumbs.db
 *.local
 *.pem
 *.key
+*.password
+.updater-key*
 *_rsa
 *id_rsa*
 *credential*.json
