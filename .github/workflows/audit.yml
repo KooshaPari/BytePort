@@ -155,7 +155,8 @@ jobs:
       - name: Run cargo-semver-checks against registry baseline
         if: github.event_name != 'pull_request'
         # v1
-        uses: obi1kenobi/cargo-semver-checks-action@6b69fcf40e9b5fb17adeb57e4b6ecd020649a239
+        uses: >-
+          obi1kenobi/cargo-semver-checks-action@6b69fcf40e9b5fb17adeb57e4b6ecd020649a239
         # Push, schedule, and manual runs intentionally retain the release
         # behavior: compare published crates against crates.io and fail if a
         # package has not been published or lacks a valid registry baseline.
