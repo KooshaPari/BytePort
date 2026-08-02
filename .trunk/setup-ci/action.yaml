@@ -29,15 +29,21 @@ runs:
       run: |
         set -euo pipefail
 
-        trunk_cache="${INPUT_CACHE_PATH:-${HOME}/.cache/trunk}"
-        if [[ "${trunk_cache}" == '~/'* ]]; then
-          trunk_cache="${HOME}/${trunk_cache#~/}"
+        runner_home="$(getent passwd "$(id -u)" | cut -d: -f6)"
+        if [[ -z "${runner_home}" ]]; then
+          runner_home="$(cd ~ && pwd)"
         fi
-        prettier_modules="$(
-          find "${trunk_cache}/tools/prettier" \
-            -mindepth 2 -maxdepth 2 -type d -name node_modules \
-            -print -quit 2>/dev/null
-        )"
+        prettier_modules=""
+        for trunk_cache in \
+          "${runner_home}/.cache/trunk" \
+          "/home/runner/.cache/trunk"; do
+          [[ -d "${trunk_cache}/tools/prettier" ]] || continue
+          prettier_modules="$(
+            find "${trunk_cache}/tools/prettier" \
+              -type d -path '*/node_modules' -print -quit 2>/dev/null
+          )"
+          [[ -n "${prettier_modules}" ]] && break
+        done
         if [[ -z "${prettier_modules}" ]]; then
           echo "::error::Trunk Prettier tool directory not found" >&2
           exit 1
