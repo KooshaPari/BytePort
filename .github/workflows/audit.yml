@@ -121,8 +121,23 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          # PR semver checks compare against the actual base commit below.
+          # Keep full history so the action can resolve that revision.
+          fetch-depth: 0
       - name: Run cargo-semver-checks
+        if: github.event_name == 'pull_request'
         uses: obi1kenobi/cargo-semver-checks-action@6b69fcf40e9b5fb17adeb57e4b6ecd020649a239 # v1
+        with:
+          # Unpublished workspace crates have no crates.io baseline yet. A PR
+          # still needs a real API comparison, so use the PR base revision.
+          baseline-rev: ${{ github.event.pull_request.base.sha }}
+      - name: Run cargo-semver-checks against registry baseline
+        if: github.event_name != 'pull_request'
+        uses: obi1kenobi/cargo-semver-checks-action@6b69fcf40e9b5fb17adeb57e4b6ecd020649a239 # v1
+        # Push, schedule, and manual runs intentionally retain the release
+        # behavior: compare published crates against crates.io and fail if a
+        # package has not been published or lacks a valid registry baseline.
 
   # ---------- npm audit (frontend web) ----------
   npm-audit:
