@@ -53,7 +53,7 @@ jobs:
         env:
           A11Y_URLS: 'http://localhost:4173/,http://localhost:4173/login,http://localhost:4173/signup,http://localhost:4173/home,http://localhost:4173/m/deploys,http://localhost:4173/m/projects,http://localhost:4173/m/settings'
         working-directory: frontend/web
-        run: node --import tsx/esm ../../tests/a11y/audit.ts
+        run: npx --no-install tsx ../../tests/a11y/audit.ts
 
       - name: Annotate PR (failure only)
         if: failure()
