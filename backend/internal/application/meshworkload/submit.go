@@ -71,6 +71,9 @@ func (s *DeploymentStore) SaveWithID(ctx context.Context, owner string, req Desi
 		}
 		metadata := candidate.CompositionMetadata()
 		if metadata != nil && metadata.Digest == req.CompositionDigest {
+			if metadata.Source != req.Source || metadata.Evidence != req.Evidence {
+				return "", &ConflictError{Message: fmt.Sprintf("mesh workload %q already exists with different handoff evidence", req.Name)}
+			}
 			replayID = candidate.UUID()
 			continue
 		}
@@ -84,7 +87,13 @@ func (s *DeploymentStore) SaveWithID(ctx context.Context, owner string, req Desi
 	if err != nil {
 		return "", err
 	}
-	dep.SetCompositionMetadata(domain.CompositionMetadata{Digest: req.CompositionDigest, ArtifactRef: req.ArtifactRef})
+	dep.SetCompositionMetadata(domain.CompositionMetadata{
+		Digest:      req.CompositionDigest,
+		ArtifactRef: req.ArtifactRef,
+		Source:      req.Source,
+		Verified:    true,
+		Evidence:    req.Evidence,
+	})
 	dep.SetProvider("execution_backend", req.ExecutionBackend)
 	if len(req.Placement.Labels)+len(req.Placement.Constraints) > 0 {
 		dep.SetProvider("placement", req.Placement)
@@ -108,7 +117,7 @@ func (s *DeploymentStore) List(ctx context.Context, owner string) ([]DesiredStat
 			continue
 		}
 		backend, _ := dep.Providers()["execution_backend"].(string)
-		responses = append(responses, DesiredStateResponse{ID: dep.UUID(), Name: dep.Name(), Owner: dep.Owner(), CompositionDigest: metadata.Digest, ArtifactRef: metadata.ArtifactRef, ExecutionBackend: backend, Placement: placementFromProvider(dep.Providers()["placement"]), Status: dep.Status().String(), AcceptedAt: dep.CreatedAt()})
+		responses = append(responses, DesiredStateResponse{ID: dep.UUID(), Name: dep.Name(), Owner: dep.Owner(), CompositionDigest: metadata.Digest, ArtifactRef: metadata.ArtifactRef, ExecutionBackend: backend, Source: metadata.Source, Verified: metadata.Verified, Evidence: metadata.Evidence, Placement: placementFromProvider(dep.Providers()["placement"]), Status: dep.Status().String(), AcceptedAt: dep.CreatedAt()})
 	}
 	return responses, nil
 }
@@ -189,6 +198,9 @@ func (uc *SubmitDesiredStateUseCase) Execute(ctx context.Context, owner string, 
 		CompositionDigest: req.CompositionDigest,
 		ArtifactRef:       req.ArtifactRef,
 		ExecutionBackend:  req.ExecutionBackend,
+		Source:            req.Source,
+		Verified:          true,
+		Evidence:          req.Evidence,
 		Placement:         req.Placement,
 		Status:            "accepted",
 		AcceptedAt:        time.Now().UTC(),

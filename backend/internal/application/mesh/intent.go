@@ -17,6 +17,8 @@ type WorkloadIntent struct {
 	CompositionDigest string            `json:"composition_digest"`
 	ArtifactRef       string            `json:"artifact_ref"`
 	ExecutionBackend  string            `json:"execution_backend"`
+	Source            string            `json:"source"`
+	Evidence          string            `json:"evidence"`
 	Placement         map[string]string `json:"placement,omitempty"`
 }
 
@@ -37,10 +39,32 @@ func (i WorkloadIntent) Validate() error {
 	if strings.TrimSpace(i.ArtifactRef) == "" {
 		return fmt.Errorf("artifact_ref is required")
 	}
+	if err := validateReference("source", i.Source); err != nil {
+		return err
+	}
+	if err := validateReference("evidence", i.Evidence); err != nil {
+		return err
+	}
 	switch i.ExecutionBackend {
 	case "nanovms", "podman", "apple-containers", "wsl-containers":
 	default:
 		return fmt.Errorf("unsupported execution_backend %q", i.ExecutionBackend)
+	}
+	return nil
+}
+
+func validateReference(field, value string) error {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return fmt.Errorf("%s is required", field)
+	}
+	if len(value) > 1024 {
+		return fmt.Errorf("%s is too long", field)
+	}
+	for _, char := range value {
+		if char < 0x20 || char == 0x7f {
+			return fmt.Errorf("%s contains a control character", field)
+		}
 	}
 	return nil
 }

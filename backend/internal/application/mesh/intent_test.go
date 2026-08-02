@@ -6,7 +6,7 @@ import (
 )
 
 func TestWorkloadIntentValidate(t *testing.T) {
-	i := WorkloadIntent{Owner: "alice", CompositionName: "demo", CompositionDigest: "sha256:" + strings.Repeat("a", 64), ArtifactRef: "oci://registry/demo", ExecutionBackend: "podman"}
+	i := WorkloadIntent{Owner: "alice", CompositionName: "demo", CompositionDigest: "sha256:" + strings.Repeat("a", 64), ArtifactRef: "oci://registry/demo", ExecutionBackend: "podman", Source: "git://github.com/KooshaPari/PhenoCompose/examples/composition-v0.yaml", Evidence: "run://phenocompose/69b4f35f"}
 	if err := i.Validate(); err != nil {
 		t.Fatalf("valid intent rejected: %v", err)
 	}
