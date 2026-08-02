@@ -47,7 +47,7 @@ jobs:
         working-directory: frontend/web
         run: |
           npm install --ignore-scripts --no-save --package-lock=false @axe-core/playwright@4.12.1 playwright@1.61.1
-          npm exec --ignore-scripts --no -- playwright install --with-deps chromium
+          node node_modules/playwright/cli.js install --with-deps chromium
 
       - name: Run a11y audit
         env:
