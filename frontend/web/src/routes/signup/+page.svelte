@@ -1,10 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import tempUser from '../+layout.svelte';
-	import { initializeUser, setUser, user } from '../../stores/user';
-	import type { User } from '../../stores/user';
+	import { initializeUser } from '../../stores/user';
 
-	let newUser: User;
 	let Error: string = '';
 
 	// Get base URL with correct port
@@ -22,13 +19,13 @@
 			return;
 		}
 		const formData = new FormData(regUserForm);
-		let newUser = {
+		const signupUser = {
 			Name: String(formData.get('name') ?? ''),
 			Email: String(formData.get('email') ?? ''),
 			Password: String(formData.get('password') ?? '')
 		};
 
-		const { Name, Email, Password } = newUser;
+		const { Name, Email, Password } = signupUser;
 		try {
 			const baseUrl = getBaseUrl();
 			const response = await fetch(`${baseUrl}/signup`, {
@@ -59,3 +56,64 @@
 		}
 	}
 </script>
+
+<div class="bg-dark-surface h-screen w-screen overflow-x-hidden">
+	<div
+		id="header"
+		class="bg-dark-surfaceContainerLow h-1/5 w-full flex-col justify-between ps-2.5"
+	>
+		<div id="headerNav" class="h-3/5 pt-2.5"></div>
+		<div id="headerContent" class="h-2/5 text-4xl text-white">Create your account.</div>
+	</div>
+	<div id="body" class="px-2.5 pt-5">
+		<h1 class="text-2xl text-white">Sign up to BytePort</h1>
+		<div id="logCont">
+			<form class="flex-row" name="regUser" on:submit|preventDefault={signUpUser}>
+				<div>
+					<label for="name">Name</label>
+					<input name="name" placeholder="Name" required type="text" />
+				</div>
+				<div>
+					<label for="email">Email</label>
+					<input name="email" placeholder="Email" required type="email" />
+				</div>
+				<div>
+					<label for="password">Password</label>
+					<input name="password" placeholder="Password" required type="password" />
+				</div>
+				<div>
+					<input
+						type="submit"
+						value="Create account"
+						class="bg-dark-surfaceContainerHigh text-dark-onSurface hover:bg-dark-surfaceContainerHighest active:bg-dark-surfaceContainer rounded-full p-2"
+					/>
+					<button
+						type="button"
+						on:click={() => goto('/login')}
+						class="bg-dark-surfaceContainerHigh text-dark-onSurface hover:bg-dark-surfaceContainerHighest active:bg-dark-surfaceContainer my-3 rounded-full p-2"
+					>
+						Back to login
+					</button>
+				</div>
+			</form>
+			{#if Error}
+				<p role="alert" class="text-dark-error">{Error}</p>
+			{/if}
+		</div>
+	</div>
+</div>
+
+<style>
+	@reference '../../app.css';
+
+	#logCont form > div > input {
+		@apply bg-dark-surfaceContainerHigh text-dark-onSurface placeholder-dark-onSurfaceVariant selection:bg-dark-surfaceContainer hover:bg-dark-surfaceContainerHighest my-2 rounded-full;
+		border: none;
+	}
+	#logCont form > div > label {
+		@apply text-dark-onSurface;
+	}
+	#logCont form > div {
+		@apply h-1/5 w-screen flex-row items-center justify-center;
+	}
+</style>

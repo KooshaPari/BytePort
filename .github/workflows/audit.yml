@@ -183,6 +183,9 @@ jobs:
   # ---------- SonarCloud ----------
   sonarcloud:
     name: SonarCloud
+    # PR analysis is provided by the SonarCloud GitHub integration. Keep this
+    # advisory workflow out of PR runs to avoid duplicate/non-gating checks.
+    if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     continue-on-error: true
