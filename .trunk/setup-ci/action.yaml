@@ -1,5 +1,8 @@
+---
 name: Trunk Code Quality setup
-description: Install frontend dependencies required by the repository's Trunk linters
+description: >-
+  Install frontend dependencies and Trunk formatter plugins required by the
+  repository quality checks.
 
 runs:
   using: composite
@@ -7,7 +10,7 @@ runs:
     - name: Set up Node.js
       uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
       with:
-        node-version: '20'
+        node-version: "20"
         cache: npm
         cache-dependency-path: frontend/web/package-lock.json
 
@@ -15,3 +18,33 @@ runs:
       shell: bash
       working-directory: frontend/web
       run: npm ci --ignore-scripts --no-audit --no-fund
+
+    - name: Install Trunk-managed tools
+      shell: bash
+      run: "${TRUNK_PATH:-trunk} tools install --ci"
+
+    - name: Install Trunk Prettier plugins
+      shell: bash
+      working-directory: frontend/web
+      run: |
+        set -euo pipefail
+
+        prettier_bin="$(
+          find "${HOME}/.cache/trunk/tools/prettier" \
+            -path '*/node_modules/.bin/prettier' -print -quit
+        )"
+        if [[ -z "${prettier_bin}" || ! -x "${prettier_bin}" ]]; then
+          echo "::error::Trunk Prettier executable not found after tools install" >&2
+          exit 1
+        fi
+
+        prettier_root="$(cd "$(dirname "${prettier_bin}")/../.." && pwd)"
+        npm install \
+          --prefix "${prettier_root}" \
+          --no-save \
+          --package-lock=false \
+          --ignore-scripts \
+          --no-audit \
+          --no-fund \
+          prettier-plugin-svelte@4.1.0 \
+          prettier-plugin-tailwindcss@0.8.0
