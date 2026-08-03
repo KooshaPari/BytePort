@@ -19,8 +19,8 @@ path = "src/lib.rs"
 # pairs cleanly with our stable `tokio = 1` runtime elsewhere in the
 # workspace. zvariant 4 tracks the same release.
 [target.'cfg(target_os = "linux")'.dependencies]
-zbus = { version = "4", default-features = false, features = ["tokio"] }
-zvariant = "4"
+zbus = { version = "5", default-features = false, features = ["tokio"] }
+zvariant = "5"
 tokio = { version = "1", features = ["rt", "macros"] }
 
 [target.'cfg(not(target_os = "linux"))'.dependencies]
