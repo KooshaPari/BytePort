@@ -11,11 +11,21 @@ on:
     branches: [main, master]
     paths:
       - '.github/workflows/infisical.yml'
-  pull_request:
+
+# Secret-backed jobs must never run from untrusted pull-request code.
+permissions:
+  contents: read
 
 jobs:
   sync-secrets:
     name: Pull secrets from Infisical
+    if: >-
+      github.event_name == 'workflow_call' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' &&
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'))
+    permissions:
+      contents: read
     runs-on: blacksmith-2vcpu-ubuntu-2204
     timeout-minutes: 5
     steps:
@@ -27,7 +37,7 @@ jobs:
           curl -1sLf "https://dl.cloudsmith.io/public/infisical/infisical-cli/setup.deb.sh" | sudo -E bash
           sudo apt-get install -y infisical
 
-      - name: Pull secrets to .env
+      - name: Validate Infisical access without exposing values
         env:
           INFISICAL_TOKEN: ${{ secrets.INFISICAL_TOKEN }}
           INFISICAL_PROJECT_ID: ${{ vars.INFISICAL_PROJECT_ID || secrets.INFISICAL_PROJECT_ID || '8efe392e-56a6-4c3c-89f9-8141183dd7e8' }}
@@ -43,17 +53,10 @@ jobs:
             exit 1
           fi
 
-          # Pull all secrets from the configured env into .env
+          # Inject secrets only into this short-lived child process. Do not
+          # write a local secrets file or print the resulting environment.
           infisical run \
             --projectId "$INFISICAL_PROJECT_ID" \
             --env "$INFISICAL_ENV" \
             --token "$INFISICAL_TOKEN" \
-            -- bash -c 'echo "Secrets loaded into env successfully" && env | grep -E "^[A-Z_]+=" | grep -v -E "^(PATH|HOME|PWD|SHELL|HOSTNAME|TERM|GITHUB_|RUNNER_|CARGO_|DEPLOY_|INPUT_|IMAGE_|ACTIONS_|STEP_|BOOT_|GRUB_|LS_COLORS|INVOCATION_ID|JOURNAL_)" | head -20'
-
-      - name: Upload secrets as artifact (debug only, never published)
-        if: failure()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: infisical-debug
-          path: .env
-          retention-days: 1
+            -- bash -c 'printf "%s\\n" "Infisical secrets loaded successfully"'
