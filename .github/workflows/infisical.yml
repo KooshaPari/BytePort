@@ -19,11 +19,11 @@ permissions:
 jobs:
   sync-secrets:
     name: Pull secrets from Infisical
+    # A reusable caller must also be trusted; never pull credentials for a
+    # pull_request context, even if another workflow invokes this one.
     if: >-
-      github.event_name == 'workflow_call' ||
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'push' &&
-      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'))
+      github.event_name != 'pull_request' &&
+      github.event_name != 'pull_request_target'
     permissions:
       contents: read
     runs-on: blacksmith-2vcpu-ubuntu-2204
