@@ -18,7 +18,6 @@ lint:
     - actionlint
     - black
     - clippy
-    - eslint
     - golangci-lint
     - mypy
     - prettier
@@ -35,10 +34,6 @@ lint:
       direct_configs:
         - pyproject.toml
         - ruff.toml
-    - name: eslint
-      direct_configs:
-        - .eslintrc.*
-        - eslint.config.*
     - name: golangci-lint
       direct_configs:
         - .golangci.yml
