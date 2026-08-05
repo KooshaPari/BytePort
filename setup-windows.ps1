@@ -5,7 +5,8 @@ param(
     [string]$Domain = "yourdomain.com",
     [string]$ProjectsPath = "C:\BytePort",
     [string]$TunnelName = "byteport-main",
-    [switch]$SkipDocker = $false,
+    [ValidateSet("podman", "wsl-containers")]
+    [string]$ContainerRuntime = "podman",
     [switch]$SkipCloudflare = $false
 )
 
@@ -43,10 +44,6 @@ $tools = @(
     "nodejs"
 )
 
-if (!$SkipDocker) {
-    $tools += "docker-desktop"
-}
-
 if (!$SkipCloudflare) {
     # Install cloudflared manually since it's not in chocolatey
     Write-Host "Installing cloudflared..." -ForegroundColor Gray
@@ -70,32 +67,15 @@ foreach ($tool in $tools) {
     choco install $tool -y
 }
 
-# Configure Docker (if not skipped)
-if (!$SkipDocker) {
-    Write-Host "🐳 Configuring Docker..." -ForegroundColor Yellow
-
-    # Wait for Docker Desktop to start
-    Write-Host "Waiting for Docker Desktop to start..." -ForegroundColor Gray
-    $timeout = 120 # 2 minutes timeout
-    $elapsed = 0
-    do {
-        Start-Sleep -Seconds 5
-        $elapsed += 5
-        try {
-            $dockerStatus = docker version 2>$null
-            if ($dockerStatus) { break }
-        } catch {
-            # Continue waiting
-        }
-    } while ($elapsed -lt $timeout)
-
-    if ($elapsed -ge $timeout) {
-        Write-Host "Warning: Docker Desktop may not be running. Please start it manually." -ForegroundColor Red
-    } else {
-        # Create Docker network for BytePort
-        docker network create byteport-network 2>$null
-        Write-Host "Created Docker network: byteport-network" -ForegroundColor Gray
-    }
+# Container lifecycle is delegated to the selected Podman/WSL Containers
+# adapter.  This setup script deliberately does not install or invoke a
+# competing container runtime; capability probing and lifecycle receipts are
+# owned by NanoVMS/PhenoCompose.
+$runtimeCommand = if ($ContainerRuntime -eq "podman") { "podman.exe" } else { "wslc.exe" }
+if (!(Get-Command $runtimeCommand -ErrorAction SilentlyContinue)) {
+    Write-Host "Warning: $runtimeCommand was not found. Install/configure it before starting services." -ForegroundColor Yellow
+} else {
+    Write-Host "Using container runtime adapter: $ContainerRuntime ($runtimeCommand)" -ForegroundColor Gray
 }
 
 # Configure environment variables
@@ -107,7 +87,8 @@ $envVars = @{
     "BYTEPORT_API_PORT" = "8081"
     "BYTEPORT_NVMS_PORT" = "3000"
     "BYTEPORT_FRONTEND_PORT" = "5173"
-    "DOCKER_NETWORK" = "byteport-network"
+    "CONTAINER_RUNTIME" = $ContainerRuntime
+    "CONTAINER_NETWORK" = "byteport-network"
     "TUNNEL_CONFIG_PATH" = "$ProjectsPath\tunnels"
     "TUNNEL_NAME" = $TunnelName
     "PROJECTS_PATH" = "$ProjectsPath\projects"
@@ -126,7 +107,8 @@ BYTEPORT_DOMAIN=$Domain
 BYTEPORT_API_PORT=8081
 BYTEPORT_NVMS_PORT=3000
 BYTEPORT_FRONTEND_PORT=5173
-DOCKER_NETWORK=byteport-network
+CONTAINER_RUNTIME=$ContainerRuntime
+CONTAINER_NETWORK=byteport-network
 TUNNEL_CONFIG_PATH=$ProjectsPath\tunnels
 TUNNEL_NAME=$TunnelName
 PROJECTS_PATH=$ProjectsPath\projects
@@ -162,51 +144,197 @@ logfile: $ProjectsPath\logs\tunnel.log
     Write-Host "Created tunnel config template at $ProjectsPath\tunnels\config-template.yml" -ForegroundColor Gray
 }
 
-# Create service management scripts
+# Create service management scripts.  The generated manager records the
+# exact root PID, command marker, and start time for every service.  Stop only
+# acts on a still-matching tracked process tree; it never searches by a
+# process image name and never terminates unrelated agent/Codex processes.
 Write-Host "🔧 Creating service management scripts..." -ForegroundColor Yellow
+
+$escapedProjectsPath = $ProjectsPath.Replace("'", "''")
+$serviceManagerTemplate = @'
+[CmdletBinding()]
+param(
+    [ValidateSet('start', 'stop')]
+    [string]$Action = 'start'
+)
+
+$ErrorActionPreference = 'Stop'
+$Root = '__PROJECTS_PATH__'
+$PidDirectory = Join-Path $Root '.byteport-pids'
+$ProtectedProcessPattern = '(?i)(^|[\\/ _-])(codex(?:\.exe)?|codex-code-mode-host(?:\.exe)?|cursor(?:\.exe)?|claude(?:\.exe)?|claude-code|agent-runner|agent-host)([\\/ _.-]|$)'
+
+$Services = @(
+    [pscustomobject]@{
+        Name = 'byteport-api'
+        FilePath = 'go.exe'
+        Arguments = @('run', 'main.go')
+        WorkingDirectory = Join-Path $Root 'backend\byteport'
+        CommandMarker = 'go run main.go'
+    }
+    [pscustomobject]@{
+        Name = 'nvms'
+        FilePath = 'go.exe'
+        Arguments = @('run', 'main.go')
+        WorkingDirectory = Join-Path $Root 'backend\nvms'
+        CommandMarker = 'go run main.go'
+    }
+    [pscustomobject]@{
+        Name = 'frontend'
+        FilePath = 'npm.cmd'
+        Arguments = @('run', 'dev')
+        WorkingDirectory = Join-Path $Root 'frontend\web'
+        CommandMarker = 'npm run dev'
+    }
+)
+
+function Get-ProcessCommandLine {
+    param([Parameter(Mandatory)][int]$Pid)
+
+    $process = Get-CimInstance Win32_Process -Filter "ProcessId=$Pid" -ErrorAction SilentlyContinue
+    if ($null -eq $process) { return $null }
+    return [string]$process.CommandLine
+}
+
+function Get-DescendantProcessIds {
+    param([Parameter(Mandatory)][int]$ParentPid)
+
+    $children = @(Get-CimInstance Win32_Process -Filter "ParentProcessId=$ParentPid" -ErrorAction SilentlyContinue)
+    foreach ($child in $children) {
+        [int]$child.ProcessId
+        Get-DescendantProcessIds -ParentPid ([int]$child.ProcessId)
+    }
+}
+
+function Assert-TrackedTreeSafe {
+    param([Parameter(Mandatory)][int[]]$ProcessIds)
+
+    foreach ($candidatePid in $ProcessIds) {
+        $commandLine = Get-ProcessCommandLine -Pid $candidatePid
+        if ([string]::IsNullOrWhiteSpace($commandLine)) {
+            throw "Refusing to stop PID ${candidatePid}: unable to verify command identity"
+        }
+        if ($commandLine -match $ProtectedProcessPattern) {
+            throw "Refusing to stop protected agent/Codex PID $candidatePid"
+        }
+    }
+}
+
+function Get-RecordPath {
+    param([Parameter(Mandatory)][string]$Name)
+
+    return (Join-Path $PidDirectory "$Name.json")
+}
+
+function Read-TrackedProcess {
+    param([Parameter(Mandatory)]$Service)
+
+    $recordPath = Get-RecordPath -Name $Service.Name
+    if (!(Test-Path -LiteralPath $recordPath)) { return $null }
+
+    try {
+        $record = Get-Content -LiteralPath $recordPath -Raw | ConvertFrom-Json
+        $pid = [int]$record.Pid
+    } catch {
+        throw "Refusing to act on malformed PID record: $recordPath"
+    }
+
+    $commandLine = Get-ProcessCommandLine -Pid $pid
+    if ([string]::IsNullOrWhiteSpace($commandLine)) {
+        Remove-Item -LiteralPath $recordPath -Force
+        return $null
+    }
+
+    $process = Get-Process -Id $pid -ErrorAction SilentlyContinue
+    if ($null -eq $process) {
+        Remove-Item -LiteralPath $recordPath -Force
+        return $null
+    }
+
+    $startedUtc = $process.StartTime.ToUniversalTime().ToString('o')
+    if ($startedUtc -ne [string]$record.StartedUtc -or
+        $commandLine -notlike "*$($Service.CommandMarker)*") {
+        throw "Refusing to stop PID $pid for $($Service.Name): tracked identity no longer matches"
+    }
+
+    return [pscustomobject]@{
+        Pid = $pid
+        RecordPath = $recordPath
+        CommandLine = $commandLine
+    }
+}
+
+function Start-TrackedService {
+    param([Parameter(Mandatory)]$Service)
+
+    if (!(Test-Path -LiteralPath $Service.WorkingDirectory)) {
+        throw "Service directory does not exist: $($Service.WorkingDirectory)"
+    }
+
+    $existing = Read-TrackedProcess -Service $Service
+    if ($null -ne $existing) {
+        throw "$($Service.Name) is already tracked at PID $($existing.Pid); stop it explicitly first"
+    }
+
+    $process = Start-Process -FilePath $Service.FilePath -ArgumentList $Service.Arguments -WorkingDirectory $Service.WorkingDirectory -PassThru
+    $startedUtc = $process.StartTime.ToUniversalTime().ToString('o')
+    [pscustomobject]@{
+        Pid = $process.Id
+        StartedUtc = $startedUtc
+        CommandMarker = $Service.CommandMarker
+    } | ConvertTo-Json | Set-Content -LiteralPath (Get-RecordPath -Name $Service.Name) -Encoding UTF8
+    Write-Host "Started $($Service.Name) (PID $($process.Id))"
+}
+
+function Stop-TrackedService {
+    param([Parameter(Mandatory)]$Service)
+
+    $tracked = Read-TrackedProcess -Service $Service
+    if ($null -eq $tracked) {
+        Write-Host "$($Service.Name) is not running"
+        return
+    }
+
+    # The identity check above is the safety boundary.  Descendants are
+    # collected by parent PID, so no global image-name kill is possible.  The
+    # second guard makes agent/Codex targeting fail closed even if a tracked
+    # service tree was tampered with after it started.
+    $descendants = @(Get-DescendantProcessIds -ParentPid $tracked.Pid)
+    [array]::Reverse($descendants)
+    Assert-TrackedTreeSafe -ProcessIds (@($tracked.Pid) + $descendants)
+    foreach ($childPid in $descendants) {
+        Stop-Process -Id $childPid -Force -ErrorAction SilentlyContinue
+    }
+    Stop-Process -Id $tracked.Pid -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $tracked.RecordPath -Force
+    Write-Host "Stopped $($Service.Name) (tracked PID $($tracked.Pid))"
+}
+
+New-Item -ItemType Directory -Path $PidDirectory -Force | Out-Null
+foreach ($service in $Services) {
+    if ($Action -eq 'start') {
+        Start-TrackedService -Service $service
+    } else {
+        Stop-TrackedService -Service $service
+    }
+}
+'@
+$serviceManager = $serviceManagerTemplate.Replace('__PROJECTS_PATH__', $escapedProjectsPath)
+$serviceManager | Out-File -FilePath "$ProjectsPath\byteport-services.ps1" -Encoding UTF8
 
 $startScript = @"
 @echo off
-echo Starting BytePort Services...
-
-echo Setting environment variables...
-set BYTEPORT_ROOT=$ProjectsPath
-set BYTEPORT_DOMAIN=$Domain
-set PROJECTS_PATH=$ProjectsPath\projects
-set TUNNEL_CONFIG_PATH=$ProjectsPath\tunnels
-set TUNNEL_NAME=$TunnelName
-
-echo Starting BytePort API...
-cd /d "%~dp0backend\byteport"
-start /B go run main.go
-
-echo Starting NVMS Service...
-cd /d "%~dp0backend\nvms"
-start /B go run main.go
-
-echo Starting Frontend...
-cd /d "%~dp0frontend\web"
-start /B npm run dev
-
-echo All services started!
-echo Access BytePort at: http://localhost:5173
-pause
+setlocal
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$ProjectsPath\byteport-services.ps1" -Action start
+exit /b %ERRORLEVEL%
 "@
 
 $startScript | Out-File -FilePath "$ProjectsPath\start-services.bat" -Encoding ASCII
 
 $stopScript = @"
 @echo off
-echo Stopping BytePort Services...
-
-echo Stopping Go processes...
-taskkill /F /IM go.exe 2>nul
-
-echo Stopping Node processes...
-taskkill /F /IM node.exe 2>nul
-
-echo All services stopped!
-pause
+setlocal
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$ProjectsPath\byteport-services.ps1" -Action stop
+exit /b %ERRORLEVEL%
 "@
 
 $stopScript | Out-File -FilePath "$ProjectsPath\stop-services.bat" -Encoding ASCII
