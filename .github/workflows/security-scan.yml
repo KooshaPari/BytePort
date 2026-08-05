@@ -42,6 +42,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_CONFIG: .gitleaks.toml
+          # The action otherwise uses the first PR commit as the base and
+          # attempts to resolve its parent, which is not guaranteed in a PR
+          # checkout. Use the actual target-branch commit instead.
+          BASE_REF: ${{ github.event.pull_request.base.sha }}
 
   cargo-audit:
     name: cargo-audit (vulnerabilities)
