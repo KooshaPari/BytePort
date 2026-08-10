@@ -99,6 +99,7 @@ pub struct ExecResult {
 // ---------------------------------------------------------------------------
 
 /// A DAG-aware executor that runs DagUnits in dependency order.
+#[derive(Debug)]
 pub struct Executor {
     /// The in-memory manifest.
     manifest: DagUnitManifest,

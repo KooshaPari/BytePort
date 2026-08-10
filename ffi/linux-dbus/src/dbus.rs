@@ -1,6 +1,6 @@
 //! D-Bus service skeleton for `org.byteport.LinuxBridge1`.
 //!
-//! This module holds the `#[zbus::dbus_interface]`-annotated struct that
+//! This module holds the `#[zbus::interface]`-annotated impl block that
 //! will eventually expose the bridge over the session bus. Because we
 //! only ship the scaffold in this PR, the interface body is intentionally
 //! a no-op (returning `Ok(())`); the real methods will be wired in once
@@ -9,8 +9,14 @@
 //! Linux-only — guarded by `#[cfg(target_os = "linux")]` on every item
 //! so the rest of the workspace compiles unchanged on macOS / Windows.
 
-#[cfg(target_os = "linux")]
-use zbus::dbus_interface;
+/// Inert implementation of the `org.byteport.LinuxBridge1` interface
+/// used by the scaffold on every target.
+///
+/// On Linux this struct is wired up by [`zbus::interface`] so the
+/// service can be served at [`crate::OBJECT_PATH`] under
+/// [`crate::BUS_NAME`]. On other targets it is a plain value type that
+/// keeps `cfg`-agnostic code compiling.
+pub struct LinuxBridgeSkeleton;
 
 /// D-Bus interface served at [`crate::OBJECT_PATH`] under
 /// [`crate::BUS_NAME`].
@@ -23,8 +29,8 @@ use zbus::dbus_interface;
 /// 3. Serve this interface at `OBJECT_PATH`.
 /// 4. Forward inbound `HandOff` calls to the BytePort host process.
 #[cfg(target_os = "linux")]
-#[dbus_interface(name = "org.byteport.LinuxBridge1")]
-pub trait LinuxBridge1 {
+#[zbus::interface(name = "org.byteport.LinuxBridge1")]
+impl LinuxBridgeSkeleton {
     /// Acknowledge a pending hand-off from a companion app.
     ///
     /// Returns the assigned `session_id` as a `u64`. Companion apps are
@@ -45,46 +51,12 @@ pub trait LinuxBridge1 {
 
     /// Emitted after the host process has consumed the bytes handed off
     /// via `handoff(session_id)`.
-    #[dbus_interface(signal)]
-    fn bytes_received(session_id: u64, byte_count: u64) -> zbus::Result<()>;
-}
-
-/// Stub interface kept around on non-Linux targets so callers can still
-/// reference the type in `cfg`-agnostic code.
-#[cfg(not(target_os = "linux"))]
-#[allow(dead_code)]
-pub trait LinuxBridge1 {
-    fn handoff(&mut self, item_count: u64) -> Result<u64, String>;
-    fn ping(&self) -> Result<String, String>;
-}
-
-/// Inert implementation of [`LinuxBridge1`] used by the scaffold on
-/// non-Linux targets and by Linux-side tests before the real wiring
-/// lands.
-pub struct LinuxBridgeSkeleton;
-
-#[cfg(target_os = "linux")]
-impl LinuxBridge1 for LinuxBridgeSkeleton {
-    fn handoff(&mut self, _item_count: u64) -> zbus::fdo::Result<u64> {
-        // Scaffold: real impl allocates a session id from an atomic
-        // counter and persists the in-flight hand-off state.
-        Ok(0)
-    }
-
-    fn ping(&self) -> zbus::fdo::Result<String> {
-        Ok("pong".to_string())
-    }
-}
-
-#[cfg(not(target_os = "linux"))]
-impl LinuxBridge1 for LinuxBridgeSkeleton {
-    fn handoff(&mut self, _item_count: u64) -> Result<u64, String> {
-        Err("D-Bus bridge unavailable off-Linux".to_string())
-    }
-
-    fn ping(&self) -> Result<String, String> {
-        Err("D-Bus bridge unavailable off-Linux".to_string())
-    }
+    #[zbus(signal)]
+    async fn bytes_received(
+        ctxt: &zbus::object_server::SignalContext<'_>,
+        session_id: u64,
+        byte_count: u64,
+    ) -> zbus::Result<()>;
 }
 
 #[cfg(test)]
@@ -97,14 +69,17 @@ mod tests {
         let s = LinuxBridgeSkeleton;
         // `.ping()` on the impl returns `Result<String, _>`; we unwrap
         // here because the scaffold impl is infallible.
-        let v = LinuxBridge1::ping(&s).expect("ping");
+        let v = s.ping().expect("ping");
         assert_eq!(v, "pong");
     }
 
     #[cfg(not(target_os = "linux"))]
     #[test]
     fn skeleton_ping_errors_off_linux() {
-        let s = LinuxBridgeSkeleton;
-        assert!(LinuxBridge1::ping(&s).is_err());
+        // On non-Linux targets we don't have the real `ping` impl, so we
+        // assert the struct surface + constants are intact instead.
+        let _s = LinuxBridgeSkeleton;
+        assert_eq!(crate::BUS_NAME, "org.byteport.LinuxBridge1");
+        assert_eq!(crate::OBJECT_PATH, "/org/byteport/LinuxBridge1");
     }
 }

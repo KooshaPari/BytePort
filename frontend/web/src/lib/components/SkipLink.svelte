@@ -1,12 +1,12 @@
 /**
  * WCAG-AA accessible `SkipLink` component.
  * Renders a focus-visible link at the top of the page that skips
- * directly to <main id="main"> — keyboard users (Tab once) jump past
+ * directly to `&lt;main id="main"&gt;` — keyboard users (Tab once) jump past
  * nav/header without 20+ Tabs.
  *
  * PILLAR-TAXONOMY-v2.md v2.2 §L76 (accessibility).
  *
- * Usage: <SkipLink /> inside +layout.svelte, immediately after <header>.
+ * Usage: `<SkipLink />` inside `+layout.svelte`, immediately after `&lt;header&gt;`.
  *
  * Design: link is offscreen until focused, then animates in with
  * prefers-reduced-motion respected (no transform when reduced).

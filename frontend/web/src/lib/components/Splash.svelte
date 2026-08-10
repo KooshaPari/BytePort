@@ -13,7 +13,8 @@
    * Dismissable: clicking the surface calls `onDismiss` after a 600ms minimum
    * so the animation always plays at least once.
    */
-  import { onMount, tweened } from 'svelte/motion';
+  import { onMount } from 'svelte';
+  import { tweened } from 'svelte/motion';
   import { cubicOut } from 'svelte/easing';
 
   export let progress: number = 0;

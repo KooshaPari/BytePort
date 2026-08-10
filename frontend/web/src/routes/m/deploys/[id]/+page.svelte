@@ -12,7 +12,6 @@
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
   import { t } from '$lib/i18n';
-  import { reducedMotion } from '$lib/util/reducedMotion';
   import EmptyState from '$lib/components/EmptyState.svelte';
   import type { Readable } from 'svelte/store';
 

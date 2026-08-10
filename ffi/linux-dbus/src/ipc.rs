@@ -73,11 +73,11 @@ pub async fn call_handoff(item_count: u64) -> Result<u64, LinuxBridgeError> {
 
 /// Subscribe to the `BytesReceived(session_id, byte_count)` signal.
 ///
-/// On Linux this returns a `zbus::SignalStream` that yields every
+/// On Linux this returns a `zbus::proxy::SignalStream` that yields every
 /// signal emitted by the bridge. On non-Linux targets it returns
 /// [`LinuxBridgeError::NoBus`].
 #[cfg(target_os = "linux")]
-pub async fn subscribe_bridge_signals() -> Result<zbus::SignalStream<'static>, LinuxBridgeError> {
+pub async fn subscribe_bridge_signals() -> Result<zbus::proxy::SignalStream<'static>, LinuxBridgeError> {
     let conn = session_bus().await?;
     let proxy = zbus::Proxy::new(&conn, BUS_NAME, OBJECT_PATH, "org.byteport.LinuxBridge1")
         .await
@@ -101,7 +101,9 @@ pub async fn subscribe_bridge_signals() -> Result<(), LinuxBridgeError> {
 #[cfg(target_os = "linux")]
 #[allow(dead_code)]
 pub(crate) async fn ping_bridge() -> ZbusResult<String> {
-    let conn = session_bus().await.map_err(zbus::Error::from)?;
+    let conn = session_bus()
+        .await
+        .map_err(|e| zbus::Error::Failure(format!("session_bus: {e}")))?;
     let reply: String = conn
         .call_method(
             Some(BUS_NAME),
