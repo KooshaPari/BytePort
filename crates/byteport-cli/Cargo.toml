@@ -7,7 +7,5 @@ description = "BytePort tools CLI — transport, port, codec, and UI CLI binding
 publish = false
 
 [dependencies]
-byteport-transport = { path = "../byteport-transport", features = ["otel"] }
-byteport-otel = { path = "../byteport-otel" }
+byteport-transport = { path = "../byteport-transport" }
 clap = { version = "4", features = ["derive"] }
-tracing = "0.1"
