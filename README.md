@@ -89,6 +89,32 @@ project.
 
 ---
 
+## Zero-Config Start (Docker Compose)
+
+> **Fastest path — no tools to install beyond Docker.**
+> Addresses scorecard gaps **S01** (Install-to-Use Time) and **U08** (Zero-Config Start).
+
+```sh
+git clone https://github.com/KooshaPari/BytePort.git
+cd BytePort
+cp .env.example .env        # optional — defaults work for local dev
+docker compose up --build
+```
+
+This builds two containers:
+
+| Service | Port | What it runs |
+|---|---|---|
+| `backend` | **8080** | Go API (Gin + SQLite) |
+| `web` | **3000** | SvelteKit frontend |
+
+Open <http://localhost:3000> and follow the on-screen signup flow.
+No tmux, no `spin`, no `air`, no manual Go/Node installs required.
+
+> **Stop:** `Ctrl-C` or `docker compose down`.
+
+---
+
 ## Quickstart (60 seconds)
 
 ### Prerequisites
