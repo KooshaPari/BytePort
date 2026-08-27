@@ -332,6 +332,25 @@ Full verification matrix in `PLAN.md` Phase 10.
 
 ---
 
+## API Documentation (Swagger UI)
+
+Interactive API docs are published via **GitHub Pages**. The
+[swagger-ui.yml](.github/workflows/swagger-ui.yml) workflow automatically
+builds and deploys the Swagger UI whenever `docs/openapi.yaml` changes on
+`main`.
+
+**To enable it:**
+
+1. Go to **Settings > Pages** in the GitHub repo.
+2. Under **Build and deployment > Source**, select **GitHub Actions**.
+3. Push any change to `docs/openapi.yaml` (or trigger the workflow manually via
+   **Actions > Deploy Swagger UI > Run workflow**).
+
+The live docs will be available at
+`https://kooshapari.github.io/BytePort/`.
+
+---
+
 ## Related work
 
 - **Phenotype-org governance** — `phenotype-org-governance/` defines the org-wide
