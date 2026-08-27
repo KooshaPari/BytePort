@@ -1,0 +1,115 @@
+name: Lefthook CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: lefthook-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pre-commit:
+    name: Pre-commit hooks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo registry and build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: cargo-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: cargo-${{ runner.os }}-
+
+      - name: Install lefthook
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/evilmartians/lefthook/master/install.sh | sh
+          echo "$PWD/bin" >> "$GITHUB_PATH"
+
+      - name: Install cargo-deny
+        run: cargo install cargo-deny
+
+      - name: Run lefthook pre-commit
+        run: lefthook run pre-commit
+
+  pre-push:
+    name: Pre-push hooks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry and build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: cargo-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: cargo-${{ runner.os }}-
+
+      - name: Install lefthook
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/evilmartians/lefthook/master/install.sh | sh
+          echo "$PWD/bin" >> "$GITHUB_PATH"
+
+      - name: Install cargo-deny and cargo-audit
+        run: |
+          cargo install cargo-deny
+          cargo install cargo-audit
+
+      - name: Run lefthook pre-push
+        run: lefthook run pre-push
+
+  commit-lint:
+    name: Commit message lint
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install lefthook
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/evilmartians/lefthook/master/install.sh | sh
+          echo "$PWD/bin" >> "$GITHUB_PATH"
+
+      - name: Lint PR commits against conventional commits
+        run: |
+          RANGE="${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
+          echo "Checking commits in range: $RANGE"
+          FAILED=0
+          for SHA in $(git rev-list --reverse "$RANGE"); do
+            MSG=$(git log -1 --format=%B "$SHA")
+            FIRST_LINE=$(echo "$MSG" | head -n1)
+            if ! echo "$FIRST_LINE" | grep -Eq '^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?!?: .{1,72}$'; then
+              echo "::error::Commit $SHA does not follow Conventional Commits: $FIRST_LINE"
+              FAILED=1
+            else
+              echo "OK: $SHA — $FIRST_LINE"
+            fi
+          done
+          if [ "$FAILED" -eq 1 ]; then
+            echo ""
+            echo "All commits must follow Conventional Commits format:"
+            echo "  <type>(<scope>): <description>"
+            echo ""
+            echo "  Types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert"
+            exit 1
+          fi
+          echo "All commits follow Conventional Commits."
