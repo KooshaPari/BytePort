@@ -70,22 +70,24 @@
 		"zod": "^4.4.3"
 	},
 	"dependencies": {
-		"@rollup/rollup-darwin-arm64": "^4.60.4",
 		"@tailwindcss/aspect-ratio": "^0.4.2",
 		"@tailwindcss/container-queries": "^0.1.1",
 		"@tailwindcss/forms": "^0.5.11",
 		"@tailwindcss/typography": "^0.5.19",
-		"@tauri-apps/cli-darwin-arm64": "^2.11.2",
 		"@tauri-apps/plugin-http": "^2.5.9",
 		"@tauri-apps/plugin-os": "^2.3.2",
 		"iconify-icon": "^3.0.2",
 		"svelte-radix": "^3.0.2",
 		"tailwind-scrollbar": "^4.0.2"
 	},
+	"optionalDependencies": {
+		"@rollup/rollup-darwin-arm64": "^4.60.4",
+		"@tauri-apps/cli-darwin-arm64": "^2.11.2"
+	},
 	"overrides": {
 		"cookie": "0.7.0",
 		"esbuild": "0.25.0",
-		"postcss": "8.5.10",
+		"postcss": "8.5.26",
 		"prismjs": "1.30.0",
 		"tmp": "0.2.6",
 		"uuid": "14.0.0",
@@ -102,7 +104,7 @@
 	"resolutions": {
 		"cookie": "0.7.0",
 		"esbuild": "0.25.0",
-		"postcss": "8.5.10",
+		"postcss": "8.5.26",
 		"prismjs": "1.30.0",
 		"tmp": "0.2.6",
 		"uuid": "14.0.0",
