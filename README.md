@@ -68,15 +68,7 @@ This opens a tmux session with three panes:
 - Go backend with `air` hot-reload (port 8081)
 - (Spin is started manually for `nvms` — see `backend/nvms/README.md`)
 
-### Sign up, link GitHub, deploy your first project
-
-1. Open <http://localhost:5173/signup>
-2. Create an account
-3. Open <http://localhost:5173/link>, click "Link GitHub", authorize
-4. Open <http://localhost:5173/deploy>, pick a repo, give it a name and description, click Deploy
-5. Wait ~90s. Your project is live at the `AccessURL` shown on `/instances`
-
-### A minimal `odin.nvms`
+SCALAR(0x762f008a20)
 
 ```yaml
 NAME: my-app
