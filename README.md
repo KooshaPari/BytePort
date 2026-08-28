@@ -68,7 +68,12 @@ This opens a tmux session with three panes:
 - Go backend with `air` hot-reload (port 8081)
 - (Spin is started manually for `nvms` — see `backend/nvms/README.md`)
 
-SCALAR(0x762f008a20)
+### Repository workflow
+
+The GitHub linking, manifest, deployment, and instance-management surfaces are represented in the repository. The end-to-end manifest-driven deployment workflow remains under active implementation; see [PLAN.md](PLAN.md) for the current delivery status.
+
+### Example `odin.nvms` manifest (planned workflow)
+
 
 ```yaml
 NAME: my-app
