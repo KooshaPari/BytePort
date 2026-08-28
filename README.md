@@ -1,94 +1,21 @@
-<!-- AI-DD-META:START -->
-<!-- This repository is planned, maintained, and managed by AI Agents only. -->
-<!-- Slop issues are expected and intentionally present as part of an HITL-less -->
-<!-- /minimized AI-DD metaproject of learning, refining, and building brute-force -->
-<!-- training for both agents and the human operator. -->
-![Downloads](https://img.shields.io/github/downloads/KooshaPari/BytePort/total?style=flat-square&label=downloads&color=blue)
-![GitHub release](https://img.shields.io/github/v/release/KooshaPari/BytePort?style=flat-square&label=release)
-![License](https://img.shields.io/github/license/KooshaPari/BytePort?style=flat-square)
-![AI-Slop](https://img.shields.io/badge/AI--DD-Slop%20Expected-orange?style=flat-square)
-![AI-Only-Maintained](https://img.shields.io/badge/Planned%20%26%20Maintained%20by-AI%20Agents%20Only-red?style=flat-square)
-![HITL-less](https://img.shields.io/badge/HITL--less%20AI--DD-metaproject-yellow?style=flat-square)
-
-> ⚠️ **AI-Agent-Only Repository**
->
-> This repo is **planned, maintained, and managed exclusively by AI Agents**.
-> Slop issues, rough edges, and AI artifacts are **expected and intentionally
-> present** as part of an **HITL-less / minimized AI-DD** metaproject focused
-> on learning, refining, and brute-force training both the agents and the
-> human operator. Bug reports and contributions are still welcome, but please
-> expect AI-generated code, comments, and documentation throughout.
-<!-- AI-DD-META:END -->
-> **Pinned references (Phenotype-org)**
-> - MSRV: see rust-toolchain.toml (Tauri 2 shell)
-> - cargo-deny config: see deny.toml
-> - cargo-audit: rustsec/audit-check@v2 weekly
-> - Branch protection: 1 reviewer required, no force-push
-> - Authority: phenotype-org-governance/SUPERSEDED.md
-
 # BytePort
 
-[![CI](https://github.com/KooshaPari/BytePort/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/KooshaPari/BytePort/actions/workflows/ci.yml)
-[![crates.io](https://img.shields.io/crates/v/byteport.svg)](https://crates.io/crates/byteport)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Phenotype](https://img.shields.io/badge/Phenotype-org-blueviolet)](https://github.com/KooshaPari)
+Declarative deployment infrastructure from GitHub repository to running service.
 
-## Badges
+BytePort is a self-hosted deployment platform that uses a repository manifest to coordinate authenticated project ingestion, build/deployment configuration, AWS provisioning, endpoint registration, and observability behind a single developer workflow.
 
-[![Build](https://img.shields.io/github/actions/workflow/status/KooshaPari/BytePort/ci.yml?branch=main&label=build)](https://github.com/KooshaPari/BytePort/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/KooshaPari/BytePort?include_prereleases&sort=semver)](https://github.com/KooshaPari/BytePort/releases)
-[![License](https://img.shields.io/github/license/KooshaPari/BytePort)](LICENSE)
-[![Phenotype](https://img.shields.io/badge/Phenotype-org-blueviolet)](https://github.com/KooshaPari)
-[![AI Slop Inside](https://sladge.net/badge.svg)](https://sladge.net)
+> **Development model**
+>
+> BytePort uses agent-assisted implementation and maintenance. Product direction,
+> requirements, architecture, integration strategy, verification standards, and
+> release governance are human-directed. Repository artifacts may include
+> machine-generated code and documentation and are validated through the project's
+> CI, security, and verification workflows.
 
-> **Architecture:** See [ARCHITECTURE.md](ARCHITECTURE.md) for component architecture.
-> **Threat model:** See [docs/security/threat-model.md](docs/security/threat-model.md) for the per-component STRIDE analysis.
+## Status
 
-## Work state
-
-| Status | Detail |
-|---|---|
-| Phase | 0 — Governance reset (active) |
-| Branch | `main` (release); feature branches per DAG |
-| Build | [![CI](https://github.com/KooshaPari/BytePort/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/KooshaPari/BytePort/actions/workflows/ci.yml) |
-| Audit | cargo-audit weekly; cargo-deny per deny.toml |
-| Coverage | 23-gate verification matrix (Phase 10 target) |
-| Next milestone | Phase 1 — Security & reliability floor |
-
-> This section is refreshed per DAG unit to reflect the current work-state
-> of the repository. See `PLAN.md` for the full 173-task DAG.
-
-## What is this?
-
-**BytePort is a self-hosted Infrastructure-as-Code deployment + portfolio platform
-for developer projects.** Define one manifest (`odin.nvms`) at your repo root and
-BytePort provisions a MicroVM-backed deployment, registers the resulting endpoints
-with a portfolio site, and uses an LLM to generate showcase metadata for each
-project.
-
-### Canonical stack (last updated 2026-06-12)
-
-| Layer | Technology | Where |
-|---|---|---|
-| Backend API | Go 1.25 + Gin + GORM + SQLite | `backend/byteport/` |
-| NVMS runtime | Go 1.25 + Spin (Fermyon wasm) | `backend/nvms/` |
-| Persistence | SQLite via GORM | `backend/database.db` |
-| Auth | PASETO v2 + httpOnly cookies | `backend/byteport/lib/auth.go` |
-| Crypto | AES-256-CFB + Argon2id | `backend/byteport/lib/crypto.go` |
-| GitHub | OAuth 2.0 (auto-refresh) | `backend/byteport/lib/git.go` |
-| AWS SDK | EC2 / S3 / IAM provisioning | `backend/byteport/lib/aws*.go` |
-| LLM | OpenAI (pluggable: local, Gemini-stub) | `backend/nvms/lib/llm.go` |
-| Frontend | SvelteKit 2 + Svelte 5 + Tailwind 4 | `frontend/web/` |
-| Desktop | Tauri 2 (Windows code-signed, macOS notarized) | `frontend/web/src-tauri/` |
-| Telemetry | OpenTelemetry (OTLP-ready, ConsoleSpanExporter default) | `backend/byteport/main.go` |
-
-> **Retired narrative.** Earlier revisions of this README described BytePort as
-> a Loco.rs / Rust / NanoVMS project with a custom hypervisor and OS. That
-> product was never built. The repo root is Go/SvelteKit/Tauri; the `nvms`
-> runtime is a Spin wasm module, not a custom kernel.
-
----
-
+- **Current repository:** Go/Gin/GORM/SQLite backend services, SvelteKit web frontend, Tauri shell, GitHub/OAuth and AWS integration surfaces, and CI/security workflows.
+- **Planned:** manifest-driven delivery completion and isolated microVM execution. These are not represented as a currently available runtime.
 ## Zero-Config Start (Docker Compose)
 
 > **Fastest path — no tools to install beyond Docker.**
