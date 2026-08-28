@@ -355,14 +355,8 @@ mod tests {
             PromptMessage::warning("t", "b").kind,
             PromptKind::Warning
         );
-        assert_eq!(
-            PromptMessage::error("t", "b").kind,
-            PromptKind::Error
-        );
-        assert_eq!(
-            PromptMessage::confirm("t", "b").kind,
-            PromptKind::Confirm
-        );
+        assert_eq!(PromptMessage::error("t", "b").kind, PromptKind::Error);
+        assert_eq!(PromptMessage::confirm("t", "b").kind, PromptKind::Confirm);
         let choice = PromptMessage::choice("t", "b", vec!["x".into(), "y".into()]);
         assert_eq!(choice.kind, PromptKind::Choice);
         assert_eq!(choice.options, vec!["x".to_string(), "y".to_string()]);
@@ -377,10 +371,7 @@ mod tests {
             UiError::RenderFailed("boom".into()).to_string(),
             "UI render failed: boom"
         );
-        assert_eq!(
-            UiError::UserCancelled.to_string(),
-            "user cancelled the operation"
-        );
+        assert_eq!(UiError::UserCancelled.to_string(), "user cancelled the operation");
         assert_eq!(
             UiError::InvalidState.to_string(),
             "UI is in an invalid state for this operation"
