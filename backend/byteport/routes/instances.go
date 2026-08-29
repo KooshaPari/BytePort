@@ -8,8 +8,21 @@ import (
 )
 
 func GetInstances(c *gin.Context) {
+	userVal, exists := c.Get("user")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+	user, ok := userVal.(models.User)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user context"})
+		return
+	}
+
 	var instances []models.Instance
-	user := c.MustGet("user").(models.User)
-	models.DB.Where("owner = ?", user.UUID).Find(&instances)
+	if err := models.DB.Where("owner = ?", user.UUID).Find(&instances).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch instances"})
+		return
+	}
 	c.JSON(http.StatusOK, instances)
 }
