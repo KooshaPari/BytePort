@@ -48,6 +48,7 @@ func HandleCallback(c *gin.Context) {
 	authDetails, err := lib.GetUserAccessToken(authToken, code)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user access token", "details": err.Error()})
+		return
 	}
 	encryptedToken, err := lib.EncryptSecret(authDetails.Token)
 	if err != nil {
