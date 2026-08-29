@@ -8,10 +8,20 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
+
+// nvmsURL returns the NVMS service base URL from the NVMS_URL env var,
+// falling back to the default localhost address.
+func nvmsURL() string {
+	if u := os.Getenv("NVMS_URL"); u != "" {
+		return u
+	}
+	return "http://localhost:3000"
+}
 
 func DeployProject(c *gin.Context) {
 	// add project to db after compiling to obj;
@@ -27,7 +37,7 @@ func DeployProject(c *gin.Context) {
 		return
 	}
 	fmt.Println("Deploying project: ", newProject)
-	url := "http://localhost:3000/deploy"
+	url := nvmsURL() + "/deploy"
 
 	jsonProject, err := json.Marshal(newProject)
 	if err != nil {
@@ -125,7 +135,7 @@ func TerminateInstance(c *gin.Context) {
 	}
 	project.User = user
 	//fmt.Println("Deleting project: ", project)
-	url := "http://localhost:3000/terminate"
+	url := nvmsURL() + "/terminate"
 
 	jsonProject, err := json.Marshal(project)
 	if err != nil {
