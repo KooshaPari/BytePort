@@ -1,10 +1,12 @@
 package main
 
 import (
+	"net/http"
 	"os"
 	"strings"
 
 	"github.com/byteport/api/internal/container"
+	"github.com/byteport/api/internal/monitor"
 	"github.com/byteport/api/lib"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -15,6 +17,7 @@ type APIServer struct {
 	router    *gin.Engine
 	container *container.Container
 	store     *DeploymentStore // Legacy - will be removed
+	monitor   *monitor.Monitor
 }
 
 // NewAPIServer creates a new API server instance
@@ -23,6 +26,13 @@ func NewAPIServer(c *container.Container) *APIServer {
 
 	// Legacy store for backward compatibility during migration
 	store := NewDeploymentStore()
+
+	// Container monitor — NANOVMS_URL env var points at the nanovms API
+	nvmsURL := os.Getenv("NANOVMS_URL")
+	if nvmsURL == "" {
+		nvmsURL = "http://localhost:8082"
+	}
+	mon := monitor.NewMonitor(nvmsURL)
 
 	allowedOrigins := parseAllowedOrigins()
 
@@ -77,12 +87,33 @@ func NewAPIServer(c *container.Container) *APIServer {
 
 		// Documentation
 		v1.GET("/docs", handleDocs)
+
+		// Container monitoring
+		v1.GET("/containers/status", func(c *gin.Context) {
+			statuses, err := mon.ListAll(c.Request.Context())
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+			c.JSON(http.StatusOK, gin.H{"containers": statuses})
+		})
 	}
+
+	// Standalone container status endpoint at /api/containers/status
+	r.GET("/api/containers/status", func(c *gin.Context) {
+		statuses, err := mon.ListAll(c.Request.Context())
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"containers": statuses})
+	})
 
 	return &APIServer{
 		router:    r,
 		container: c,
 		store:     store,
+		monitor:   mon,
 	}
 }
 
