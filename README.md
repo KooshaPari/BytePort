@@ -2,6 +2,8 @@
 
 Declarative deployment infrastructure from GitHub repository to running service.
 
+[![AI slop inside](https://sladge.net/badge.svg)](https://sladge.net) [![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/KooshaPari/BytePort/total)](https://github.com/KooshaPari/BytePort/releases)
+
 BytePort is a self-hosted deployment platform that uses a repository manifest to coordinate authenticated project ingestion, build/deployment configuration, AWS provisioning, endpoint registration, and observability behind a single developer workflow.
 
 > **Development model**
