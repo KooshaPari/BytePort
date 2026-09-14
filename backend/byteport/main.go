@@ -69,6 +69,8 @@ func setupRouter() *gin.Engine {
 	r.POST("/login", routes.Login)
 	r.POST("/signup", routes.Signup)
 	r.GET("/api/github/callback", routes.HandleCallback)
+	r.GET("/health", routes.HealthHandler)
+	r.GET("/metrics", routes.MetricsHandler)
 
 	// gh webhook at /api/github/auth/webhook
 
