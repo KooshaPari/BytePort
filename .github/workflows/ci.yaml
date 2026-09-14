@@ -20,7 +20,6 @@ jobs:
       matrix:
         module:
           - backend/byteport
-          - backend/nvms
     steps:
       - name: Checkout the code
         uses: actions/checkout@v6
@@ -43,7 +42,6 @@ jobs:
       matrix:
         module:
           - backend/byteport
-          - backend/nvms
     steps:
       - name: Checkout the code
         uses: actions/checkout@v6
@@ -71,7 +69,7 @@ jobs:
           go-version: 'stable'
       - name: Check formatting
         run: |
-          unformatted=$(gofmt -l backend/byteport backend/nvms)
+          unformatted=$(gofmt -l backend/byteport)
           if [ -n "$unformatted" ]; then
             echo "::warning::The following files are not gofmt-clean (advisory; does not block merge):"
             echo "$unformatted"

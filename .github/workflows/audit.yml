@@ -148,7 +148,7 @@ jobs:
 
   # ---------- Go govulncheck ----------
   govulncheck:
-    name: Go govulncheck (backend/byteport, backend/nvms)
+    name: Go govulncheck (backend/byteport)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -162,20 +162,11 @@ jobs:
           go-version: '1.25'
           cache-dependency-path: |
             backend/byteport/go.sum
-            backend/nvms/go.sum
       - name: Run govulncheck (byteport)
         working-directory: backend/byteport
         run: |
           go install golang.org/x/vuln/cmd/govulncheck@latest
           govulncheck ./...
-      - name: Run govulncheck (nvms)
-        working-directory: backend/nvms
-        run: |
-          if [ -f go.mod ]; then
-            govulncheck ./... || echo "::warning::govulncheck reported issues in backend/nvms"
-          else
-            echo "backend/nvms has no go.mod; skipping"
-          fi
 
   # ---------- SonarCloud ----------
   sonarcloud:

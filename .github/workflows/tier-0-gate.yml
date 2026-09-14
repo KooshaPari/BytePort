@@ -99,7 +99,7 @@ jobs:
           go-version: stable
       - name: Check formatting
         run: |
-          unformatted=$(gofmt -l backend/byteport backend/nvms 2>/dev/null || true)
+          unformatted=$(gofmt -l backend/byteport 2>/dev/null || true)
           if [ -n "$unformatted" ]; then
             echo "::error::The following files are not gofmt-clean:"
             echo "$unformatted"
