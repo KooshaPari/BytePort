@@ -54,7 +54,7 @@ func NewMonitor(nvmsURL string) *Monitor {
 
 // GetStatus fetches the status of a single sandbox from the nanovms API.
 func (m *Monitor) GetStatus(ctx context.Context, sandboxID string) (*ContainerStatus, error) {
-	url := fmt.Sprintf("%s/sandboxes/%s/status", m.nvmsURL, sandboxID)
+	url := fmt.Sprintf("%s/v1/sandboxes/%s", m.nvmsURL, sandboxID)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -90,7 +90,7 @@ func (m *Monitor) GetStatus(ctx context.Context, sandboxID string) (*ContainerSt
 
 // ListAll fetches the status of all containers from the nanovms API.
 func (m *Monitor) ListAll(ctx context.Context) ([]ContainerStatus, error) {
-	url := fmt.Sprintf("%s/sandboxes", m.nvmsURL)
+	url := fmt.Sprintf("%s/v1/sandboxes", m.nvmsURL)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {

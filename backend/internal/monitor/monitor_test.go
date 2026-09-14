@@ -26,8 +26,8 @@ func TestGetStatusMockServer(t *testing.T) {
 		if r.Method != http.MethodGet {
 			t.Errorf("method = %s, want GET", r.Method)
 		}
-		if r.URL.Path != "/sandboxes/sb-123/status" {
-			t.Errorf("path = %s, want /sandboxes/sb-123/status", r.URL.Path)
+		if r.URL.Path != "/v1/sandboxes/sb-123" {
+			t.Errorf("path = %s, want /v1/sandboxes/sb-123", r.URL.Path)
 		}
 
 		w.Header().Set("Content-Type", "application/json")
@@ -99,8 +99,8 @@ func TestListAllMockServer(t *testing.T) {
 		if r.Method != http.MethodGet {
 			t.Errorf("method = %s, want GET", r.Method)
 		}
-		if r.URL.Path != "/sandboxes" {
-			t.Errorf("path = %s, want /sandboxes", r.URL.Path)
+		if r.URL.Path != "/v1/sandboxes" {
+			t.Errorf("path = %s, want /v1/sandboxes", r.URL.Path)
 		}
 
 		w.Header().Set("Content-Type", "application/json")
