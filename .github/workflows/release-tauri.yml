@@ -61,25 +61,8 @@ jobs:
           releaseBody: 'See the assets below to download and install BytePort.'
           releaseDraft: false
           prerelease: false
+          includeUpdater: false
           args: '--target universal-apple-darwin'
-
-      - name: Build .pkg installer
-        run: |
-          PKG_PATH=$(find frontend/web/src-tauri/target/universal-apple-darwin/release/bundle/macos -name '*.app' -maxdepth 1 2>/dev/null | head -1)
-          if [ -n "$PKG_PATH" ]; then
-            pkgbuild --component "$PKG_PATH" \
-              --identifier com.byteport.desktop \
-              --version "${{ github.ref_name || inputs.tag }}" \
-              --install-location /Applications \
-              BytePort-${{ github.ref_name || inputs.tag }}-universal.pkg
-          fi
-
-      - name: Upload .pkg to release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: BytePort-*.pkg
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-windows:
     name: Windows (x86_64 + aarch64)
@@ -104,8 +87,6 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           projectPath: frontend/web
           tagName: ${{ github.ref_name || inputs.tag }}
@@ -113,14 +94,8 @@ jobs:
           releaseBody: 'See the assets below to download and install BytePort.'
           releaseDraft: false
           prerelease: false
+          includeUpdater: false
           args: '--target x86_64-pc-windows-msvc'
-
-      - name: Upload .msi to release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: frontend/web/src-tauri/target/x86_64-pc-windows-msvc/release/bundle/msi/*.msi
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-linux:
     name: Linux (x86_64 + aarch64)
@@ -159,17 +134,8 @@ jobs:
           releaseBody: 'See the assets below to download and install BytePort.'
           releaseDraft: false
           prerelease: false
+          includeUpdater: false
           args: '--target x86_64-unknown-linux-gnu'
-
-      - name: Upload Linux artifacts
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            frontend/web/src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/deb/*.deb
-            frontend/web/src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/rpm/*.rpm
-            frontend/web/src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/appimage/*.AppImage
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   update-install-script:
     name: Update install script
