@@ -118,17 +118,6 @@ pub fn run() {
             app.manage(AppState {
                 uploader: Arc::clone(&uploader),
             });
-
-            if cfg!(debug_assertions) {
-                // In debug builds, also surface logs into the in-app console
-                // window. In release builds, the OS-level logger is the
-                // single sink (configured by tauri-plugin-log above).
-                app.handle().plugin(
-                    tauri_plugin_log::Builder::default()
-                        .level(log::LevelFilter::Info)
-                        .build(),
-                )?;
-            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![ipc::create_upload])
