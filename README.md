@@ -148,6 +148,36 @@ Builds the SvelteKit frontend, runs `npm start`, then `go run main.go`.
 
 ---
 
+## Install
+
+### macOS
+Download `.dmg` from https://github.com/KooshaPari/BytePort/releases
+Drag BytePort.app to `/Applications`
+
+### Windows
+Download `.msi` from https://github.com/KooshaPari/BytePort/releases
+Run the installer
+
+### Linux (Debian/Ubuntu)
+Download `.deb` from https://github.com/KooshaPari/BytePort/releases
+```sh
+sudo dpkg -i byteport_*_amd64.deb
+```
+
+### Linux (Fedora/RHEL)
+Download `.rpm` from https://github.com/KooshaPari/BytePort/releases
+```sh
+sudo rpm -i byteport_*_amd64.rpm
+```
+
+### From source
+```sh
+git clone https://github.com/KooshaPari/BytePort
+cd BytePort/frontend/web && npm install && npx tauri build
+```
+
+---
+
 ## Project layout
 
 ```
