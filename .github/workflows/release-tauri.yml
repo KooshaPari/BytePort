@@ -44,7 +44,7 @@ jobs:
           targets: aarch64-apple-darwin,x86_64-apple-darwin
 
       - name: Install dependencies (macOS)
-        run: brew install lib[keys=webkitgtk-4.1,gtk4]
+        run: echo "macOS has WebKit built-in, no extra deps needed"
 
       - name: Install frontend deps
         working-directory: frontend/web
