@@ -144,16 +144,18 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
 
       - name: Update install.sh with latest tag
         run: |
           TAG="${{ github.ref_name || inputs.tag }}"
           sed -i "s|LATEST_VERSION=.*|LATEST_VERSION=\"$TAG\"|" install.sh
 
-      - name: Commit updated install script
+      - name: Commit and push updated install script
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add install.sh
           git diff --cached --quiet || git commit -m "chore: update install.sh to $TAG"
-          git push
+          git push origin main
