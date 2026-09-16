@@ -62,5 +62,9 @@ logs/
 *.profdata
 *.gcda
 *.gcno
-*.lcov
 .instr-profile
+
+# Ephemeral logs & dev artifacts
+_log_bp.txt
+_logs_*/
+crt.pem
