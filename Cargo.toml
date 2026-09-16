@@ -1,8 +1,16 @@
 [workspace]
 resolver = "3"
+
 members = [
     "crates/byteport-transport",
     "crates/byteport-cli",
     "crates/byteport-dag",
+    "crates/integration",
     "frontend/web/src-tauri",
 ]
+
+[workspace.dependencies]
+# Shared Phenotype crates (local paths — PhenoInfra not yet on GitHub)
+phenotype-crypto = { path = "/Users/kooshapari/CodeProjects/Phenotype/repos/PhenoInfra/infrakit/crates/phenotype-crypto" }
+phenotype-observability = { path = "/Users/kooshapari/CodeProjects/Phenotype/repos/PhenoInfra/infrakit/crates/phenotype-observability" }
+phenotype-health = { path = "/Users/kooshapari/CodeProjects/Phenotype/repos/PhenoInfra/infrakit/crates/phenotype-health" }

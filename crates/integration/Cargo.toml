@@ -3,20 +3,19 @@ name = "byteport-integration"
 version = "0.1.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
-description = "BytePort integration crate wiring pheno-errors, pheno-tracing, and pheno-config"
+description = "BytePort integration crate wiring shared Phenotype crates (crypto, observability)"
 
 [lib]
 name = "byteport_integration"
 path = "src/lib.rs"
 
 [dependencies]
-pheno-errors = { path = "../../../pheno-errors" }
-pheno-tracing = { path = "../../../pheno-tracing" }
-pheno-config = { path = "../../../Configra/crates/pheno-config" }
+phenotype-crypto = { workspace = true }
+phenotype-observability = { workspace = true }
+phenotype-health = { workspace = true }
 tracing = "0.1"
 serde = { version = "1.0", features = ["derive"] }
+thiserror = "2.0"
 
 [dev-dependencies]
 serde = { version = "1.0", features = ["derive"] }
-
-[workspace]
