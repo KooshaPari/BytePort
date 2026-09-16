@@ -10,7 +10,7 @@ members = [
 ]
 
 [workspace.dependencies]
-# Shared Phenotype crates (local paths — PhenoInfra not yet on GitHub)
-phenotype-crypto = { path = "/Users/kooshapari/CodeProjects/Phenotype/repos/PhenoInfra/infrakit/crates/phenotype-crypto" }
-phenotype-observability = { path = "/Users/kooshapari/CodeProjects/Phenotype/repos/PhenoInfra/infrakit/crates/phenotype-observability" }
-phenotype-health = { path = "/Users/kooshapari/CodeProjects/Phenotype/repos/PhenoInfra/infrakit/crates/phenotype-health" }
+# Shared Phenotype crates from PhenoInfra
+phenotype-crypto = { git = "https://github.com/KooshaPari/PhenoInfra.git", rev = "dd040ed1" }
+phenotype-observability = { git = "https://github.com/KooshaPari/PhenoInfra.git", rev = "dd040ed1" }
+phenotype-health = { git = "https://github.com/KooshaPari/PhenoInfra.git", rev = "dd040ed1" }
