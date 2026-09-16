@@ -91,15 +91,9 @@ fn upload_bucket() -> String {
 /// Tauri entry point.
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    // Initialise tracing once per process. `try_init` is a no-op if a
-    // subscriber is already installed (e.g. by `cargo test`).
-    let _ = tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info")),
-        )
-        .with_target(true)
-        .try_init();
+    // Logging is handled by tauri_plugin_log below; do NOT initialise
+    // tracing_subscriber here — it claims the global `log` facade and
+    // conflicts with tauri_plugin_log's logger registration.
 
     let uploader: Arc<dyn UploadTransport> = Arc::new(S3UploadTransport::new(
         upload_endpoint(),
