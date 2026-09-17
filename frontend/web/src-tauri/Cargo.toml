@@ -19,6 +19,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2.5.6", features = [] }
 
 [dependencies]
+byteport-dag = { path = "../../../crates/byteport-dag" }
 byteport-transport = { path = "../../../crates/byteport-transport" }
 clap = { version = "4.5", features = ["derive"] }
 clap-ext = { path = "../../../vendor/clap-ext/crates/clap-ext" }
