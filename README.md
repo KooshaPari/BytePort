@@ -1,360 +1,190 @@
-<!-- AI-DD-META:START -->
-<!-- This repository is planned, maintained, and managed by AI Agents only. -->
-<!-- Slop issues are expected and intentionally present as part of an HITL-less -->
-<!-- /minimized AI-DD metaproject of learning, refining, and building brute-force -->
-<!-- training for both agents and the human operator. -->
-![Downloads](https://img.shields.io/github/downloads/KooshaPari/BytePort/total?style=flat-square&label=downloads&color=blue)
-![GitHub release](https://img.shields.io/github/v/release/KooshaPari/BytePort?style=flat-square&label=release)
-![License](https://img.shields.io/github/license/KooshaPari/BytePort?style=flat-square)
-![AI-Slop](https://img.shields.io/badge/AI--DD-Slop%20Expected-orange?style=flat-square)
-![AI-Only-Maintained](https://img.shields.io/badge/Planned%20%26%20Maintained%20by-AI%20Agents%20Only-red?style=flat-square)
-![HITL-less](https://img.shields.io/badge/HITL--less%20AI--DD-metaproject-yellow?style=flat-square)
-
-> ⚠️ **AI-Agent-Only Repository**
->
-> This repo is **planned, maintained, and managed exclusively by AI Agents**.
-> Slop issues, rough edges, and AI artifacts are **expected and intentionally
-> present** as part of an **HITL-less / minimized AI-DD** metaproject focused
-> on learning, refining, and brute-force training both the agents and the
-> human operator. Bug reports and contributions are still welcome, but please
-> expect AI-generated code, comments, and documentation throughout.
-<!-- AI-DD-META:END -->
-> **Work state:** ACTIVE · **Progress:** `█████████░ 90%`
->
-> **Pinned references (Phenotype-org)**
-> - MSRV: see rust-toolchain.toml (Tauri 2 shell)
-> - cargo-deny config: see deny.toml
-> - cargo-audit: rustsec/audit-check@v2 weekly
-> - Branch protection: 1 reviewer required, no force-push
-> - Authority: phenotype-org-governance/SUPERSEDED.md
-
 # BytePort
 
-Declarative deployment infrastructure from GitHub repository to running service.
+**BytePort is the only open-source desktop deployment application in the Phenotype ecosystem.** A multi-language cross-platform solution that turns your local machine into a deployment target for containerized workloads.
 
-[![AI slop inside](https://sladge.net/badge.svg)](https://sladge.net) [![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/KooshaPari/BytePort/total)](https://github.com/KooshaPari/BytePort/releases)
+[![CI](https://github.com/KooshaPari/BytePort/actions/workflows/ci.yml/badge.svg)](https://github.com/KooshaPari/BytePort/actions)
+[![License: MIT OR Apache-2.0](https://img.shields.io/badge/License-MIT%2FApache--2.0-blue.svg)](LICENSE)
+[![Releases](https://img.shields.io/github/v/release/KooshaPari/BytePort?style=flat-square&label=release)](https://github.com/KooshaPari/BytePort/releases)
 
-BytePort is a self-hosted deployment platform that uses a repository manifest to coordinate authenticated project ingestion, build/deployment configuration, AWS provisioning, endpoint registration, and observability behind a single developer workflow.
+---
 
-> **Development model**
->
-> BytePort uses agent-assisted implementation and maintenance. Product direction,
-> requirements, architecture, integration strategy, verification standards, and
-> release governance are human-directed. Repository artifacts may include
-> machine-generated code and documentation and are validated through the project's
-> CI, security, and verification workflows.
+## What BytePort Is
 
-## Status
+A **Tauri 2** desktop application that lets you deploy, manage, and monitor containerized workloads from a native desktop interface. Unlike cloud-only solutions, BytePort runs locally, giving you direct control over deployment environments.
 
-- **Current repository:** Go/Gin/GORM/SQLite backend services, SvelteKit web frontend, Tauri shell, GitHub/OAuth and AWS integration surfaces, and CI/security workflows.
-- **Planned:** manifest-driven delivery completion and isolated microVM execution. These are not represented as a currently available runtime.
-## Zero-Config Start (Docker Compose)
+**Key distinction**: BytePort is the **only open-source desktop deployment app** in the Phenotype ecosystem. Closest competitors are Server Compass (proprietary, $29) and Coolify (web-based, requires separate server).
 
-> **Fastest path — no tools to install beyond Docker.**
-> Addresses scorecard gaps **S01** (Install-to-Use Time) and **U08** (Zero-Config Start).
+---
 
-```sh
+## Architecture
+
+BytePort follows a **three-tier architecture**:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      Tauri 2 Desktop Shell                    │
+│  ┌─────────────────┐    ┌─────────────────────────────────┐   │
+│  │ SvelteKit UI    │◄──►│ Tauri IPC Bridge                │   │
+│  │ (Svelte 5)      │    │ Rust core + Go backend protocol │   │
+│  └─────────────────┘    └─────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    Go / Gin Backend                         │
+│  • HTTP gRPC API for Tauri shell                             │
+│  • Container orchestration (Podman/Docker CLI)               │
+│  • Persistence layer (SQLite)                                │
+│  • Health check & readiness probes                           │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Rust Workspace (`Cargo.toml`)
+
+| Crate | Responsibility |
+|-------|--------------|
+| `crates/byteport-transport` | Wire transport primitives (serde models, errors) |
+| `crates/byteport-cli` | CLI bindings for transport |
+| `crates/byteport-dag` | DAG foundation: executor interfaces, topological sort |
+| `crates/byteport-otel` | OpenTelemetry instrumentation |
+| `frontend/web/src-tauri` | Desktop shell binary |
+
+### Shared Crates (from [PhenoInfra](https://github.com/KooshaPari/PhenoInfra))
+
+- `phenotype-crypto` – Cross-platform crypto primitives
+- `phenotype-observability` – Structured logging, metrics
+- `phenotype-health` – Health endpoint utilities
+
+### Go Modules
+
+| Module | Location |
+|--------|----------|
+| `byteport` (main) | `backend/byteport/` |
+| `bytebridge` (legacy) | `backend/bytebridge/ByteBridge/` |
+
+### Frontend
+
+- **UI Framework**: SvelteKit v5 with Svelte 5 runes
+- **Build Tools**: Vite, TypeScript, Tailwind CSS, ESLint/Prettier
+- **App Shell**: Tauri 2 (Rust core + webview frontend)
+
+---
+
+## Installation
+
+### Development Environment
+
+```bash
+# Prerequisites
+- Rust stable (rust-toolchain.toml pins "stable" with rustfmt, clippy, rust-src)
+- Go 1.25.0
+- Node.js 22+ (bun or npm)
+- Tauri 2 development dependencies (see docs/CONTRIBUTING.md)
+
+# Clone
 git clone https://github.com/KooshaPari/BytePort.git
 cd BytePort
-cp .env.example .env        # optional — defaults work for local dev
-docker compose up --build
+
+# Install Rust deps & build
+cargo build --workspace
+
+# Install frontend
+cd frontend/web
+npm install  # or bun install
 ```
 
-This builds two containers:
+### Build Desktop App
 
-| Service | Port | What it runs |
-|---|---|---|
-| `backend` | **8080** | Go API (Gin + SQLite) |
-| `web` | **3000** | SvelteKit frontend |
+```bash
+# Build Tauri app for current platform
+cargo tauri build
 
-Open <http://localhost:3000> and follow the on-screen signup flow.
-No tmux, no `spin`, no `air`, no manual Go/Node installs required.
+# Output: dist/byteport_*.{dmg,msi,AppImage}
+```
 
-> **Stop:** `Ctrl-C` or `docker compose down`.
+### Run Development Server
+
+```bash
+# Terminal 1: Build Rust core
+cargo tauri dev
+
+# Terminal 2: Start frontend dev
+cd frontend/web
+npm run dev
+```
+
+The app will open automatically in Tauri dev mode.
 
 ---
 
-## Quickstart (60 seconds)
-
-### Prerequisites
-
-| Tool | Version | Why |
-|---|---|---|
-| `go` | 1.25+ | Backend, NVMS |
-| `node` | 20+ | SvelteKit |
-| `npm` | 10+ | SvelteKit deps |
-| `tmux` | any | `./start dev` orchestration |
-| `spin` | 1.20+ | `nvms` runtime (https://developer.fermyon.com/spin) |
-| `air` | latest | Go hot-reload (`go install github.com/cosmtrek/air@latest`) |
-| `git` | any | obvious |
-
-### One command to start everything
-
-```sh
-./start dev
-```
-
-This opens a tmux session with three panes:
-
-- SvelteKit dev server (port 5173)
-- Go backend with `air` hot-reload (port 8081)
-- (Spin is started manually for `nvms` — see `backend/nvms/README.md`)
-
-### Repository workflow
-
-The GitHub linking, manifest, deployment, and instance-management surfaces are represented in the repository. The end-to-end manifest-driven deployment workflow remains under active implementation; see [PLAN.md](PLAN.md) for the current delivery status.
-
-### Example `odin.nvms` manifest (planned workflow)
-
-
-```yaml
-NAME: my-app
-DESCRIPTION: A task management web application
-
-SERVICES:
-  - NAME: "main"           # Required — public-facing service, exposed at "/"
-    PATH: "./frontend"
-    PORT: 8080
-    RUNTIME: "nodejs"
-    BUILD: ["npm install", "npm run build"]
-    ENV:
-      API_URL: "http://localhost:8081"
-
-  - NAME: "backend"
-    PATH: "./backend"
-    PORT: 8081
-    RUNTIME: "go"
-    BUILD: ["go build -o server ./cmd/server"]
-    ENV:
-      DATABASE_URL: "postgres://localhost/myapp"
-
-INFRASTRUCTURE:
-  compute: ec2             # or ecs, lambda
-  region: us-east-1
-  instance_type: t3.micro
-
-PORTFOLIO:
-  generate_page: true
-  description_source: llm  # or readme, manual
-```
-
-### Production
-
-```sh
-./start prod
-```
-
-Builds the SvelteKit frontend, runs `npm start`, then `go run main.go`.
-
----
-
-## Install
-
-### macOS
-Download `.dmg` from https://github.com/KooshaPari/BytePort/releases
-Drag BytePort.app to `/Applications`
-
-### Windows
-Download `.msi` from https://github.com/KooshaPari/BytePort/releases
-Run the installer
-
-### Linux (Debian/Ubuntu)
-Download `.deb` from https://github.com/KooshaPari/BytePort/releases
-```sh
-sudo dpkg -i byteport_*_amd64.deb
-```
-
-### Linux (Fedora/RHEL)
-Download `.rpm` from https://github.com/KooshaPari/BytePort/releases
-```sh
-sudo rpm -i byteport_*_amd64.rpm
-```
-
-### From source
-```sh
-git clone https://github.com/KooshaPari/BytePort
-cd BytePort/frontend/web && npm install && npx tauri build
-```
-
----
-
-## Project layout
+## Project Structure
 
 ```
 BytePort/
-├── backend/
-│   ├── byteport/        # Core API: Go 1.25, Gin, GORM, SQLite
-│   │   ├── main.go      # Entry: OTel init, auth init, Gin server
-│   │   ├── lib/         # Auth, crypto, git, apilink (SSRF-safe)
-│   │   ├── models/      # GORM data models
-│   │   └── routes/      # Gin HTTP handlers
-│   └── nvms/            # NVMS runtime: Go 1.25, Spin wasm, port 3000
-│       ├── main.go      # Spin HTTP entry + router
-│       ├── projectManager/  # deploy/terminate logic
-│       ├── lib/         # LLM providers
-│       ├── Provisioner/ # MicroVM lifecycle
-│       └── Builder/     # Image building
-├── frontend/
-│   └── web/             # SvelteKit 2 admin UI
-│       ├── src/         # Routes + components
-│       └── src-tauri/   # Tauri 2 desktop shell
-├── docs/                # Long-form documentation (auto-generated + hand-written)
-├── .github/workflows/   # CI: go-ci, npm-ci, tauri-ci, nvms-ci, codeql, etc.
-├── start                # tmux dev orchestration
-├── start.bat            # Windows parity (Phase 9)
-├── justfile             # just task runner
-├── golangci.yml         # golangci-lint config
-├── deny.toml            # cargo-deny config
-├── AGENTS.md            # Forge agent instructions
-├── CLAUDE.md            # Claude-specific orientation
-├── CHARTER.md           # Mission, tenets, scope
-├── PLAN.md              # v1.0 roadmap (Phase 0–11)
-├── SPEC.md              # Canonical technical spec
-├── SPECS_INDEX.md       # Auto-generated audit index
-├── STATUS.md            # Current health + known gaps
-├── PRD.md               # Epics + stories
-├── FUNCTIONAL_REQUIREMENTS.md   # 20 FRs, traced to PRD epics
-├── ARCHITECTURE.md      # Component boundaries
-├── stub-inventory.md    # Open TODOs and stubs
-└── worklog.md           # Development log
+├── backend/             # Go backend (Gin server, persistence, orchestration)
+│   ├── byteport/       # Main Go module (api, handlers, services)
+│   └── bytebridge/     # Legacy bridge components
+├── crates/             # Rust workspace crates
+│   ├── byteport-cli/   # CLI bindings
+│   ├── byteport-dag/   # DAG executor/scheduler
+│   ├── byteport-otel/  # OpenTelemetry instrumentation
+│   ├── byteport-transport/  # Wire types
+│   └── integration/    # Shared Phenotype crate wiring
+├── frontend/           # SvelteKit frontend
+│   └── web/            # Tauri-compatible SvelteKit app
+├── src-tauri/          # Tauri desktop shell (inside frontend/web)
+├── docs/               # Architecture, contributions, guides
+├── Cargo.toml          # Rust workspace (resolver 3)
+├── rust-toolchain.toml # Rust stable + components
+└── go.mod              # Go 1.25.0 module
 ```
 
 ---
 
-## Governance
+## Usage
 
-- **`STATUS.md`** — current health, known gaps, what v1.0 means
-- **`CHARTER.md`** — mission, tenets, scope, success criteria, authority levels
-- **`PLAN.md`** — v1.0 roadmap (10 phases + governance pass)
-- **`SPEC.md`** — canonical technical spec (stack, data models, API, security)
-- **`PRD.md`** — epics + stories
-- **`FUNCTIONAL_REQUIREMENTS.md`** — 20 FRs, grouped by capability, traced to PRD
-- **`ARCHITECTURE.md`** — component boundaries
-- **`SPECS_INDEX.md`** — auto-generated audit index
-- **`stub-inventory.md`** — open TODOs and stubs
-- **`worklog.md`** — development log
+After building/running:
+
+1. **Launch the application** – Native desktop window opens
+2. **Connect to local daemon** – Auto-connects to local Go backend
+3. **Deploy containers** – Use UI or CLI tools to manage workloads
+4. **Monitor** – View container health, logs, metrics in real-time
+
+See `docs/` for detailed guides on features, CLI usage, and API reference.
 
 ---
 
-## Roadmap (v1.0)
+## Documentation
 
-See `PLAN.md` for the full 173-task DAG. Headline phases:
-
-- **Phase 0** (PR #1) — Governance reset ← *we are here*
-- **Phase 1** (PR #2) — Security & reliability floor (4 critical bugs)
-- **Phase 2** (PR #3) — Manifest engine (NVMS YAML)
-- **Phase 3** (PR #4) — Backend hardening (slog, OTLP, rate limit, healthz, shutdown)
-- **Phase 4** (PR #5) — NVMS service completion (auth on, LLM providers, /metrics)
-- **Phase 5** (PR #6) — SvelteKit frontend (11 routes, zod, superforms, runes, i18n, a11y)
-- **Phase 6** (PR #7) — Tauri 2 desktop shell (signing, notarize, CSP, deep-link, updater)
-- **Phase 7** (PR #8) — CI/CD (15+ workflows, dependabot, release-drafter, FR coverage)
-- **Phase 8** (PR #9) — Dev orchestration & onboarding (parameterized `./start`, Dockerfiles)
-- **Phase 9** (PR #10) — Long-form documentation
-- **Phase 10** — Verification matrix (23 gates, fan-in at v1.0.0)
-
----
-
-## API at a glance
-
-| Method | Path | Auth | Purpose |
-|---|---|---|---|
-| `POST` | `/signup` | public | Create account |
-| `POST` | `/login` | public | Authenticate, set PASETO cookie |
-| `GET` | `/authenticate` | cookie | Validate token, return user object |
-| `GET` | `/link` | cookie | Initiate GitHub OAuth |
-| `POST` | `/link` | cookie | Save AWS + LLM + Portfolio credentials |
-| `GET` | `/instances` | cookie | List user's instances |
-| `GET` | `/projects` | cookie | List user's projects |
-| `GET` | `/api/github/callback` | OAuth | GitHub OAuth callback |
-| `GET` | `/api/github/repositories` | cookie | List user's GitHub repos |
-| `POST` | `/deploy` | cookie | Trigger deployment |
-| `POST` | `/terminate` | cookie | Terminate an instance |
-| `GET` | `/user/:id/creds` | cookie | Get decrypted credentials |
-| `PUT` | `/user/:id/creds` | cookie | Update profile (name, email, password) |
-
-Full request/response shapes in `SPEC.md` §4.
-
----
-
-## Security model (summary)
-
-- **At rest** — all credentials (AWS, GitHub, LLM, Portfolio) AES-256-CFB encrypted with auto-generated master key
-- **Passwords** — Argon2id (memory=64MiB, iterations=3, parallelism=2, salt=16B, key=32B)
-- **Session** — PASETO v2 tokens in httpOnly cookies
-- **GitHub tokens** — auto-refresh every 7h45m via background goroutine
-- **SSRF protection** — `lib/apilink.go` rejects loopback / private / link-local / multicast; allowlist via env
-- **AWS validation** — STS session + `s3.ListBuckets` smoke test
-- **OpenAI validation** — single `GET /v1/models` call
-- **OTel traces** — every protected handler wrapped in otelgin middleware
-
-Full security model in `SPEC.md` §5 and `CHARTER.md` §2 (Tenets 7, 8).
-
----
-
-## Quality gates (CI)
-
-| Gate | Command | Required |
-|---|---|---|
-| `go vet ./backend/...` | 0 warnings | yes |
-| `go build ./backend/...` | 0 errors | yes |
-| `go test ./backend/...` | all pass | yes |
-| `golangci-lint run` | 0 errors | yes |
-| `cargo test` (src-tauri) | all pass | yes |
-| `cargo clippy -- -D warnings` (src-tauri) | 0 errors | yes |
-| `npm run check` (frontend) | 0 errors | yes |
-| `osv-scanner --recursive .` | clean | yes |
-| `trufflehog filesystem .` | 0 secrets | yes |
-| `codeql analyze` | 0 alerts | yes |
-
-Full verification matrix in `PLAN.md` Phase 10.
-
----
-
-## Example projects
-
-- [Fixit-Go](https://github.com/kooshapari/fixit-go) — Go + SvelteKit todo list, ready for BytePort deploy
-- [Chatta](https://github.com/kooshapari/chatta) — Real-time chat, multi-service manifest
-- [Slickport](https://github.com/kooshapari/slickport) — Portfolio integration example
-
----
-
-## API Documentation (Swagger UI)
-
-Interactive API docs are published via **GitHub Pages**. The
-[swagger-ui.yml](.github/workflows/swagger-ui.yml) workflow automatically
-builds and deploys the Swagger UI whenever `docs/openapi.yaml` changes on
-`main`.
-
-**To enable it:**
-
-1. Go to **Settings > Pages** in the GitHub repo.
-2. Under **Build and deployment > Source**, select **GitHub Actions**.
-3. Push any change to `docs/openapi.yaml` (or trigger the workflow manually via
-   **Actions > Deploy Swagger UI > Run workflow**).
-
-The live docs will be available at
-`https://kooshapari.github.io/BytePort/`.
-
----
-
-## Related work
-
-- **Phenotype-org governance** — `phenotype-org-governance/` defines the org-wide
-  rules this repo follows (FR IDs, ADRs, cargo-deny baseline, branch protection).
-- **Authvault** (formerly `authkit`) — Rust auth/secrets crate used by sibling repos.
-- **phenotype-auth-ts** — TypeScript auth SDK.
+| Document | Purpose |
+|----------|---------|
+| `docs/ARCHITECTURE.md` | Full architecture reference |
+| `docs/CONTRIBUTING.md` | Development setup, testing, commits |
+| `docs/ops/` | Operations guides |
+| `docs/reviews/` | Design reviews, ADRs |
+| `docs/research/` | Experiment protocols, findings |
 
 ---
 
 ## Contributing
 
-- Read `PLAN.md` Phase 0–1 to understand current state and what's queued next.
-- Read `AGENTS.md` for worktree + integration rules.
-- Open a draft PR early; the org quality gate (`fr-coverage.yml`) requires
-  PR-to-FR traceability before merge.
+See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) for:
+- Development environment setup
+- Code style (Rustfmt, Clippy, ESLint/Prettier)
+- Testing (cargo test, cargo-bench, vitest)
+- Commit conventions (ledger trailers: `tx-agent:`, `tx-validated:`)
+- PR review process
 
 ---
 
 ## License
 
-MIT. See `LICENSE`.
+Dual-licensed under **Apache-2.0** OR **MIT**. See [LICENSE](LICENSE) for details.
+
+---
+
+## Related
+
+- **PhenoInfra** – Shared phenotype crates ([KooshaPari/PhenoInfra](https://github.com/KooshaPari/PhenoInfra))
+- **PhenoShared** – Shared workspace docs, CI, crates ([KooshaPari/PhenoShared](https://github.com/KooshaPari/PhenoShared))
+<!-- AI-DD-META:END -->
