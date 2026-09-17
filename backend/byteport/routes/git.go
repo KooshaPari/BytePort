@@ -34,7 +34,11 @@ func HandleCallback(c *gin.Context) {
 	// printout full query string
 	code := c.Query("code")
 	state := c.Query("state")
-	comps := strings.Split(state, "<BYTEPORT>")
+	comps := strings.SplitN(state, "<BYTEPORT>", 2)
+	if len(comps) < 2 || comps[0] == "" || comps[1] == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid state parameter"})
+		return
+	}
 	authToken := comps[0]
 	userID := comps[1]
 

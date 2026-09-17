@@ -47,9 +47,9 @@ type LoginRequest struct {
 	Password string `json:"password"`
 }
 type SignupRequest struct {
-	Name     string `json:"name"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Name     string `json:"name" binding:"required"`
+	Email    string `json:"email" binding:"required"`
+	Password string `json:"password" binding:"required"`
 }
 
 // contains everything not in signup request but in the original user object
