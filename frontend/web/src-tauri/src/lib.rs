@@ -190,11 +190,17 @@ pub mod ipc {
     }
 
     /// IPC response body for [`health_check`].
+    ///
+    /// Callers must not equate reachability with health: any HTTP listener
+    /// on the probed port makes `backend_reachable` true, including a
+    /// foreign service answering `404`. Treat the backend as healthy only
+    /// when `status_code == Some(200)`.
     #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
     pub struct HealthStatus {
         /// `true` when the backend completed an HTTP exchange within the
         /// timeout. A refused connection or timeout yields `false` rather
-        /// than an error.
+        /// than an error. Does not distinguish BytePort from another
+        /// process bound to the same port.
         pub backend_reachable: bool,
         /// HTTP status code, or `None` when no response was received.
         pub status_code: Option<u16>,
