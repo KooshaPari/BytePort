@@ -18,6 +18,11 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 [build-dependencies]
 tauri-build = { version = "2.5.6", features = [] }
 
+[features]
+# Required for production builds: embeds frontendDist assets instead of loading devUrl.
+# The Tauri 2 template ships this; it was absent, causing white windows in release builds.
+custom-protocol = ["tauri/custom-protocol"]
+
 [dependencies]
 byteport-dag = { path = "../../../crates/byteport-dag" }
 byteport-transport = { path = "../../../crates/byteport-transport" }
