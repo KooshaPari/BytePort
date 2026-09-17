@@ -114,7 +114,7 @@ pub fn run() {
             });
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![ipc::create_upload])
+        .invoke_handler(tauri::generate_handler![ipc::create_upload, ipc::health_check])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
@@ -128,6 +128,23 @@ pub mod ipc {
     use tauri::State;
 
     use super::AppState;
+
+    /// Environment variable that overrides the backend base URL probed by
+    /// [`health_check`].
+    const BACKEND_URL_ENV: &str = "BYTEPORT_BACKEND_URL";
+
+    /// Default backend base URL — matches the Go API server's default port
+    /// (`PORT` unset falls back to `8080` in `backend/main.go`).
+    const BACKEND_URL_DEFAULT: &str = "http://localhost:8080";
+
+    /// Health endpoint path exposed by the Go API server (`GET /health`).
+    const HEALTH_PATH: &str = "/health";
+
+    /// Hard timeout for a single probe, in seconds (`curl --max-time`).
+    const HEALTH_TIMEOUT_SECS: u64 = 2;
+
+    /// Upper bound on the response body handed back to the frontend.
+    const HEALTH_BODY_LIMIT: usize = 4_096;
 
     /// IPC request body for `create_upload`.
     #[derive(Debug, Deserialize)]
@@ -170,6 +187,186 @@ pub mod ipc {
                 headers: instr.headers,
             })
             .map_err(|e| e.to_string())
+    }
+
+    /// IPC response body for [`health_check`].
+    #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+    pub struct HealthStatus {
+        /// `true` when the backend completed an HTTP exchange within the
+        /// timeout. A refused connection or timeout yields `false` rather
+        /// than an error.
+        pub backend_reachable: bool,
+        /// HTTP status code, or `None` when no response was received.
+        pub status_code: Option<u16>,
+        /// Response body truncated to [`HEALTH_BODY_LIMIT`]. When the probe
+        /// fails before an HTTP exchange, this carries the `curl` diagnostic
+        /// instead so the UI can explain the failure.
+        pub response_body: Option<String>,
+        /// Probe wall-clock latency in milliseconds.
+        pub latency_ms: u64,
+    }
+
+    /// Resolve the absolute health endpoint URL.
+    ///
+    /// Honours [`BACKEND_URL_ENV`] so alternate ports/ hosts can be probed
+    /// without a rebuild, and tolerates a trailing slash on the base URL.
+    fn health_endpoint() -> String {
+        let base = std::env::var(BACKEND_URL_ENV).unwrap_or_else(|_| BACKEND_URL_DEFAULT.to_string());
+        format!("{}{HEALTH_PATH}", base.trim_end_matches('/'))
+    }
+
+    /// Truncate a body to `limit` bytes on a UTF-8 char boundary.
+    fn truncate_body(raw: &str, limit: usize) -> String {
+        if raw.len() <= limit {
+            return raw.to_string();
+        }
+        let mut end = limit;
+        while end > 0 && !raw.is_char_boundary(end) {
+            end -= 1;
+        }
+        format!("{}...", &raw[..end])
+    }
+
+    /// Interpret `curl` output into a [`HealthStatus`].
+    ///
+    /// `curl` is invoked with `--write-out '\n%{http_code}'`, so the final
+    /// line of stdout is the status code and everything before it is the
+    /// body. `%{http_code}` is `000` when no response was received.
+    fn parse_probe_output(stdout: &str, stderr: &str, latency_ms: u64) -> HealthStatus {
+        let (body, code) = match stdout.rsplit_once('\n') {
+            Some((body, code)) => (body, code.trim()),
+            None => ("", stdout.trim()),
+        };
+
+        let status_code = code.parse::<u16>().ok().filter(|code| *code != 0);
+        let backend_reachable = status_code.is_some();
+
+        let trimmed_body = body.trim_matches('\n');
+        let response_body = if !trimmed_body.is_empty() {
+            Some(truncate_body(trimmed_body, HEALTH_BODY_LIMIT))
+        } else if backend_reachable {
+            None
+        } else {
+            let diagnostic = stderr.trim();
+            if diagnostic.is_empty() {
+                None
+            } else {
+                Some(truncate_body(diagnostic, HEALTH_BODY_LIMIT))
+            }
+        };
+
+        HealthStatus {
+            backend_reachable,
+            status_code,
+            response_body,
+            latency_ms,
+        }
+    }
+
+    /// Blocking probe of `url` using `curl`.
+    ///
+    /// `reqwest` is deliberately not a dependency of this crate, so the
+    /// probe shells out to the system `curl` (always present on macOS and
+    /// shipped with Windows 10+). `Err` is reserved for the case where the
+    /// probe could not run at all.
+    fn probe_blocking(url: &str) -> Result<HealthStatus, String> {
+        use std::process::Command;
+        use std::time::Instant;
+
+        let started = Instant::now();
+        let output = Command::new("curl")
+            .arg("--max-time")
+            .arg(HEALTH_TIMEOUT_SECS.to_string())
+            .arg("--silent")
+            .arg("--show-error")
+            .arg("--write-out")
+            .arg("\n%{http_code}")
+            .arg(url)
+            .output()
+            .map_err(|e| format!("failed to run curl: {e}"))?;
+
+        let latency_ms = u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+
+        Ok(parse_probe_output(&stdout, &stderr, latency_ms))
+    }
+
+    /// Tauri command: probe the Go backend's `/health` endpoint.
+    ///
+    /// Returns reachability, HTTP status, a bounded response body, and the
+    /// latency. A refused connection or timeout reports
+    /// `backend_reachable: false`; `Err` is only returned when the probe
+    /// itself could not run (for example `curl` is unavailable).
+    #[tauri::command]
+    pub async fn health_check() -> Result<HealthStatus, String> {
+        let url = health_endpoint();
+        // `curl` is blocking; keep it off the async runtime's worker threads.
+        tauri::async_runtime::spawn_blocking(move || probe_blocking(&url))
+            .await
+            .map_err(|e| format!("health probe task failed: {e}"))?
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        #[test]
+        fn health_endpoint_default_is_local_backend() {
+            // Env vars are shared across test threads; only assert shape.
+            let url = health_endpoint();
+            assert!(url.ends_with("/health"), "unexpected endpoint: {url}");
+            assert!(url.starts_with("http"), "unexpected endpoint: {url}");
+            assert!(!url.contains("//health"), "double slash in: {url}");
+        }
+
+        #[test]
+        fn parse_probe_output_reports_success() {
+            let status = parse_probe_output("{\"status\":\"ok\"}\n200", "", 12);
+            assert!(status.backend_reachable);
+            assert_eq!(status.status_code, Some(200));
+            assert_eq!(status.response_body.as_deref(), Some("{\"status\":\"ok\"}"));
+            assert_eq!(status.latency_ms, 12);
+        }
+
+        #[test]
+        fn parse_probe_output_reports_server_error_body() {
+            let status = parse_probe_output("db down\n503", "", 5);
+            assert!(status.backend_reachable);
+            assert_eq!(status.status_code, Some(503));
+            assert_eq!(status.response_body.as_deref(), Some("db down"));
+        }
+
+        #[test]
+        fn parse_probe_output_treats_curl_failure_as_unreachable() {
+            let status = parse_probe_output(
+                "\n000",
+                "curl: (7) Failed to connect to localhost port 8080: Connection refused",
+                2001,
+            );
+            assert!(!status.backend_reachable);
+            assert_eq!(status.status_code, None);
+            assert!(status
+                .response_body
+                .as_deref()
+                .is_some_and(|body| body.contains("Connection refused")));
+        }
+
+        #[test]
+        fn parse_probe_output_drops_empty_body_when_reachable() {
+            let status = parse_probe_output("\n204", "", 1);
+            assert!(status.backend_reachable);
+            assert_eq!(status.status_code, Some(204));
+            assert_eq!(status.response_body, None);
+        }
+
+        #[test]
+        fn truncate_body_is_char_boundary_safe() {
+            let raw = "ééééé";
+            let truncated = truncate_body(raw, 5);
+            assert_eq!(truncated, "éé...");
+            assert_eq!(truncate_body("short", 5), "short");
+        }
     }
 }
 
