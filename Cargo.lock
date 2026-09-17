@@ -153,6 +153,7 @@ checksum = "7f202df86484c868dbad7eaa557ef785d5c66295e41b460ef922eca0723b842c"
 name = "app"
 version = "0.1.0"
 dependencies = [
+ "byteport-dag",
  "byteport-transport",
  "clap",
  "clap-ext",
@@ -525,7 +526,6 @@ dependencies = [
 [[package]]
 name = "clap-ext"
 version = "0.1.0"
-source = "git+https://github.com/KooshaPari/clap-ext?tag=v0.1.0#05f6927bfd5477fafebfdc0166a7578ff154f0bf"
 dependencies = [
  "anyhow",
  "clap",
