@@ -134,8 +134,8 @@ pub mod ipc {
     const BACKEND_URL_ENV: &str = "BYTEPORT_BACKEND_URL";
 
     /// Default backend base URL — matches the Go API server's default port
-    /// (`PORT` unset falls back to `8080` in `backend/main.go`).
-    const BACKEND_URL_DEFAULT: &str = "http://localhost:8080";
+    /// (`r.Run("0.0.0.0:8081")` in `backend/byteport/main.go`).
+    const BACKEND_URL_DEFAULT: &str = "http://localhost:8081";
 
     /// Health endpoint path exposed by the Go API server (`GET /health`).
     const HEALTH_PATH: &str = "/health";
