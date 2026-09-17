@@ -5,6 +5,7 @@ import (
 	"byteport/models"
 	"byteport/routes"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -14,6 +15,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/sdk/trace"
+	"gorm.io/gorm"
 )
 
 // initTracer sets up the OTel tracer provider with a ConsoleSpanExporter.
@@ -106,12 +108,12 @@ func main() {
 	var temp models.GitSecret
 	result := models.DB.First(&temp) // Retrieve the first entry
 	if result.Error != nil {
-		if result.RowsAffected == 0 {
-			fmt.Println("No entries found in git_secrets table.")
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			fmt.Println("No entries found in git_secrets table (empty DB; starting fresh).")
 		} else {
 			fmt.Printf("Error retrieving data from git_secrets table: %v\n", result.Error)
+			os.Exit(1)
 		}
-		os.Exit(1)
 	}
 	//models.DB.Exec("Delete from projects")
 	r := setupRouter()
