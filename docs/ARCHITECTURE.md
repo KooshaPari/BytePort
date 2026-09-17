@@ -8,7 +8,7 @@
 ## 1. System Overview
 
 BytePort is a multi-language desktop deployment application. A **Tauri 2**
-desktop shell hosts a **SvelteKit 5** frontend and talks to a **Go** backend
+desktop shell hosts a **SvelteKit** (Svelte 5) frontend and talks to a **Go** backend
 service. The Rust side is organized as a Cargo workspace whose reusable
 libraries (transport, DAG scheduling, OpenTelemetry, CLI bindings) are
 consumed by the Tauri shell and by Phoenix infrastructure.
@@ -56,7 +56,7 @@ secret backends, **godotenv** config, AWS SDK v2. Go module `github.com/byteport
 
 ### 2.3 Frontend (`frontend/web`)
 
-- **SvelteKit 5** + **Vite 8** + **Tailwind CSS 4** (Svelte 5, `sveltekit-superforms`, `zod`, `bits-ui`, `lucide-svelte`).
+- **SvelteKit 2** + **Svelte 5** + **Vite 8** + **Tailwind CSS 4** (`sveltekit-superforms`, `zod`, `bits-ui`, `lucide-svelte`).
 - Pages under `src/routes/` (home, login, signup, docs, otel, preview, qa) plus `+layout.*` shell.
 - **Tauri 2** integration: `src-tauri/` with `tauri.conf.json`, capabilities, icons, and `src/{lib.rs,main.rs}`.
 - Testing: Vitest, Playwright, Storybook 8.
@@ -89,7 +89,7 @@ Control flow conventions:
 | Dependency | Purpose |
 |------------|---------|
 | Tauri 2 (`@tauri-apps/api`, `tauri-plugin-log/plugins`) | Desktop shell, IPC, OS/log plugins |
-| SvelteKit 5 / Vite | Frontend framework and bundler |
+| SvelteKit 2 (Svelte 5) / Vite | Frontend framework and bundler |
 | gin-gonic/gin | Go HTTP router |
 | gorm (postgres, sqlite) | ORM and persistence |
 | workos-go / go-jose | AuthN/AuthZ and JWT |
