@@ -9,9 +9,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
 
-	"aidanwoods.dev/go-paseto"
 	"github.com/gin-gonic/gin"
 )
 
@@ -22,21 +20,6 @@ func init() {
 // setupRouter creates a minimal Gin engine for testing.
 func setupRouter() *gin.Engine {
 	return gin.New()
-}
-
-// createTestToken generates a PASETO v4 local token with the given user-id
-// claim, encrypted with the provided symmetric key. This mirrors the logic
-// in lib.GenerateToken without requiring the OS keyring.
-func createTestToken(key paseto.V4SymmetricKey, userID string) string {
-	token := paseto.NewToken()
-	token.SetAudience("test@example.com")
-	token.SetExpiration(time.Now().Add(time.Hour))
-	token.SetSubject("session")
-	token.SetIssuer("BytePort")
-	token.SetIssuedAt(time.Now())
-	token.SetNotBefore(time.Now())
-	token.SetString("user-id", userID)
-	return token.V4Encrypt(key, nil)
 }
 
 // --- Route handler registration tests ---

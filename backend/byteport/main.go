@@ -33,6 +33,7 @@ func initTracer() (*trace.TracerProvider, error) {
 
 func setupRouter() *gin.Engine {
 	r := gin.Default()
+	r.Use(routes.MetricsMiddleware())
 	r.Use(cors.New(cors.Config{
 		AllowOrigins: []string{
 			"http://localhost:5173",

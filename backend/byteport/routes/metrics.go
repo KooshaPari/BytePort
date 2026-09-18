@@ -44,6 +44,18 @@ func recordSandboxStopped() {
 	metrics.sandboxActive.Add(-1)
 }
 
+// MetricsMiddleware records the total request count and the error count for
+// every request handled by the engine.
+func MetricsMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		recordRequest()
+		c.Next()
+		if c.Writer.Status() >= http.StatusBadRequest {
+			recordError()
+		}
+	}
+}
+
 // MetricsHandler exposes application metrics in Prometheus text format.
 func MetricsHandler(c *gin.Context) {
 	var m runtime.MemStats

@@ -152,6 +152,7 @@ func DeployProject(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add project to database"})
 		return
 	}
+	recordDeploy()
 	c.JSON(http.StatusOK, gin.H{
 		"message":    "Success",
 		"sandbox_id": sandboxResp.ID,
@@ -210,6 +211,7 @@ func TerminateInstance(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to remove project from database"})
 		return
 	}
+	recordSandboxStopped()
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Success",
 	})
