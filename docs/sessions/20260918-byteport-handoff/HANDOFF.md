@@ -43,8 +43,60 @@ headless CLI (`crates/byteport-cli`) with `version`, `transport status`,
 | `8415889e` | Declare `[features] custom-protocol = ["tauri/custom-protocol"]` in `frontend/web/src-tauri/Cargo.toml` |
 | `00ff4d8b` | Makefile + README: stop instructing builds that produce white-window binaries |
 | `6f512fd9` | CSP `connect-src` fix + `getBaseUrl()` `platform()` guard |
+| `c10cc547` | This handoff + `scripts/verify-frontend-boot.py` |
+| `373e58ad` | GORM driver selected from `DATABASE_URL` instead of hardcoded postgres |
+| `de1ec6b2` | Canonical port 8081 + allow the macOS Tauri origin (`tauri://localhost`) |
 
-All three are on `origin/main`. `git log --oneline @{u}..HEAD` is empty.
+All commits are on `origin/main`. `git log --oneline @{u}..HEAD` is empty.
+
+**Trap for reviewers:** this working tree also carries an unrelated,
+pre-existing PII-redaction sweep (`kooshapari` → `<REDACTED>`, 50+ files across
+`docs/`, root `*.md`, `backend/server.go`, `backend/bytebridge/.../spin.toml`).
+It is **not** part of this session's work. Stage by explicit path; never
+`git add -A`.
+
+---
+
+## 2b. Backend architecture — there are TWO backends
+
+This is the single most confusing thing in the repo. Both live under `backend/`:
+
+| | `backend/` | `backend/byteport/` |
+|---|---|---|
+| Go module | `github.com/byteport/api` | `byteport` |
+| Entry point | `main.go` → `server.go` | `main.go` |
+| Routes | `/api/v1/*` | `/authenticate`, `/api/...` |
+| Port | `defaultPort` 8081 (was 8080) | `resolvePort()` → 8081 |
+| Models | `backend/models/` | `backend/byteport/models/` |
+| Used by the desktop app? | **No** | **Yes** |
+
+The SvelteKit frontend fetches `http://localhost:8081/authenticate`, which only
+`backend/byteport` serves. Verify any backend change against the right module —
+earlier in this session a test was run against the wrong one and produced a
+misleading 403/404.
+
+`backend/models/` and `backend/byteport/models/` are **separate packages that
+have drifted**. Do not assume a fix in one applies to the other.
+
+### Environment trap: Go builds need a pinned SDK
+
+`go build` fails in `backend/models` (any package pulling CGO, e.g. the SQLite
+driver) because the CommandLineTools SDK 27.0 `.tbd` files carry an
+`arm64e.x1-macos` architecture the CommandLineTools linker rejects:
+
+```
+libresolv.9.tbd:4:20: error: unknown architecture arm64e.x1-macos
+```
+
+Pin Xcode's SDK instead:
+
+```bash
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+SDKROOT=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk \
+CGO_ENABLED=1 go build -o /tmp/byteport-api .
+```
+
+This links with only "built for newer macOS version" warnings.
 
 ### Root cause of the reported "white screen"
 
@@ -87,14 +139,31 @@ Two further defects were found while closing the verification loop:
 - `cargo build --release --workspace --exclude app` succeeds (the README's
   documented non-GUI build).
 
+- **Backend integration against the real backend (`backend/byteport`).** With
+  that module running on 8081 and the installed app launched, the backend's own
+  request log recorded:
+  ```
+  204 | OPTIONS "/authenticate"   <- preflight accepted (403 before the CORS fix)
+  401 | GET     "/authenticate"   <- real request followed; 401 = not logged in
+  ```
+  A genuine request/response cycle between the packaged desktop app and the real
+  Go backend, not a stub.
+- **CORS fix, including a failure caught by testing.** The first attempt -
+  adding `tauri://localhost` to `AllowOrigins` - *panicked at startup* because
+  `gin-contrib/cors` rejects non-http(s) schemes. The shipped fix uses
+  `AllowOriginFunc`. Recorded because the naive approach looks correct and
+  breaks the server.
+
 **NOT verified — treat as UNKNOWN:**
 
 - **Visual appearance.** The capture restriction forbids screenshots, so
   nobody has confirmed the window *looks* correct. Behaviour is proven;
   pixels are not. Ask the operator to eyeball it.
-- **Backend integration beyond `/authenticate`.** The Go backend was not
-  running during verification; a stub served 8081. Real endpoint behaviour
-  (projects, auth, git search) is untested here.
+- **Endpoints other than `/authenticate`.** Projects, git search, deployments
+  and the WorkOS auth flow were not exercised end to end.
+- **The SQLite path.** See open work: the documented SQLite default now selects
+  the right driver, but migration then fails because the models use
+  PostgreSQL-only types.
 - **Signing for distribution.** `bundle.macOS` is `{}`, so Tauri produces
   only the Rust linker's ad-hoc signature and no bundle `_CodeSignature`.
   I ad-hoc signed the installed copy manually (`codesign --force --deep
@@ -210,12 +279,14 @@ have a `no-mistakes` remote configured.
 
 | Priority | Item |
 |---|---|
+| High | Resolve the SQLite-vs-Postgres contradiction. `INSTALL.md`/`DEPLOYMENT.md`/`docker-compose.yml` promise `file:./byteport.db`, but the models use PostgreSQL-only types (`uuid DEFAULT gen_random_uuid()`, `jsonb`), so AutoMigrate fails with `near "(": syntax error`. Either make SQLite work (app-generated UUIDs, portable JSON) or correct the docs. **Check both** `backend/models/` and `backend/byteport/models/` — they have drifted. |
+| High | Reconcile the two backends (`backend/` vs `backend/byteport/`). They are separate modules with different routes and duplicated, drifted models. Decide which is canonical and retire the other, or document the split deliberately. |
 | High | Register `tauri-plugin-os` in `src-tauri/src/lib.rs` once network allows; then the `try/catch` in `+page.svelte` becomes belt-and-braces |
-| High | Wire a real backend check: start `backend/byteport` and confirm non-stub endpoints work from the packaged app |
+| High | Exercise endpoints other than `/authenticate` (projects, git search, deployments, WorkOS auth) from the packaged app |
 | Medium | Set `bundle.macOS.signingIdentity` (or rely on `tauri-action` env) so bundles verify without manual ad-hoc signing |
 | Medium | `frontend/web/src-tauri/benches/ipc.rs` is broken — uses `criterion` and `app_lib::ipc::IpcEnvelope`, neither of which is wired. `cargo check --all-targets` fails. |
 | Medium | Confirm visual appearance with the operator (only they can see it) |
-| Low | 46 pre-existing uncommitted files in the working tree (PII-redaction sweep, workflow churn). **Not from this session — do not discard.** |
+| Low | ~50 pre-existing uncommitted files in the working tree (PII-redaction sweep, workflow churn). **Not from this session — do not discard, do not commit.** |
 | Low | 8 Dependabot alerts on `main` (2 high, 6 moderate), typical Tauri 2.x ecosystem |
 
 ### Security follow-up (not BytePort)
@@ -258,8 +329,10 @@ cloudflare.com.** Tracked here because the same operator owns both repos.
 ## 10. First three actions for the new session
 
 1. `git clone git@github.com:KooshaPari/BytePort.git && git log --oneline -5`
-   and confirm `6f512fd9` is HEAD.
+   and confirm `de1ec6b2` is HEAD.
 2. `cargo tauri build`, then run the §6 probe against the fresh binary. Expect
    a `/authenticate` hit. If absent, check CSP `connect-src` and `platform()`.
-3. Start the real Go backend and repeat the probe to move backend integration
-   from UNKNOWN to verified.
+3. Run the **correct** backend module — `cd backend/byteport && go build` with
+   the pinned SDK from §2b — and confirm the app reaches it (expect
+   `204 OPTIONS /authenticate` then `401 GET /authenticate`). Do not test
+   against `backend/` (the `/api/v1` module); it is not the app's backend.
