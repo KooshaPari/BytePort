@@ -61,7 +61,7 @@ PILLARS = [
     {"id":51,"name":"RBAC","check":lambda p:any(p.glob("**/*rbac*"))},
     {"id":52,"name":"AUDIT_LOGS","check":lambda p:any(p.glob("**/*audit*log*"))},
     {"id":53,"name":"DATABASE_MIGRATIONS","check":lambda p:(p/"migrations").exists() or (p/"migrate").exists()},
-    {"id":54,"name":"ENV_VARS","check":lambda p:(p/".env").exists() or (p/".env.local").exists()},
+    {"id":54,"name":"ENV_VARS","check":lambda p:(p/".env").exists() or (p/".env.local").exists() or (p/".env.example").exists() or (p/".env.sample").exists()},
     {"id":55,"name":"KUBERNETES","check":lambda p:any(p.glob("**/k8s/*.yml")) or any(p.glob("**/kubernetes/*.yml"))},
     {"id":56,"name":"HELM","check":lambda p:(p/"Chart.yaml").exists()},
     {"id":57,"name":"TERRAFORM","check":lambda p:any(p.glob("**/*.tf"))},

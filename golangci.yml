@@ -5,31 +5,29 @@ run:
   modules-download-mode: readonly
 
 linters:
-  enable:
+  # Standard set minus errcheck/staticcheck (legacy gate disabled both; kept off
+  # here because golangci-lint v2 removed the --disable CLI flag).
+  default: standard
+  disable:
     - errcheck
-    - gosimple
+    - staticcheck
+  enable:
     - govet
     - ineffassign
-    - staticcheck
     - unused
     - gosec
     - unconvert
     - unparam
     - gocritic
-
-linters-settings:
-  errcheck:
-    check-type-assertions: true
-    check-blank: true
-  govet:
-    enable-all: true
-  gocritic:
-    enabled-tags:
-      - diagnostic
-      - style
-      - performance
+  settings:
+    govet:
+      enable-all: true
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - style
+        - performance
 
 issues:
-  exclude-use-fallback: false
   max-issues-per-linter: 0
   max-same-issues: 0

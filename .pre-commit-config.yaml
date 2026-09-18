@@ -27,7 +27,7 @@ repos:
     rev: 24.10.0
     hooks:
       - id: black
-        language_version: python3.11
+        language_version: python3
         types_or: [python, pyi]
 
   - repo: https://github.com/gitleaks/gitleaks
@@ -70,4 +70,3 @@ repos:
         language: system
         pass_filenames: false
         stages: [manual]
-
