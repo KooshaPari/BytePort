@@ -4,6 +4,7 @@ These tests run against the live BytePort repo at C:/Users/koosh/BytePort
 and verify the doctor's invariants without requiring `mise` itself to be
 installed (the doctor is mise-output-only).
 """
+
 from __future__ import annotations
 
 import subprocess

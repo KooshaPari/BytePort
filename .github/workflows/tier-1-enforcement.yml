@@ -50,10 +50,9 @@ jobs:
 
       - name: Validate SBOM output exists and is non-empty
         run: |
-          sbom_file="$(ls *.cdx.json 2>/dev/null | head -1)"
+          sbom_file="$(find . -name '*.cdx.json' -not -path './target/*' | head -1)"
           if [ -z "$sbom_file" ]; then
             echo "❌ No .cdx.json file found after generation"
-            ls -la
             exit 1
           fi
           echo "✅ SBOM file: $sbom_file"
@@ -68,7 +67,7 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: sbom-bomlet
-          path: '*.cdx.json'
+          path: '**/*.cdx.json'
           retention-days: 60
 
   # ── Job 3: LICENSE presence & content check ─────────────────────────

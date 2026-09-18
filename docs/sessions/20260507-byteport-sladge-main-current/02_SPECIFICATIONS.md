@@ -16,4 +16,3 @@
   pre-existing runtime blockers.
 - Mitigation: Record exact command results and keep code changes limited to the
   validation blocker.
-

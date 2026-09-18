@@ -80,5 +80,3 @@ updates:
           - "*"
         update-types:
           - "major"
-
-

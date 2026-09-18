@@ -4,7 +4,6 @@
 
 import os
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
-import math
 
 SIZE = 512
 OUTPUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "byteport-3d.png")
@@ -147,7 +146,9 @@ def main():
     # --- Background (rounded rect) ---
     margin = 0
     corner_r = 96
-    draw_rounded_rect(draw, (margin, margin, SIZE - margin, SIZE - margin), corner_r, BG_TOP + (255,))
+    draw_rounded_rect(
+        draw, (margin, margin, SIZE - margin, SIZE - margin), corner_r, BG_TOP + (255,)
+    )
 
     # Apply gradient on background
     bg_overlay = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
@@ -156,23 +157,28 @@ def main():
         for x in range(SIZE):
             # Only fill within rounded rect area (approximate)
             if (
-                x < corner_r and y < corner_r
+                x < corner_r
+                and y < corner_r
                 and (x - corner_r) ** 2 + (y - corner_r) ** 2 > corner_r**2
             ):
                 continue
             if (
-                x > SIZE - corner_r and y < corner_r
+                x > SIZE - corner_r
+                and y < corner_r
                 and (x - (SIZE - corner_r)) ** 2 + (y - corner_r) ** 2 > corner_r**2
             ):
                 continue
             if (
-                x < corner_r and y > SIZE - corner_r
+                x < corner_r
+                and y > SIZE - corner_r
                 and (x - corner_r) ** 2 + (y - (SIZE - corner_r)) ** 2 > corner_r**2
             ):
                 continue
             if (
-                x > SIZE - corner_r and y > SIZE - corner_r
-                and (x - (SIZE - corner_r)) ** 2 + (y - (SIZE - corner_r)) ** 2 > corner_r**2
+                x > SIZE - corner_r
+                and y > SIZE - corner_r
+                and (x - (SIZE - corner_r)) ** 2 + (y - (SIZE - corner_r)) ** 2
+                > corner_r**2
             ):
                 continue
             t = (x + y) / (2 * SIZE)

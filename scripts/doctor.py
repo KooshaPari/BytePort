@@ -21,6 +21,7 @@ This is the Tier-3 stabilization guard rail for BytePort's 4-toolchain
 convergence. It is intentionally read-only and offline-safe: it never
 invokes a build, only parses files.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -29,7 +30,6 @@ import re
 import shutil
 import sys
 from pathlib import Path
-from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MISE_TOML = REPO_ROOT / "mise.toml"
@@ -205,7 +205,9 @@ def doctor() -> int:
             f"Cargo.toml rust-version ({msrv}) != mise.toml RUST_VERSION ({mise_rust})"
         )
     elif msrv and not mise_rust:
-        warnings.append(f"Cargo.toml rust-version {msrv} but no RUST_VERSION in mise.toml")
+        warnings.append(
+            f"Cargo.toml rust-version {msrv} but no RUST_VERSION in mise.toml"
+        )
     elif mise_rust and not msrv:
         warnings.append(
             f"mise.toml pins RUST_VERSION {mise_rust} but Cargo.toml has no rust-version"
@@ -220,7 +222,9 @@ def doctor() -> int:
     elif go_dir and not mise_go:
         warnings.append(f"go.mod go directive {go_dir} but no GO_VERSION in mise.toml")
     elif mise_go and not go_dir:
-        warnings.append(f"mise.toml pins GO_VERSION {mise_go} but no go.mod go directive")
+        warnings.append(
+            f"mise.toml pins GO_VERSION {mise_go} but no go.mod go directive"
+        )
 
     pkg_eng = package_engines()
     pkg_node = pkg_eng.get("node")
@@ -252,8 +256,10 @@ def doctor() -> int:
                         f"Taskfile target {name!r} references binary {binary!r} "
                         f"which is not on PATH (likely provided via mise)"
                     )
-        print(f"  Taskfile: {len(targets)} top-level targets, "
-              f"{len(target_names & KNOWN_TARGETS)} in allowlist")
+        print(
+            f"  Taskfile: {len(targets)} top-level targets, "
+            f"{len(target_names & KNOWN_TARGETS)} in allowlist"
+        )
 
     # Live tool check (best-effort)
     live = {
@@ -276,9 +282,10 @@ def doctor() -> int:
                 print(f"  - {w}", file=sys.stderr)
         return 1
 
-    print("\nPASS: BytePort toolchain convergence healthy" + (
-        f" ({len(warnings)} warning(s))" if warnings else ""
-    ))
+    print(
+        "\nPASS: BytePort toolchain convergence healthy"
+        + (f" ({len(warnings)} warning(s))" if warnings else "")
+    )
     return 0
 
 

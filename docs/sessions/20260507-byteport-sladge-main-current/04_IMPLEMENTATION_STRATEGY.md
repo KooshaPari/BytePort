@@ -6,4 +6,3 @@
 - Keep the Sladge change documentation-only.
 - Keep the Go change limited to removing unused imports, with no tracer behavior
   changes.
-

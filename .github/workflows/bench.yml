@@ -97,38 +97,39 @@ jobs:
 
           # Simple regression check: fail if any benchmark got >20% slower
           if [ -f baseline-results/criterion.txt ] && [ -f current-results/criterion.txt ]; then
-            python3 -c "
-          import re, sys
+            python3 - <<'PY'
+          import re
+          import sys
+
+          UNITS = {"ns": 1, "µs": 1000, "ms": 1000000, "s": 1000000000}
+
 
           def parse_benchmarks(path):
               results = {}
               try:
-                  with open(path) as f:
-                      for line in f:
-                          m = re.match(r'(\S+)\s+(\d+)\s*(ns|\u00b5s|ms|s)', line.strip())
-                          if m:
-                              name = m.group(1)
-                              val = int(m.group(2))
-                              unit = m.group(3)
-                              multipliers = {'ns': 1, '\u00b5s': 1000, 'ms': 1000000, 's': 1000000000}
-                              results[name] = val * multipliers[unit]
-              except Exception as e:
-                  print(f'Warning: could not parse {path}: {e}')
+                  with open(path) as handle:
+                      for line in handle:
+                          match = re.match(r"(\S+)\s+(\d+)\s*(ns|µs|ms|s)", line.strip())
+                          if match:
+                              name, value, unit = match.groups()
+                              results[name] = int(value) * UNITS[unit]
+              except Exception as exc:  # noqa: BLE001
+                  print(f"Warning: could not parse {path}: {exc}")
               return results
 
-          baseline = parse_benchmarks('baseline-results/criterion.txt')
-          current = parse_benchmarks('current-results/criterion.txt')
+
+          baseline = parse_benchmarks("baseline-results/criterion.txt")
+          current = parse_benchmarks("current-results/criterion.txt")
 
           if not baseline or not current:
-              print('Could not parse benchmark results for comparison.')
+              print("Could not parse benchmark results for comparison.")
               sys.exit(0)
 
           regressions = []
           improvements = []
-          for name in current:
+          for name, value in current.items():
               if name in baseline:
-                  ratio = current[name] / baseline[name]
-                  pct = (ratio - 1) * 100
+                  pct = (value / baseline[name] - 1) * 100
                   if pct > 20:
                       regressions.append((name, pct))
                   elif pct < -20:
@@ -136,20 +137,20 @@ jobs:
 
           if regressions:
               print()
-              print('Performance regressions detected (>20% slower):')
-              for name, pct in sorted(regressions, key=lambda x: -x[1]):
-                  print(f'  {name}: +{pct:.1f}%')
+              print("Performance regressions detected (>20% slower):")
+              for name, pct in sorted(regressions, key=lambda item: -item[1]):
+                  print(f"  {name}: +{pct:.1f}%")
               sys.exit(1)
 
           if improvements:
               print()
-              print('Performance improvements detected:')
-              for name, pct in sorted(improvements, key=lambda x: x[1]):
-                  print(f'  {name}: {pct:.1f}%')
+              print("Performance improvements detected:")
+              for name, pct in sorted(improvements, key=lambda item: item[1]):
+                  print(f"  {name}: {pct:.1f}%")
 
           print()
-          print('No significant regressions detected.')
-          "
+          print("No significant regressions detected.")
+          PY
 
       - name: Comment on PR
         if: always()

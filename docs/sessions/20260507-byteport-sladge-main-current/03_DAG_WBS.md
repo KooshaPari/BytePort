@@ -13,4 +13,3 @@
 
 - Step 6 depends on all validation evidence from step 5.
 - Landing ledger updates depend on the final commit hash and validation result.
-

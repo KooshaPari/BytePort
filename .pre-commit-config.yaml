@@ -2,6 +2,26 @@
 # Install: pre-commit install
 # Run default hooks: pre-commit run --all-files
 # Run heavy language baselines: pre-commit run --all-files --hook-stage manual
+#
+# Generated, vendored and editor-state paths are excluded: they are not ours to
+# format, and rewriting them (e.g. end-of-file-fixer over src-tauri/gen or
+# vendored crates) produced ~100-file diffs on every run.
+exclude: |
+  (?x)^(
+    frontend/web/\.history/.*|
+    frontend/web/\.svelte-kit/.*|
+    frontend/web/src-tauri/gen/.*|
+    frontend/web/src-tauri/vendor/.*|
+    frontend/web/target/.*|
+    vendor/.*|
+    \.astro/.*|
+    \.grade-reports/.*|
+    \.idea/.*|
+    node_modules/.*|
+    target/.*|
+    .*\.(lock|sum)$|
+    frontend/web/(package-lock\.json|yarn\.lock)
+  )$
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -39,8 +59,7 @@ repos:
     hooks:
       - id: cargo-clippy
         name: cargo clippy -- -D warnings
-        entry: cargo clippy --workspace --all-targets --all-features
-        args: [--, -D, warnings]
+        entry: bash -c 'command -v cargo >/dev/null || { echo "cargo not installed; skipping clippy"; exit 0; }; cargo clippy --workspace --all-targets --all-features -- -D warnings'
         language: system
         types: [rust]
         pass_filenames: false
@@ -48,8 +67,7 @@ repos:
 
       - id: golangci-lint
         name: golangci-lint run --timeout 5m
-        entry: golangci-lint run
-        args: [--timeout, 5m]
+        entry: bash -c 'command -v golangci-lint >/dev/null || { echo "golangci-lint not installed; skipping"; exit 0; }; cd backend/byteport && golangci-lint run --config ../../golangci.yml --timeout 5m'
         language: system
         types: [go]
         pass_filenames: false
@@ -57,8 +75,7 @@ repos:
 
       - id: tsc
         name: tsc --noEmit
-        entry: npx tsc
-        args: [--noEmit]
+        entry: bash -c 'cd frontend/web && [ -d node_modules ] || { echo "frontend node_modules missing; skipping tsc"; exit 0; }; npx tsc --noEmit'
         language: system
         types_or: [ts, tsx]
         pass_filenames: false
@@ -66,7 +83,7 @@ repos:
 
       - id: trufflehog
         name: trufflehog filesystem
-        entry: trufflehog filesystem --no-update --only-verified --fail .
+        entry: bash -c 'command -v trufflehog >/dev/null || { echo "trufflehog not installed; skipping"; exit 0; }; trufflehog filesystem --no-update --only-verified --fail .'
         language: system
         pass_filenames: false
         stages: [manual]
