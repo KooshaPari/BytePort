@@ -85,10 +85,15 @@ BytePort follows a **three-tier architecture**:
 git clone https://github.com/KooshaPari/BytePort.git
 cd BytePort
 
-# Install Rust deps & build
-cargo build --workspace
+# Build the Rust backend/CLI crates.
+# NOTE: the desktop GUI crate (frontend/web/src-tauri) is excluded on purpose.
+# It must go through the Tauri CLI so frontend assets are embedded. A plain
+# `cargo build` of that crate produces a binary that loads the dev-server URL
+# (http://localhost:5173) and shows a white window when no dev server runs.
+# See "Build Desktop App" below.
+cargo build --workspace --exclude app
 
-# Install frontend
+# Install frontend deps
 cd frontend/web
 npm install  # or bun install
 ```
@@ -96,10 +101,16 @@ npm install  # or bun install
 ### Build Desktop App
 
 ```bash
-# Build Tauri app for current platform
+# Build Tauri app for current platform (also runs the frontend build)
 cargo tauri build
 
-# Output: dist/byteport_*.{dmg,msi,AppImage}
+# Outputs (verified on macOS/aarch64):
+#   target/release/bundle/macos/Byteport.app
+#   target/release/bundle/dmg/Byteport_<version>_<arch>.dmg
+#
+# `make build-app` runs the same thing. Do NOT use a bare
+# `cargo build --release -p app`: it skips the frontend build and the
+# `custom-protocol` feature, producing a white-window binary.
 ```
 
 ### Run Development Server
