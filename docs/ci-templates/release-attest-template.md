@@ -45,7 +45,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # e.g., de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Build artifact
         # Replace with your actual build step.
@@ -62,14 +62,14 @@ jobs:
         # The official GitHub Action for SLSA Build L3 provenance.
         # Pin to a specific SHA from https://github.com/actions/attest-build-provenance/releases
         # v1.3.0 = 35a8f9717e7a2adb1c2c3b2ac88961ba9c230e98
-        uses: actions/attest-build-provenance@35a8f9717e7a2adb1c2c3b2ac88961ba9c230e98
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
         with:
           subject-name: ${{ github.repository }}
           subject-digest: sha256:$(sha256sum dist/artifact | awk '{print $1}')
           push-to-registry: false  # SC4 wired: just publish to GitHub attestations API
 
       - name: Upload artifact
-        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd0de8ccd5686b70862  # e.g., 65c4c4a1ddee5b72f698fdd0de8ccd5686b70862
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ github.event.inputs.version || github.ref_name }}-artifact
           path: dist/

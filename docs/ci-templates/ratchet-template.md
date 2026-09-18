@@ -40,14 +40,14 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # e.g., de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Setup language
         # Adapt for your stack:
         # Rust: `dtolnay/rust-toolchain@stable`
         # Python: `actions/setup-python@v5 with python-version: '3.12'`
         # Node: `actions/setup-node@v4 with node-version: '20'`
-        uses: actions/setup-node@1a4442cacd436585916f4bd0495db9b8a8a0d4d8  # e.g., 1a4442cacd436585916f4bd0495db9b8a8a0d4d8
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 20
           cache: 'npm'
