@@ -1,81 +1,188 @@
 <script lang="ts">
-	// @ts-nocheck
-	import { Input } from '$lib/components/ui/input';
+	/**
+	 * Single-select dropdown for list toolbars.
+	 *
+	 * Hand-rolled rather than built on a popover primitive: it only ever needs
+	 * "below the trigger, inside the page", so avoiding a portal and floating
+	 * positioning removes any interaction with the focus scope of the dialogs
+	 * these toolbars sit beside. Keyboard semantics follow a listbox: Down/Up
+	 * move the active row, Enter/Space commit, Escape closes and refocuses the
+	 * trigger, Home/End jump.
+	 */
+	import ChevronDown from 'lucide-svelte/icons/chevron-down';
 	import Check from 'lucide-svelte/icons/check';
-	import ChevronsUpDown from 'lucide-svelte/icons/chevrons-up-down';
-	import { tick } from 'svelte';
-	import * as Command from '$lib/components/ui/command/index.js';
-	import * as Popover from '$lib/components/ui/popover/index.js';
-	import { Button } from '$lib/components/ui/button/index.js';
-	import { cn } from '$lib/utils.js';
 
-	type ComboItem = {
+	export interface ComboOption {
 		value: string;
 		label: string;
-	};
+	}
 
-	type Props = {
-		items: ComboItem[];
-		placeholder: string;
-		onselect?: (event: CustomEvent<string>) => void;
-	};
+	let {
+		options,
+		value = $bindable(''),
+		placeholder = 'All',
+		label = '',
+		disabled = false,
+		class: klass = ''
+	}: {
+		options: ComboOption[];
+		value?: string;
+		placeholder?: string;
+		label?: string;
+		disabled?: boolean;
+		class?: string;
+	} = $props();
 
-	let { items, placeholder, onselect }: Props = $props();
+	const uid = $props.id();
+	const listId = `${uid}-list`;
 
 	let open = $state(false);
-	let value = $state('');
-	let selectedValue = $state('');
+	let activeIndex = $state(0);
+	let root = $state<HTMLDivElement | null>(null);
+	let trigger = $state<HTMLButtonElement | null>(null);
 
-	$effect(() => {
-		selectedValue = items.find((f) => f.value === value)?.label ?? `Select a ${placeholder}...`;
-	});
+	const selected = $derived(options.find((option) => option.value === value) ?? null);
+	const activeId = $derived(open && options[activeIndex] ? `${uid}-opt-${activeIndex}` : undefined);
 
-	// We want to refocus the trigger button when the user selects
-	// an item from the list so users can continue navigating the
-	// rest of the form with the keyboard.
-	async function closeAndFocusTrigger(triggerId: string) {
-		open = false;
-		console.log('ID: ', triggerId);
-		tick().then(() => {
-			console.log('CL');
-			document.getElementById(triggerId)?.focus();
-		});
+	function openList() {
+		if (disabled) return;
+		const current = options.findIndex((option) => option.value === value);
+		activeIndex = current >= 0 ? current : 0;
+		open = true;
 	}
+
+	function closeList(refocus = true) {
+		open = false;
+		if (refocus) trigger?.focus();
+	}
+
+	function commit(index: number) {
+		const option = options[index];
+		if (!option) return;
+		value = option.value;
+		closeList();
+	}
+
+	function onkeydown(event: KeyboardEvent) {
+		if (disabled) return;
+
+		if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+			event.preventDefault();
+			if (!open) {
+				openList();
+				return;
+			}
+			const step = event.key === 'ArrowDown' ? 1 : -1;
+			activeIndex = Math.min(Math.max(activeIndex + step, 0), Math.max(options.length - 1, 0));
+			return;
+		}
+
+		if (event.key === 'Enter' || event.key === ' ') {
+			if (!open) {
+				event.preventDefault();
+				openList();
+				return;
+			}
+			if (event.key === ' ') event.preventDefault();
+			commit(activeIndex);
+			return;
+		}
+
+		if (event.key === 'Escape' && open) {
+			event.preventDefault();
+			closeList();
+			return;
+		}
+
+		if (open && event.key === 'Home') {
+			event.preventDefault();
+			activeIndex = 0;
+			return;
+		}
+
+		if (open && event.key === 'End') {
+			event.preventDefault();
+			activeIndex = Math.max(options.length - 1, 0);
+		}
+	}
+
+	// Close on outside pointer down. Capture phase so a click that lands on
+	// another control still dismisses this list first.
+	$effect(() => {
+		if (!open) return;
+
+		const onPointerDown = (event: MouseEvent) => {
+			if (root && !root.contains(event.target as Node)) open = false;
+		};
+
+		document.addEventListener('mousedown', onPointerDown, true);
+		return () => document.removeEventListener('mousedown', onPointerDown, true);
+	});
 </script>
 
-<Popover.Root bind:open let:ids>
-	<Popover.Trigger asChild let:builder>
-		<Button
-			builders={[builder]}
-			variant="outline"
-			role="combobox"
-			aria-expanded={open}
-			class="w-[200px] justify-between"
+<div class="relative {klass}" bind:this={root}>
+	{#if label}
+		<span class="mb-1 block text-[11px] font-medium tracking-wide text-dark-onSurfaceVariant uppercase">
+			{label}
+		</span>
+	{/if}
+
+	<button
+		bind:this={trigger}
+		type="button"
+		{disabled}
+		{onkeydown}
+		onclick={() => (open ? closeList(false) : openList())}
+		role="combobox"
+		aria-haspopup="listbox"
+		aria-expanded={open}
+		aria-controls={listId}
+		aria-activedescendant={activeId}
+		class="flex h-8 w-full items-center justify-between gap-2 rounded-md border border-border
+			bg-dark-surfaceContainerLowest px-2.5 text-[13px] transition-colors
+			hover:border-dark-outline hover:bg-dark-surfaceContainerLow
+			focus-visible:border-dark-primary focus-visible:outline-none disabled:opacity-50"
+	>
+		<span class="truncate {selected ? 'text-dark-onSurface' : 'text-dark-onSurfaceVariant'}">
+			{selected?.label ?? placeholder}
+		</span>
+		<ChevronDown
+			size={14}
+			strokeWidth={1.75}
+			class="shrink-0 text-dark-onSurfaceVariant"
+			aria-hidden="true"
+		/>
+	</button>
+
+	{#if open}
+		<div
+			id={listId}
+			role="listbox"
+			class="absolute left-0 z-30 mt-1 max-h-64 w-full min-w-[11rem] overflow-y-auto rounded-lg
+				border border-border bg-dark-surfaceContainerHigh p-1"
 		>
-			{selectedValue}
-			<ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50" />
-		</Button>
-	</Popover.Trigger>
-	<Popover.Content class="w-[200px] p-0">
-		<Command.Root>
-			<Command.Group>
-				{#each items as item}
-					<Command.Item
-						class="cursor-pointer"
-						value={item.value}
-						onSelect={(currentValue) => {
-							value = currentValue;
-							onselect?.(new CustomEvent('select', { detail: currentValue }));
-							closeAndFocusTrigger(ids.trigger);
-						}}
-					>
-						<Check
-							class={cn('mr-2 h-4 w-4', value !== item.value && 'text-transparent')}
-						/>
-						{item.label}
-					</Command.Item>
-				{/each}
-			</Command.Group>
-		</Command.Root>
-	</Popover.Content>
-</Popover.Root>
+			{#each options as option, index (option.value)}
+				<button
+					id={`${uid}-opt-${index}`}
+					type="button"
+					role="option"
+					aria-selected={option.value === value}
+					onmousemove={() => (activeIndex = index)}
+					onclick={() => commit(index)}
+					class="flex h-8 w-full items-center gap-2 rounded px-2 text-left text-[13px] transition-colors
+						{index === activeIndex
+						? 'bg-dark-surfaceContainerHighest text-dark-onSurface'
+						: 'text-dark-onSurfaceVariant'}"
+				>
+					<Check
+						size={13}
+						strokeWidth={2}
+						class={option.value === value ? 'text-dark-primary' : 'text-transparent'}
+						aria-hidden="true"
+					/>
+					<span class="truncate">{option.label}</span>
+				</button>
+			{/each}
+		</div>
+	{/if}
+</div>

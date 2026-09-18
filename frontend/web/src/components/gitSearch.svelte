@@ -1,135 +1,240 @@
 <script lang="ts">
-	import * as Command from '$lib/components/ui/command';
-	import Icon from '@iconify/svelte';
-	import type { User } from '../stores/user.js';
-	import { user } from '../stores/user.js';
-	import { onMount, onDestroy } from 'svelte';
-	import type { Repository } from '../lib/git.js';
-	type Props = {
-		select: (repo: Repository) => void;
-	};
+	/**
+	 * Repository picker for step 1 of the new-project wizard.
+	 *
+	 * The 2023 version wrapped `cmdk`'s command list and rendered whatever came
+	 * back, with no error state: when `GET /api/github/repositories` failed (or the
+	 * session had expired) the list was simply empty and the wizard had no way
+	 * forward. It also had a `setRepo`/`dispatch` pair that logged "dispatching"
+	 * and did nothing.
+	 *
+	 * This version keeps the same endpoint and the same localStorage cache, and
+	 * adds the three states it was missing: loading, failed-with-retry, and
+	 * genuinely empty.
+	 */
+	import Search from 'lucide-svelte/icons/search';
+	import RefreshCw from 'lucide-svelte/icons/refresh-cw';
+	import FolderGit2 from 'lucide-svelte/icons/folder-git-2';
+	import Check from 'lucide-svelte/icons/check';
+	import Badge from '$lib/components/ui/Badge.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import Input from '$lib/components/ui/Input.svelte';
+	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import { ApiError, apiFetch } from '$lib/api';
+	import type { Repository } from '$lib/git';
 
-	let { select }: Props = $props();
+	let {
+		selected = null,
+		disabled = false,
+		onselect
+	}: {
+		selected?: Repository | null;
+		disabled?: boolean;
+		onselect: (repo: Repository) => void;
+	} = $props();
 
-	import * as Avatar from '$lib/components/ui/avatar';
-	type EventDetail = {
-		selectedItem: string;
-	};
-
-	let userRepos: Repository[] = $state<Repository[]>([]);
-	let client: User | null = null;
 	const CACHE_KEY = 'user_repositories';
 	const CACHE_DURATION = 1000 * 60 * 60;
-	function setRepo(repo: Repository) {
-		console.log('dispatching');
-	}
-	// read in user store and set Client
-	async function fetchAndCacheRepos() {
-		const repos = await fetchUserRepositories();
-		userRepos = repos;
-		localStorage.setItem(
-			CACHE_KEY,
-			JSON.stringify({
-				timestamp: Date.now(),
-				data: repos
-			})
-		);
+
+	let repos = $state<Repository[]>([]);
+	let phase = $state<'loading' | 'ready' | 'error'>('loading');
+	let errorMessage = $state('');
+	let query = $state('');
+	let highlight = $state(0);
+	let failedAvatars = $state(new Set<string>());
+
+	function readCache(): Repository[] | null {
+		try {
+			const cached = localStorage.getItem(CACHE_KEY);
+			if (!cached) return null;
+			const { timestamp, data } = JSON.parse(cached) as { timestamp: number; data: unknown };
+			if (Date.now() - timestamp > CACHE_DURATION) return null;
+			return Array.isArray(data) ? (data as Repository[]) : null;
+		} catch {
+			// A corrupt cache entry must not break the picker.
+			return null;
+		}
 	}
 
-	function getCachedRepos() {
-		const cached = localStorage.getItem(CACHE_KEY);
-		if (cached) {
-			const { timestamp, data } = JSON.parse(cached);
-			if (Date.now() - timestamp < CACHE_DURATION) {
-				return data;
+	function writeCache(value: Repository[]) {
+		try {
+			localStorage.setItem(CACHE_KEY, JSON.stringify({ timestamp: Date.now(), data: value }));
+		} catch {
+			// Storage can be unavailable (private mode, quota); the list still works.
+		}
+	}
+
+	async function load({ useCache = true }: { useCache?: boolean } = {}) {
+		if (useCache) {
+			const cached = readCache();
+			if (cached && cached.length > 0) {
+				repos = cached;
+				phase = 'ready';
+				return;
 			}
 		}
-		return null;
-	}
-	let loading = $state(false);
-	onMount(async () => {
-		loading = true;
-		const cachedRepos = getCachedRepos();
-		if (cachedRepos && cachedRepos.length > 0) {
-			userRepos = cachedRepos;
-			console.log('cached: ', userRepos);
-		} else {
-			await fetchAndCacheRepos();
-			console.log('not cached: ', userRepos);
+
+		phase = 'loading';
+		errorMessage = '';
+		try {
+			const data = await apiFetch<Repository[]>('/api/github/repositories');
+			const list = Array.isArray(data) ? data : [];
+			repos = list;
+			writeCache(list);
+			phase = 'ready';
+		} catch (error) {
+			phase = 'error';
+			errorMessage =
+				error instanceof ApiError && error.status === 401
+					? 'Your session expired. Sign in again to list repositories.'
+					: 'Could not reach the BytePort backend to list your repositories.';
 		}
-		loading = false;
+	}
+
+	$effect(() => {
+		void load();
 	});
 
-	async function fetchUserRepositories(): Promise<Repository[]> {
-		try {
-			const response = await fetch('http://localhost:8081/api/github/repositories', {
-				method: 'GET',
-				headers: {
-					'Content-Type': 'application/json'
-				},
-				credentials: 'include'
-			});
+	const filtered = $derived.by(() => {
+		const needle = query.trim().toLowerCase();
+		if (!needle) return repos;
+		return repos.filter((repo) =>
+			[repo.full_name, repo.name, repo.language ?? '', repo.description ?? '']
+				.join(' ')
+				.toLowerCase()
+				.includes(needle)
+		);
+	});
 
-			if (!response.ok) {
-				throw new Error(`Error fetching repositories: ${response.statusText}`);
-			}
+	$effect(() => {
+		// Keep the keyboard highlight inside the filtered list.
+		if (highlight > filtered.length - 1) highlight = Math.max(filtered.length - 1, 0);
+	});
 
-			const rawData = await response.json();
-			let data: Repository[] = rawData as Repository[];
+	function initials(repo: Repository): string {
+		const source = repo.owner?.login || repo.name || '?';
+		return source.slice(0, 2).toUpperCase();
+	}
 
-			return data;
-		} catch (error) {
-			console.error('Failed to fetch repositories:', error);
-			return [];
+	function onkeydown(event: KeyboardEvent) {
+		if (disabled || filtered.length === 0) return;
+		if (event.key === 'ArrowDown') {
+			event.preventDefault();
+			highlight = Math.min(highlight + 1, filtered.length - 1);
+		} else if (event.key === 'ArrowUp') {
+			event.preventDefault();
+			highlight = Math.max(highlight - 1, 0);
+		} else if (event.key === 'Enter') {
+			event.preventDefault();
+			const repo = filtered[highlight];
+			if (repo) onselect(repo);
 		}
+	}
+	function readValue(event: Event): string {
+		return (event.currentTarget as HTMLInputElement).value;
 	}
 </script>
 
-<Command.Root>
-	<Command.Input placeholder="Type a command or search..." />
-	<Command.List
-		class="scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent hover:scrollbar-thumb-gray-600"
-	>
-		{#if loading}
-			<Command.Loading progress={0.5}>Fetching Repos...</Command.Loading>
-		{:else}
-			<Command.Empty>No results found.</Command.Empty>
-			<Command.Group heading="Repositories">
-				{#each userRepos as repo}
-					<Command.Item
-						class="cursor-pointer"
-						value={repo.name}
-						onclick={() => {
-							select(repo);
-						}}
-					>
-						<Avatar.Root class="ms-2 me-4" delayMs={1000}>
-							<Avatar.Image src={repo.owner.avatar_url} alt={repo.full_name} />
-							<Avatar.Fallback
-								><Icon class="ms-2 me-4" icon="fa:user" /></Avatar.Fallback
-							>
-						</Avatar.Root>
-						<Icon class="ms-2 me-4" icon="fa:github" />
-						<span>{repo.name}</span>
-						{#if repo.private}
-							<Icon class="ms-2 me-4" icon="fa:lock" />
-						{:else}
-							<Icon class="ms-2 me-4" icon="fa:globe" />
-						{/if}
+<div class="flex flex-col gap-3">
+	<Input
+		label="Repository"
+		placeholder="Search your GitHub repositories"
+		autocomplete="off"
+		disabled={disabled || phase !== 'ready'}
+		value={query}
+		oninput={(event) => (query = readValue(event))}
+		{onkeydown}
+	/>
 
-						<Icon class="ms-2 me-4" icon="fa:star" />
-						{repo.stargazers_count}
-						<Icon
-							class="ms-2 me-4"
-							icon="
-iconoir:git-fork"
-						/>
-						{repo.forks_count}
-						<Icon class="ms-2 me-4" icon="fa:code" />
-						{repo.language}
-					</Command.Item>
+	<div class="h-64 overflow-hidden rounded-lg border border-border bg-dark-surfaceContainerLowest">
+		{#if phase === 'loading'}
+			<div class="flex h-full flex-col gap-1 p-2" aria-busy="true" aria-label="Loading repositories">
+				{#each [0, 1, 2, 3, 4] as row (row)}
+					<div class="flex h-11 items-center gap-2.5 rounded-md px-2.5">
+						<div class="h-5 w-5 shrink-0 animate-pulse rounded bg-dark-surfaceContainerHigh"></div>
+						<div
+							class="h-3 flex-1 animate-pulse rounded bg-dark-surfaceContainerHigh"
+							style="max-width: {60 - row * 8}%"
+						></div>
+					</div>
 				{/each}
-			</Command.Group>
+			</div>
+		{:else if phase === 'error'}
+			<div class="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
+				<p class="text-[13px] text-dark-onSurfaceVariant">{errorMessage}</p>
+				<Button variant="secondary" size="sm" onclick={() => load({ useCache: false })}>
+					<RefreshCw size={13} strokeWidth={1.75} aria-hidden="true" />
+					Retry
+				</Button>
+			</div>
+		{:else if repos.length === 0}
+			<EmptyState title="No repositories found" description="Connect GitHub in Settings to deploy from a repository.">
+				{#snippet icon()}
+					<FolderGit2 size={22} strokeWidth={1.5} aria-hidden="true" />
+				{/snippet}
+			</EmptyState>
+		{:else if filtered.length === 0}
+			<EmptyState title="No matches" description="No repository matches “{query}”." />
+		{:else}
+			<ul class="h-full overflow-y-auto p-1">
+				{#each filtered as repo, index (repo.id)}
+					{@const isSelected = selected?.full_name === repo.full_name}
+					<li>
+						<button
+							type="button"
+							aria-pressed={isSelected}
+							onclick={() => onselect(repo)}
+							onmousemove={() => (highlight = index)}
+							class="flex h-11 w-full items-center gap-2.5 rounded-md px-2 text-left transition-colors
+								{index === highlight && !isSelected
+								? 'bg-dark-surfaceContainerHigh'
+								: ''}
+								{isSelected ? 'bg-dark-primaryContainer/40' : ''}"
+						>
+							<span
+								class="flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded
+									bg-dark-surfaceContainerHighest text-[9px] font-semibold text-dark-onSurfaceVariant"
+								aria-hidden="true"
+							>
+								{#if repo.owner?.avatar_url && !failedAvatars.has(repo.full_name)}
+									<img
+										src={repo.owner.avatar_url}
+										alt=""
+										class="h-full w-full object-cover"
+										onerror={() => failedAvatars.add(repo.full_name)}
+									/>
+								{:else}
+									{initials(repo)}
+								{/if}
+							</span>
+
+							<span class="flex min-w-0 flex-1 flex-col">
+								<span class="truncate text-[13px] leading-tight font-medium text-dark-onSurface">
+									{repo.full_name}
+								</span>
+								<span class="truncate text-[11px] leading-tight text-dark-onSurfaceVariant">
+									{repo.description || 'No description'}
+								</span>
+							</span>
+
+							{#if repo.language}
+								<span class="shrink-0 text-[11px] text-dark-onSurfaceVariant">{repo.language}</span>
+							{/if}
+							{#if repo.private}
+								<Badge tone="neutral">Private</Badge>
+							{/if}
+							{#if isSelected}
+								<Check size={14} strokeWidth={2} class="shrink-0 text-dark-primary" aria-hidden="true" />
+							{/if}
+						</button>
+					</li>
+				{/each}
+			</ul>
 		{/if}
-	</Command.List>
-</Command.Root>
+	</div>
+
+	<p class="text-[11px] text-dark-onSurfaceVariant">
+		{repos.length}
+		{repos.length === 1 ? 'repository' : 'repositories'} available
+	</p>
+</div>

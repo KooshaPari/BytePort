@@ -1,100 +1,94 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button/index.js';
-	import * as Card from '$lib/components/ui/card/index.js';
-	import * as Select from '$lib/components/ui/select/index.js';
-	import { Input } from '$lib/components/ui/input/index.js';
-	import { Label } from '$lib/components/ui/label/index.js';
-	import * as Avatar from '$lib/components/ui/avatar/index.js';
-	import Icon from '@iconify/svelte';
-	let props = $props();
-	let project = props.project;
-	let repo = project.Repository;
-	const frameworks = [
-		{
-			value: 'sveltekit',
-			label: 'SvelteKit'
-		},
-		{
-			value: 'next',
-			label: 'Next.js'
-		},
-		{
-			value: 'astro',
-			label: 'Astro'
-		},
-		{
-			value: 'nuxt',
-			label: 'Nuxt.js'
-		}
-	];
+	/**
+	 * Step 3 of the new-project wizard: what is about to be deployed.
+	 *
+	 * Replaces the 2023 review card, which was a `Card` full of duplicated
+	 * `Label` + `span` pairs under two headings both called "Repository", and
+	 * crashed outright when no repository had been chosen (`repo.owner` was read
+	 * without a guard).
+	 *
+	 * Values are read-only, so they are a definition list rather than a form:
+	 * nothing here looks editable, which is the point of a review step.
+	 */
+	import Card from '$lib/components/ui/Card.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
+	import type { Repository } from '$lib/git';
+
+	let {
+		name,
+		description,
+		type,
+		platform,
+		repository
+	}: {
+		name: string;
+		description: string;
+		type: string;
+		platform: string;
+		repository: Repository | null;
+	} = $props();
+
+	function humanise(value: string): string {
+		return value.replace(/[-_]/g, ' ').replace(/^./, (character) => character.toUpperCase());
+	}
 </script>
 
-<Card.Root class="w-[350px]">
-	<Card.Header>
-		<Card.Title>Create project</Card.Title>
-		<Card.Description>Deploy your new project in one-click.</Card.Description>
-	</Card.Header>
-	<Card.Content>
-		<form>
-			<div class="grid w-full items-center gap-4">
-				<div class="flex flex-col space-y-1.5">
-					<Label for="name">Repository</Label>
-				</div>
-				<div class="flex flex-col space-y-1.5">
-					<Card.Root
-						><Card.Content>
-							<div class="flex items-center">
-								<Avatar.Root class="ms-2 me-4" delayMs={1000}>
-									<Avatar.Image
-										src={repo.owner.avatar_url}
-										alt={repo.full_name}
-									/>
-									<Avatar.Fallback
-										><Icon class="ms-2 me-4" icon="fa:user" /></Avatar.Fallback
-									>
-								</Avatar.Root>
-								<span>{repo.name}</span>
-								{#if repo.private}
-									<Icon class="ms-2 me-4" icon="fa:lock" />
-								{:else}
-									<Icon class="ms-2 me-4" icon="fa:globe" />
-								{/if}
-							</div>
-						</Card.Content></Card.Root
-					>
-				</div>
-				<div class="flex flex-col space-y-1.5">
-					<Label for="name">Repository</Label>
-				</div>
-				<div class="flex w-full flex-col space-y-1.5">
-					<Card.Root
-						><Card.Content>
-							<div class="flex-colitems-center space-y-2">
-								<div class="flex flex-row items-center space-x-3.5">
-									<Label for="name">Project Name</Label>
-									<span>{project.name}</span>
-								</div>
-								<div class="flex flex-row items-center space-x-3.5">
-									<Label for="name">Description</Label>
-									<span>{project.description}</span>
-								</div>
-								<div class="flex flex-row items-center space-x-3.5">
-									<Label for="name">Type</Label>
-									<span>{project.Type}</span>
-								</div>
-								<div class="flex flex-row items-center space-x-3.5">
-									<Label for="name">Platform</Label>
-									<span>{project.Platform}</span>
-								</div>
-								<div class="flex flex-row items-center space-x-3.5">
-									<Label for="name">NVMS Path</Label>
-									<span>{project.NVMS?.Name ?? ''}</span>
-								</div>
-							</div>
-						</Card.Content></Card.Root
-					>
-				</div>
-			</div>
-		</form>
-	</Card.Content>
-</Card.Root>
+<Card padding="none">
+	<dl class="divide-y divide-border">
+		<div class="flex items-start gap-3 px-3 py-2.5">
+			<dt
+				class="w-24 shrink-0 pt-0.5 text-[11px] font-medium tracking-wide text-dark-onSurfaceVariant uppercase"
+			>
+				Repository
+			</dt>
+			<dd class="flex min-w-0 items-center gap-2">
+				{#if repository}
+					<span class="truncate text-[13px] text-dark-onSurface">{repository.full_name}</span>
+					{#if repository.private}
+						<Badge tone="neutral">Private</Badge>
+					{/if}
+				{:else}
+					<span class="text-[13px] text-dark-onSurfaceVariant">Not selected</span>
+				{/if}
+			</dd>
+		</div>
+
+		<div class="flex items-start gap-3 px-3 py-2.5">
+			<dt
+				class="w-24 shrink-0 pt-0.5 text-[11px] font-medium tracking-wide text-dark-onSurfaceVariant uppercase"
+			>
+				Name
+			</dt>
+			<dd class="min-w-0 truncate text-[13px] text-dark-onSurface">{name || 'Untitled'}</dd>
+		</div>
+
+		<div class="flex items-start gap-3 px-3 py-2.5">
+			<dt
+				class="w-24 shrink-0 pt-0.5 text-[11px] font-medium tracking-wide text-dark-onSurfaceVariant uppercase"
+			>
+				Description
+			</dt>
+			<dd class="min-w-0 text-[13px] leading-snug text-dark-onSurface">
+				{description || 'No description'}
+			</dd>
+		</div>
+
+		<div class="flex items-start gap-3 px-3 py-2.5">
+			<dt
+				class="w-24 shrink-0 pt-0.5 text-[11px] font-medium tracking-wide text-dark-onSurfaceVariant uppercase"
+			>
+				Platform
+			</dt>
+			<dd class="text-[13px] text-dark-onSurface">{humanise(platform)}</dd>
+		</div>
+
+		<div class="flex items-start gap-3 px-3 py-2.5">
+			<dt
+				class="w-24 shrink-0 pt-0.5 text-[11px] font-medium tracking-wide text-dark-onSurfaceVariant uppercase"
+			>
+				Type
+			</dt>
+			<dd class="text-[13px] text-dark-onSurface">{humanise(type)}</dd>
+		</div>
+	</dl>
+</Card>

@@ -1,190 +1,270 @@
 <script lang="ts">
-	import Icon from '@iconify/svelte';
-	import type { Project, Instance } from '$lib/utils.ts';
-
+	/**
+	 * Overview: what the account has, at a glance.
+	 *
+	 * The 2023 dashboard rendered a 202px-wide sidebar inside the page, a 20%-tall
+	 * decorative "Hello." banner, an unclickable "+" tile, and two horizontal
+	 * overflow strips of 192x256px cards. Projects came from a local
+	 * `getBaseUrl()` copy that called `platform()` from `@tauri-apps/plugin-os`
+	 * unguarded, which throws in this shell: the promise rejected, nothing was
+	 * ever awaited with a catch, and the strips stayed empty with no explanation.
+	 *
+	 * Navigation chrome now lives in the shell (`src/routes/home/+layout.svelte`),
+	 * `src/components/projectData` owns the fetch, and all three list states (loading,
+	 * failed, empty) are rendered explicitly.
+	 */
 	import { onMount } from 'svelte';
-	import type { User } from '../../stores/user';
-	import { user, initializeUser } from '../../stores/user';
-
 	import { goto } from '$app/navigation';
-	import { platform } from '@tauri-apps/plugin-os';
-	import Dialog from '../../components/addProjectDialog.svelte';
-	import ProjectCard from '../../components/projectPopup.svelte';
-	import { populateLists } from '$lib/utils';
-	const getBaseUrl = async () => {
-		if ((window as any).__TAURI_INTERNALS__) {
-			const currentPlatform: string = platform();
-			console.log(currentPlatform);
-			switch (currentPlatform) {
-				case 'android':
-					return 'http://10.0.2.2:8081';
-				case 'windows':
-					return 'http://localhost:8081';
-				default:
-					return 'http://localhost:8081';
-			}
-		} else {
-			return 'http://localhost:8081';
-		}
-	};
+	import ChevronRight from 'lucide-svelte/icons/chevron-right';
+	import Box from 'lucide-svelte/icons/box';
+	import Server from 'lucide-svelte/icons/server';
+	import Activity from 'lucide-svelte/icons/activity';
+	import CircleAlert from 'lucide-svelte/icons/circle-alert';
+	import RefreshCw from 'lucide-svelte/icons/refresh-cw';
+	import Plus from 'lucide-svelte/icons/plus';
+	import type { Snippet } from 'svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import AddProjectDialog from '../../components/addProjectDialog.svelte';
+	import ProjectPopup from '../../components/projectPopup.svelte';
+	import {
+		fetchInstances,
+		fetchProjects,
+		watchAuth,
+		type InstanceRow,
+		type ProjectRow
+	} from '../../components/projectData';
 
-	let client: User | null = null;
-	// convert to map name, '/name'
-	const menuItemsMap = new Map<string, string>([
-		['Projects', '/home/projects'],
-		['Instances', '/home/instances'],
-		['Monitor', '/home/monitor'],
-		['Settings', '/home/settings/integrations']
+	let projects = $state<ProjectRow[]>([]);
+	let instances = $state<InstanceRow[]>([]);
+	let phase = $state<'loading' | 'ready' | 'error'>('loading');
+	let errorMessage = $state('');
+	let composerOpen = $state(false);
+	let detailOpen = $state(false);
+	let selected = $state<ProjectRow | null>(null);
+
+	async function load() {
+		phase = 'loading';
+		errorMessage = '';
+		try {
+			const [nextProjects, nextInstances] = await Promise.all([fetchProjects(), fetchInstances()]);
+			projects = nextProjects;
+			instances = nextInstances;
+			phase = 'ready';
+		} catch (error) {
+			phase = 'error';
+			errorMessage =
+				error instanceof Error && error.message
+					? error.message
+					: 'The backend did not return projects or instances.';
+		}
+	}
+
+	onMount(() => watchAuth(goto, () => void load()));
+
+	const running = $derived(instances.filter((instance) => instance.statusTone === 'primary').length);
+	const attention = $derived(
+		instances.filter((instance) => instance.statusTone === 'danger').length
+	);
+
+	const stats = $derived([
+		{ label: 'Projects', value: projects.length, icon: Box },
+		{ label: 'Instances', value: instances.length, icon: Server },
+		{ label: 'Running', value: running, icon: Activity },
+		{ label: 'Needs attention', value: attention, icon: CircleAlert }
 	]);
-	let projects: Project[];
 
-	const unsubscribe = user.subscribe((value) => {
-		// Handle pending state
-		if (value.status === 'pending') {
-			console.log('User state pending...');
-			return; // Wait for initialization to complete
-		}
-
-		// Redirect if unauthenticated
-		if (value.status !== 'authenticated') {
-			console.log('User unauthenticated, redirecting...');
-			goto('/login');
-		} else {
-			console.log('Authenticated user:', value.data);
-			// Perform actions for authenticated user
-			client = value.data; // Assign the authenticated user to `client`
-			populateLists().then((p) => {
-				projects = p;
-			}); // Populate user-specific lists or data
-		}
-	});
-
-	onMount(() => {
-		getBaseUrl().then((baseUrl) => {
-			console.log('Base URL:', baseUrl);
-			// Ensure the user initialization is complete
-			initializeUser(baseUrl);
-		});
-		return unsubscribe;
-	});
+	function openDetail(project: ProjectRow) {
+		selected = project;
+		detailOpen = true;
+	}
 </script>
 
-<div class="bg-dark-surface flex h-screen w-screen overflow-x-hidden" id="mainDashPar">
-	<div
-		class="flex-ro bg-dark-surfaceContainer h-5/5 w-1/5 items-center justify-center"
-		id="sideBar"
-	>
-		<button on:click={() => goto('/home')}>
-			<img class="py-10" alt="BytePort" src="/src/assets/img/byte.png" />
-		</button>``
-		<div id="sideBarProfileCont"></div>
-		<ul class="" id="menuList">
-			{#each [...menuItemsMap] as [key, value]}
-				<li class=" text-md w-5/5 py-2 text-center text-white">
+{#snippet panel(title: string, count: string, action: Snippet | undefined, body: Snippet)}
+	<section class="overflow-hidden rounded-lg border border-border bg-dark-surfaceContainer">
+		<header class="flex h-12 items-center justify-between gap-3 border-b border-border px-4">
+			<div class="flex items-baseline gap-2">
+				<h2 class="text-[13px] font-semibold text-dark-onSurface">{title}</h2>
+				<span class="text-[11px] text-dark-onSurfaceVariant">{count}</span>
+			</div>
+			{#if action}{@render action()}{/if}
+		</header>
+		{@render body()}
+	</section>
+{/snippet}
+
+{#snippet skeletonRows(count: number)}
+	<div class="flex flex-col" aria-busy="true" aria-label="Loading">
+		{#each Array(count) as _, index (index)}
+			<div class="flex h-11 items-center gap-3 border-b border-border px-4 last:border-b-0">
+				<span class="h-3.5 w-40 animate-pulse rounded bg-dark-surfaceContainerHigh"></span>
+				<span class="h-3.5 w-16 animate-pulse rounded bg-dark-surfaceContainerHigh"></span>
+				<span class="ms-auto h-3.5 w-24 animate-pulse rounded bg-dark-surfaceContainerHigh"></span>
+			</div>
+		{/each}
+	</div>
+{/snippet}
+
+<div class="flex flex-col gap-5">
+	<dl class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+		{#each stats as stat (stat.label)}
+			{@const StatIcon = stat.icon}
+			<div class="flex items-center gap-3 rounded-lg border border-border bg-dark-surfaceContainer px-4 py-3">
+				<span
+					class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-dark-surfaceContainerHigh text-dark-onSurfaceVariant"
+					aria-hidden="true"
+				>
+					<StatIcon size={16} strokeWidth={1.75} />
+				</span>
+				<div class="flex min-w-0 flex-col">
+					<dt class="text-[11px] font-medium tracking-wide text-dark-onSurfaceVariant uppercase">
+						{stat.label}
+					</dt>
+					<dd class="text-[15px] leading-tight font-semibold text-dark-onSurface">
+						{phase === 'ready' ? stat.value : '—'}
+					</dd>
+				</div>
+			</div>
+		{/each}
+	</dl>
+
+	{#if phase === 'error'}
+		<div class="flex items-start gap-3 rounded-lg border border-border bg-dark-surfaceContainer p-4" role="alert">
+			<CircleAlert size={16} strokeWidth={1.75} class="mt-0.5 shrink-0 text-dark-error" aria-hidden="true" />
+			<div class="flex min-w-0 flex-1 flex-col gap-2">
+				<p class="text-[13px] font-medium text-dark-onSurface">
+					Projects and instances could not be loaded
+				</p>
+				<p class="text-[12px] break-words text-dark-onSurfaceVariant">{errorMessage}</p>
+			</div>
+			<Button variant="secondary" size="sm" onclick={load}>
+				<RefreshCw size={13} strokeWidth={1.75} aria-hidden="true" />
+				Retry
+			</Button>
+		</div>
+	{/if}
+
+	{@render panel(
+		'Projects',
+		phase === 'ready' ? `${projects.length}` : '',
+		projectActions,
+		projectBody
+	)}
+
+	{@render panel(
+		'Instances',
+		phase === 'ready' ? `${instances.length}` : '',
+		instanceActions,
+		instanceBody
+	)}
+</div>
+
+{#snippet projectActions()}
+	<Button variant="primary" size="sm" onclick={() => (composerOpen = true)}>
+		<Plus size={13} strokeWidth={2} aria-hidden="true" />
+		New project
+	</Button>
+{/snippet}
+
+{#snippet projectBody()}
+	{#if phase === 'loading'}
+		{@render skeletonRows(3)}
+	{:else if projects.length === 0}
+		<EmptyState
+			title="No projects yet"
+			description="A project links a repository to a deployment. Create one to get started."
+		>
+			{#snippet icon()}
+				<Box size={22} strokeWidth={1.5} aria-hidden="true" />
+			{/snippet}
+			{#snippet actions()}
+				<Button variant="primary" size="sm" onclick={() => (composerOpen = true)}>
+					<Plus size={13} strokeWidth={2} aria-hidden="true" />
+					New project
+				</Button>
+			{/snippet}
+		</EmptyState>
+	{:else}
+		<ul class="divide-y divide-border">
+			{#each projects as project (project.uuid || project.name)}
+				<li>
 					<button
-						class="hover:bg-dark-surfaceContainerHigh active:bg-dark-surfaceContainer active:text-dark-surfaceBright w-4/5 py-2 text-center transition-all hover:-translate-y-1
-						hover:rounded-full active:translate-y-0.5"
-						on:click={() => {
-							goto(value);
-						}}
+						type="button"
+						onclick={() => openDetail(project)}
+						class="flex h-11 w-full items-center gap-3 px-4 text-left transition-colors hover:bg-dark-surfaceContainerHigh"
 					>
-						{key}
+						<span class="flex min-w-0 flex-1 flex-col">
+							<span class="truncate text-[13px] leading-tight font-medium text-dark-onSurface">
+								{project.name}
+							</span>
+							<span class="truncate text-[11px] leading-tight text-dark-onSurfaceVariant">
+								{project.target}
+							</span>
+						</span>
+						<span class="hidden shrink-0 text-[12px] text-dark-onSurfaceVariant md:block">
+							{project.lastDeployLabel}
+						</span>
+						<Badge tone={project.statusTone} dot>{project.status}</Badge>
+						<ChevronRight
+							size={14}
+							strokeWidth={1.75}
+							class="shrink-0 text-dark-onSurfaceVariant"
+							aria-hidden="true"
+						/>
 					</button>
 				</li>
 			{/each}
 		</ul>
-	</div>
+	{/if}
+{/snippet}
 
-	<div id="body" class="w-4/5">
-		<div
-			id="header"
-			class=" bg-dark-surfaceContainerLow h-1/5 w-5/5 flex-col justify-between ps-2.5"
+{#snippet instanceActions()}
+	<Button variant="ghost" size="sm" disabled={phase === 'loading'} onclick={load}>
+		<RefreshCw size={13} strokeWidth={1.75} aria-hidden="true" />
+		Refresh
+	</Button>
+{/snippet}
+
+{#snippet instanceBody()}
+	{#if phase === 'loading'}
+		{@render skeletonRows(2)}
+	{:else if instances.length === 0}
+		<EmptyState
+			title="No instances yet"
+			description="Instances appear here once a project has been deployed."
 		>
-			<div id="headerNav" class="h-3/5 pt-2.5">
-				<div class="flex justify-end pe-2.5" id="navRight">
-					<Icon
-						class="hover:text-dark-primary active:text-dark-surfaceBright mx-1 h-6 w-6 cursor-pointer text-white"
-						icon="ic:baseline-notifications"
-					/>
-					<Icon
-						class="hover:text-dark-primary active:text-dark-surfaceBright mx-1 h-6 w-6 cursor-pointer text-white"
-						on:click={() => goto('/settings')}
-						icon="ic:baseline-account-circle"
-					/>
-				</div>
-			</div>
-			<div id="headerContent" class="h-2/5 text-4xl text-white">Hello.</div>
-		</div>
-		<div id="mainBody">
-			<div id="instanceSec" class="h-2/5 w-5/5 overflow-x-scroll">
-				<h1 class="text-dark-secondary p-2">Instances</h1>
-				<div id="instances" class="flex w-max overflow-y-visible p-2">
-					<div
-						class="hover:bg-dark-surfaceContainerHighest active:bg-dark-surfaceContainer bg-dark-surfaceContainerHigh text-dark-onSurface m-0.5 mx-1.5 flex h-64 w-48 items-center justify-center rounded-lg transition-all"
-					>
-						<Icon
-							on:click={() => {
-								console.log('LO');
-							}}
-							class="active:text-dark-surfaceVariant hover:bg-dark-onPrimaryContainer active:bg-dark-onPrimary bg-dark-primary text-dark-onPrimary h-max w-max rounded-full p-5 text-4xl transition-all hover:-translate-y-2 hover:scale-105 active:translate-y-1 active:scale-100"
-							icon="ic:baseline-add"
-						/>
-					</div>
-					<!--{#each instances as instance}-->
-					<!-- <div
-							class="bg-dark-surfaceContainerHigh text-dark-onSurface m-0.5 mx-1.5 h-64 w-48 rounded-lg transition-all hover:-translate-y-2 hover:scale-105 active:translate-y-1 active:scale-100"
-						>
-							<img
-								src="/src/assets/img/byteport copy.png"
-								alt="BytePort"
-								class="h-5/5 bg-dark-surfaceContainerHighest p-2"
-							/>
-							<div
-								class=" bg-dark-surfaceContainerHigh grid-flow-col grid-cols-2 px-2 pb-3 pt-1 text-sm"
-							></div>
-					{/each}-->
-				</div>
-			</div>
-			<div id="projectsSec" class="h-2/5 w-5/5 overflow-x-scroll">
-				<h1 class="text-dark-secondary p-2">Projects</h1>
-				<div id="projects" class="flex w-max overflow-y-visible p-2">
-					<div
-						class="hover:bg-dark-surfaceContainerHighest active:bg-dark-surfaceContainer bg-dark-surfaceContainerHigh text-dark-onSurface m-0.5 mx-1.5 flex h-64 w-48 items-center justify-center rounded-lg transition-all"
-					>
-						<Dialog></Dialog>
-					</div>
-					{#each projects as project}
-						<div
-							class="hover:bg-dark-surfaceContainerHighest active:bg-dark-surfaceContainer bg-dark-surfaceContainerHigh text-dark-onSurface align-center m-0.5 mx-1.5 flex h-64 w-48 flex-col items-center justify-center rounded-lg transition-all"
-						>
-							<div
-								class=" active:text-dark-surfaceVariant hover:bg-dark-onSecondaryContainer active:bg-dark-onPrimary bg-dark-primaryContainer text-dark-onPrimary m-5 h-max w-5/5 rounded-lg p-5 text-4xl transition-all hover:-translate-y-2 hover:scale-105 active:translate-y-1 active:scale-100"
-							>
-								<a href={project.access_url} target="_blank">
-									<div class="accessBlocImg h-3/5">
-										<img src={'src/assets/img/Byte.png'} alt="project" />
-									</div>
-								</a>
-							</div>
-							<div
-								class="bg-dark-surfaceContainerHigh hpmax w-4/5 grid-flow-col grid-cols-2 px-2 pt-1 pb-3 text-sm"
-							>
-								<ProjectCard {project}></ProjectCard>
-							</div>
-							<!-- <img
-								src="/src/assets/img/byteport copy.png"
-								alt="BytePort"
-								class="h-5/5 bg-dark-surfaceContainerHighest p-2"
-							/>
-							<div class="h-5/5 bg-dark-surfaceContainerHigh flex-col px-2 pb-3 pt-3 text-sm"></div>-->
-						</div>
-					{/each}
-				</div>
-			</div>
-		</div>
-		<div id="footer"></div>
-	</div>
-</div>
+			{#snippet icon()}
+				<Server size={22} strokeWidth={1.5} aria-hidden="true" />
+			{/snippet}
+			{#snippet actions()}
+				<Button variant="secondary" size="sm" onclick={() => goto('/home/projects')}>
+					Go to projects
+				</Button>
+			{/snippet}
+		</EmptyState>
+	{:else}
+		<ul class="divide-y divide-border">
+			{#each instances as instance (instance.uuid || instance.name)}
+				<li class="flex h-11 items-center gap-3 px-4">
+					<span class="flex min-w-0 flex-1 flex-col">
+						<span class="truncate text-[13px] leading-tight font-medium text-dark-onSurface">
+							{instance.name}
+						</span>
+						<span class="truncate text-[11px] leading-tight text-dark-onSurfaceVariant">
+							{instance.os}
+						</span>
+					</span>
+					<span class="hidden shrink-0 text-[12px] text-dark-onSurfaceVariant md:block">
+						{instance.resources.length}
+						{instance.resources.length === 1 ? 'resource' : 'resources'}
+					</span>
+					<Badge tone={instance.statusTone} dot>{instance.status}</Badge>
+				</li>
+			{/each}
+		</ul>
+	{/if}
+{/snippet}
 
-<style>
-</style>
+<AddProjectDialog bind:open={composerOpen} oncreated={load} />
+<ProjectPopup bind:open={detailOpen} project={selected} onchanged={load} />

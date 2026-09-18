@@ -1,139 +1,291 @@
 <script lang="ts">
-	import Icon from '@iconify/svelte';
-	import Project from '../+layout.svelte';
-	import VMInstance from '../+layout.svelte';
-	import { onMount, onDestroy } from 'svelte';
-	import type { User } from '../../../stores/user';
-	import { setUser, user } from '../../../stores/user';
+	/**
+	 * Projects list.
+	 *
+	 * Replaces a grid of 192x256px cards that repeated a broken logo image, showed
+	 * no status, no target and no actions, and imported the route layout as a
+	 * component (`import Project from '../+layout.svelte'`) to use as a *type*.
+	 *
+	 * This is now a dense table with the columns that actually get scanned: name,
+	 * state, target, last deploy. Row actions live behind a menu so the row itself
+	 * stays a single click target for opening the project.
+	 *
+	 * Endpoints are unchanged (`GET /projects`, `POST /deploy`, `POST /terminate`).
+	 */
+	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { apiHelpers } from '../../../lib/config';
-	let client: User | null = null;
-	// convert to map name, '/name'
-	const menuItemsMap = new Map<string, string>([
-		['Projects', '/home/projects'],
-		['Instances', '/home/instances'],
-		['Monitor', '/home/monitor'],
-		['Settings', '/home/settings']
-	]);
-	let projects: Project[];
-	let instances: VMInstance[];
-	onMount(() => {
-		const unsubscribe = user.subscribe((value) => {
-			client = value.data;
-			//console.log('V: ', value);
-			if (value.status != 'authenticated') {
-				goto('/login');
-			}
+	import { DropdownMenu as Menu } from 'bits-ui';
+	import EllipsisVertical from 'lucide-svelte/icons/ellipsis-vertical';
+	import ExternalLink from 'lucide-svelte/icons/external-link';
+	import RefreshCw from 'lucide-svelte/icons/refresh-cw';
+	import Plus from 'lucide-svelte/icons/plus';
+	import Search from 'lucide-svelte/icons/search';
+	import Box from 'lucide-svelte/icons/box';
+	import CircleAlert from 'lucide-svelte/icons/circle-alert';
+	import Badge from '$lib/components/ui/Badge.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import Input from '$lib/components/ui/Input.svelte';
+	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import Combo from '../../../components/combo.svelte';
+	import AddProjectDialog from '../../../components/addProjectDialog.svelte';
+	import ProjectPopup from '../../../components/projectPopup.svelte';
+	import { fetchProjects, formatAbsolute, watchAuth, type ProjectRow } from '../../../components/projectData';
+
+	const ICON_BUTTON =
+		'flex h-7 w-7 items-center justify-center rounded-md text-dark-onSurfaceVariant ' +
+		'transition-colors hover:bg-dark-surfaceContainerHigh hover:text-dark-onSurface ' +
+		'focus-visible:outline-none';
+
+	const MENU_ITEM =
+		'flex h-8 cursor-pointer items-center gap-2 rounded px-2 text-[13px] text-dark-onSurface ' +
+		'outline-none select-none data-[highlighted]:bg-dark-surfaceContainerHighest ' +
+		'data-[disabled]:pointer-events-none data-[disabled]:opacity-40';
+
+	const STATUS_FILTERS = [
+		{ value: 'all', label: 'All states' },
+		{ value: 'running', label: 'Running' },
+		{ value: 'deploying', label: 'Deploying' },
+		{ value: 'failed', label: 'Failed' },
+		{ value: 'stopped', label: 'Stopped' },
+		{ value: 'not-deployed', label: 'Not deployed' }
+	];
+
+	let projects = $state<ProjectRow[]>([]);
+	let phase = $state<'loading' | 'ready' | 'error'>('loading');
+	let errorMessage = $state('');
+	let query = $state('');
+	let statusFilter = $state('all');
+	let composerOpen = $state(false);
+	let detailOpen = $state(false);
+	let selected = $state<ProjectRow | null>(null);
+
+	async function load() {
+		if (phase !== 'ready') phase = 'loading';
+		errorMessage = '';
+		try {
+			projects = await fetchProjects();
+			phase = 'ready';
+		} catch (error) {
+			phase = 'error';
+			errorMessage =
+				error instanceof Error && error.message
+					? error.message
+					: 'The backend did not return a projects list.';
+		}
+	}
+
+	onMount(() => watchAuth(goto, () => void load()));
+
+	const filtered = $derived.by(() => {
+		const needle = query.trim().toLowerCase();
+		return projects.filter((project) => {
+			if (statusFilter !== 'all' && project.statusKey !== statusFilter) return false;
+			if (!needle) return true;
+			return [project.name, project.target, project.type, project.platform]
+				.join(' ')
+				.toLowerCase()
+				.includes(needle);
 		});
-		onDestroy(() => {
-			unsubscribe();
-		});
-		populateLists();
 	});
 
-	async function populateLists() {
-		try {
-			let response = await apiHelpers.makeRequest(apiHelpers.getApiUrl('/projects'), {
-				method: 'GET'
-			});
+	function readValue(event: Event) {
+		query = (event.currentTarget as HTMLInputElement).value;
+	}
 
-			if (response.ok) {
-				const data = await response.json();
-				projects = data;
-				console.log('Projects:', projects);
-			}
-		} catch (error) {
-			console.error('Error fetching projects:', error);
-		}
+	function openDetail(project: ProjectRow) {
+		selected = project;
+		detailOpen = true;
+	}
 
-		try {
-			let response = await apiHelpers.makeRequest(apiHelpers.getApiUrl('/instances'), {
-				method: 'GET'
-			});
-
-			if (response.ok) {
-				const data = await response.json();
-				instances = data;
-				console.log('Instances:', instances);
-			}
-		} catch (error) {
-			console.error('Error fetching instances:', error);
-		}
+	function openAccess(project: ProjectRow) {
+		if (!project.accessUrl) return;
+		window.open(project.accessUrl, '_blank', 'noopener');
 	}
 </script>
 
-<div class="bg-dark-surface flex h-screen w-screen overflow-x-hidden" id="mainDashPar">
-	<div
-		class="flex-ro bg-dark-surfaceContainer h-5/5 w-1/5 items-center justify-center"
-		id="sideBar"
-	>
-		<img
-			on:click={() => goto('/home')}
-			class="py-10"
-			alt="BytePort"
-			src="/src/assets/img/byte.png"
+<div class="flex flex-col gap-4">
+	<div class="flex flex-wrap items-end gap-2">
+		<div class="w-64">
+			<Input
+				label="Search"
+				placeholder="Name, repository or type"
+				autocomplete="off"
+				value={query}
+				oninput={readValue}
+			/>
+		</div>
+
+		<Combo
+			label="State"
+			options={STATUS_FILTERS}
+			bind:value={statusFilter}
+			class="w-40"
+			placeholder="All states"
 		/>
-		<div id="sideBarProfileCont"></div>
-		<ul class="" id="menuList">
-			{#each [...menuItemsMap] as [key, value]}
-				<li class=" text-md w-5/5 py-2 text-center text-white">
-					<button
-						class="hover:bg-dark-surfaceContainerHigh active:bg-dark-surfaceContainer active:text-dark-surfaceBright w-4/5 py-2 text-center transition-all hover:-translate-y-1
-						hover:rounded-full active:translate-y-0.5"
-						on:click={() => {
-							goto(value);
-						}}
-					>
-						{key}
-					</button>
-				</li>
-			{/each}
-		</ul>
+
+		<div class="ms-auto flex items-center gap-2 pb-0.5">
+			{#if phase === 'ready'}
+				<span class="text-[11px] text-dark-onSurfaceVariant">
+					{filtered.length} of {projects.length}
+				</span>
+			{/if}
+			<Button variant="secondary" size="sm" disabled={phase === 'loading'} onclick={load}>
+				<RefreshCw size={13} strokeWidth={1.75} aria-hidden="true" />
+				Refresh
+			</Button>
+			<Button variant="primary" size="sm" onclick={() => (composerOpen = true)}>
+				<Plus size={13} strokeWidth={2} aria-hidden="true" />
+				New project
+			</Button>
+		</div>
 	</div>
 
-	<div id="body" class="w-4/5">
-		<div
-			id="header"
-			class=" bg-dark-surfaceContainerLow h-1/5 w-5/5 flex-col justify-between ps-2.5"
-		>
-			<div id="headerNav" class="h-3/5 pt-2.5">
-				<div class="flex justify-end pe-2.5" id="navRight">
-					<Icon
-						class="hover:text-dark-primary active:text-dark-surfaceBright mx-1 h-6 w-6 cursor-pointer text-white"
-						icon="ic:baseline-notifications"
-					/>
-					<Icon
-						class="hover:text-dark-primary active:text-dark-surfaceBright mx-1 h-6 w-6 cursor-pointer text-white"
-						icon="ic:baseline-account-circle"
-					/>
-				</div>
+	{#if phase === 'error'}
+		<div class="flex items-start gap-3 rounded-lg border border-border bg-dark-surfaceContainer p-4" role="alert">
+			<CircleAlert size={16} strokeWidth={1.75} class="mt-0.5 shrink-0 text-dark-error" aria-hidden="true" />
+			<div class="flex min-w-0 flex-1 flex-col gap-1">
+				<p class="text-[13px] font-medium text-dark-onSurface">Projects could not be loaded</p>
+				<p class="text-[12px] break-words text-dark-onSurfaceVariant">{errorMessage}</p>
 			</div>
-			<div id="headerContent" class="h-2/5 text-4xl text-white">Hello.</div>
+			<Button variant="secondary" size="sm" onclick={load}>Retry</Button>
 		</div>
-		<div id="mainBody">
-			<div id="projectsSec" class="h-2/5 w-5/5 overflow-x-scroll">
-				<h1 class="text-dark-secondary p-2">Projects</h1>
-				<div id="projects" class="flex w-max overflow-y-visible p-2">
-					{#each projects as project}
-						<div
-							class="bg-dark-surfaceContainerHigh text-dark-onSurface m-0.5 mx-1.5 h-64 w-48 rounded-lg transition-all hover:-translate-y-2 hover:scale-105 active:translate-y-1 active:scale-100"
-						>
-							<img
-								src="/src/assets/img/byteport copy.png"
-								alt="BytePort"
-								class="bg-dark-surfaceContainerHighest h-5/5 p-2"
-							/>
-							<div
-								class="bg-dark-surfaceContainerHigh h-5/5 flex-col px-2 pt-3 pb-3 text-sm"
-							></div>
-						</div>
+	{/if}
+
+	<div class="overflow-hidden rounded-lg border border-border bg-dark-surfaceContainer">
+		{#if phase === 'loading'}
+			<div aria-busy="true" aria-label="Loading projects">
+				{#each Array(5) as _, index (index)}
+					<div class="flex h-11 items-center gap-3 border-b border-border px-4 last:border-b-0">
+						<span class="h-3.5 w-48 animate-pulse rounded bg-dark-surfaceContainerHigh"></span>
+						<span class="h-3.5 w-20 animate-pulse rounded bg-dark-surfaceContainerHigh"></span>
+						<span class="ms-auto h-3.5 w-28 animate-pulse rounded bg-dark-surfaceContainerHigh"></span>
+					</div>
+				{/each}
+			</div>
+		{:else if projects.length === 0}
+			<EmptyState
+				title="No projects yet"
+				description="A project links a repository to a deployment. Create one to get started."
+			>
+				{#snippet icon()}
+					<Box size={22} strokeWidth={1.5} aria-hidden="true" />
+				{/snippet}
+				{#snippet actions()}
+					<Button variant="primary" size="sm" onclick={() => (composerOpen = true)}>
+						<Plus size={13} strokeWidth={2} aria-hidden="true" />
+						New project
+					</Button>
+				{/snippet}
+			</EmptyState>
+		{:else if filtered.length === 0}
+			<EmptyState
+				title="No projects match"
+				description="Clear the search or pick a different state to see more projects."
+			>
+				{#snippet icon()}
+					<Search size={22} strokeWidth={1.5} aria-hidden="true" />
+				{/snippet}
+				{#snippet actions()}
+					<Button
+						variant="secondary"
+						size="sm"
+						onclick={() => {
+							query = '';
+							statusFilter = 'all';
+						}}
+					>
+						Clear filters
+					</Button>
+				{/snippet}
+			</EmptyState>
+		{:else}
+			<table class="w-full text-left">
+				<thead>
+					<tr class="h-9 border-b border-border bg-dark-surfaceContainerLow">
+						<th scope="col" class="px-4 text-[11px] font-medium tracking-wide text-dark-onSurfaceVariant uppercase">
+							Project
+						</th>
+						<th scope="col" class="w-36 px-4 text-[11px] font-medium tracking-wide text-dark-onSurfaceVariant uppercase">
+							State
+						</th>
+						<th scope="col" class="px-4 text-[11px] font-medium tracking-wide text-dark-onSurfaceVariant uppercase">
+							Target
+						</th>
+						<th scope="col" class="w-32 px-4 text-[11px] font-medium tracking-wide text-dark-onSurfaceVariant uppercase">
+							Last deploy
+						</th>
+						<th scope="col" class="w-12 px-2">
+							<span class="sr-only">Actions</span>
+						</th>
+					</tr>
+				</thead>
+				<tbody class="divide-y divide-border">
+					{#each filtered as project (project.uuid || project.name)}
+						<tr class="h-11 transition-colors hover:bg-dark-surfaceContainerHigh">
+							<td class="max-w-0 px-4">
+								<button
+									type="button"
+									onclick={() => openDetail(project)}
+									class="flex w-full flex-col text-left focus-visible:outline-none"
+								>
+									<span class="truncate text-[13px] leading-tight font-medium text-dark-onSurface">
+										{project.name}
+									</span>
+									<span class="truncate text-[11px] leading-tight text-dark-onSurfaceVariant">
+										{project.type} on {project.platform}
+									</span>
+								</button>
+							</td>
+							<td class="px-4">
+								<Badge tone={project.statusTone} dot>{project.status}</Badge>
+							</td>
+							<td class="max-w-0 px-4">
+								<span class="block truncate text-[12px] text-dark-onSurfaceVariant">
+									{project.target}
+								</span>
+							</td>
+							<td class="px-4 text-[12px] whitespace-nowrap text-dark-onSurfaceVariant">
+								<span title={formatAbsolute(project.lastDeployAt)}>{project.lastDeployLabel}</span>
+							</td>
+							<td class="px-2 text-right">
+								<Menu.Root>
+									<Menu.Trigger class={ICON_BUTTON} aria-label="Actions for {project.name}">
+										<EllipsisVertical size={15} strokeWidth={1.75} aria-hidden="true" />
+									</Menu.Trigger>
+
+									<Menu.Content
+										align="end"
+										sideOffset={4}
+										class="z-50 min-w-[12rem] rounded-lg border border-border bg-dark-surfaceContainerHigh p-1"
+									>
+										<Menu.Item class={MENU_ITEM} onSelect={() => openDetail(project)}>
+											Open details
+										</Menu.Item>
+										<Menu.Item
+											class={MENU_ITEM}
+											disabled={!project.accessUrl}
+											onSelect={() => openAccess(project)}
+										>
+											<ExternalLink size={13} strokeWidth={1.75} aria-hidden="true" />
+											Open access URL
+										</Menu.Item>
+										<Menu.Separator class="my-1 h-px bg-border" />
+										<Menu.Item
+											class="{MENU_ITEM} text-dark-error"
+											onSelect={() => openDetail(project)}
+										>
+											Terminate deployment
+										</Menu.Item>
+									</Menu.Content>
+								</Menu.Root>
+							</td>
+						</tr>
 					{/each}
-				</div>
-			</div>
-		</div>
-		<div id="footer"></div>
+				</tbody>
+			</table>
+		{/if}
 	</div>
 </div>
 
-<style>
-</style>
+<AddProjectDialog bind:open={composerOpen} oncreated={load} />
+<ProjectPopup bind:open={detailOpen} project={selected} onchanged={load} />
