@@ -142,6 +142,55 @@ was **half-broken**, which is worth knowing before changing colours again:
   `@tauri-apps/plugin-os` (unregistered plugin, throws) and never add a new
   `getBaseUrl` copy.
 
+### The real reason it looked unstyled
+
+Beyond the palette, **Tailwind output was almost entirely missing**. `app.css`
+had `@config` on line 1 followed by `@import 'tailwindcss'`. CSS requires
+`@import` to precede other rules, so it was invalid and silently dropped:
+
+| app.css order | Built CSS | Utilities | Preflight |
+|---|---|---|---|
+| `@config` then `@import` | 8,096 B | **none** | **none** |
+| `@import` first | 44,272 B | `.flex`, `.grid`, `.p-4`, … | present |
+
+So `class="flex p-4 rounded-lg"` did nothing on every screen; only `@apply`
+based colours worked. The build exited 0 the whole time.
+
+Note the specifier: the idiomatic bare `@import 'tailwindcss'` then fails with
+`ENOENT .../frontend/web/tailwindcss`, because Vite's CSS pipeline joins bare
+specifiers to the importing file's directory. `app.css` therefore uses a
+resolvable relative path. **Open follow-up:** migrate to `@tailwindcss/vite`,
+which removes the explicit `node_modules` path. That touches `vite.config.ts`
+and the dependency set, so it was deliberately left to the build-config owner.
+
+### Commits
+
+| Commit | Content |
+|---|---|
+| `037c0308` | Token fix, graphite/teal palette, `src/lib/components/ui/*`, `src/lib/api.ts` |
+| `511d9bd7` | `app.css` import order: stop shipping a stylesheet with no utilities |
+| `9b826bbe` | Application shell (`AppShell`, `Sidebar`, `NavItem`, `ProductMark`, `PageHeader`, `BackendStatus`, `UserChip`, `nav.ts`, `health.ts`) |
+| `9c349e4a` | Auth/entry views (login, signup, fts) |
+| `ec1d437c` | Monitor + settings views |
+| `fc29f968` | Projects + instances views and dialogs |
+| `78e63b1e` | Entry route hands off to the shell; `Input` supports `bind:value` |
+| `db7c7274` | svelte-check fix in the shell icon binding |
+
+Verified by the workers: `npx svelte-check` 0 errors / 0 warnings across 2,721
+files; `npx vite build` exit 0; Playwright DOM harnesses 34/34 (auth) and 39/39
+(projects) with zero console errors. **Visual result remains UNKNOWN** — nobody
+in the loop could see the rendered window, and no screenshots were taken.
+
+### Backend contract bug found during the redesign
+
+Two workers independently hit this: `models.AIProvider` tags the credential
+`json:"api_key"`, and the Go handler looks up the provider map by the
+case-sensitive key `"openai"`, but the frontend modelled and sent `apiKey` /
+`openAI`. Go cannot match `apiKey` to `api_key`, so the OpenAI key validated as
+**empty** and setup always failed with `Failed to validate OAI credentials`.
+Both sides now send/accept `api_key`. Worth a dedicated backend test, since the
+old UI silently never persisted that field.
+
 ### Structural debt to be aware of
 
 - `getBaseUrl` had been copy-pasted into **15 files**; several still call
