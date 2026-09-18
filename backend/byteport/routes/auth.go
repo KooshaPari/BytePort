@@ -133,7 +133,7 @@ func UpdateLink(c *gin.Context) {
 
 	if user.LLMConfig.Provider == "" {
 		user.LLMConfig = models.LLM{
-			Provider:  "openai",
+			Provider:  defaultLLMProvider,
 			Providers: make(map[string]models.AIProvider),
 		}
 	}
@@ -142,8 +142,19 @@ func UpdateLink(c *gin.Context) {
 	}
 	decryptedOAI := "err"
 	var err error
+	// ProviderEntry matches case-insensitively so a credential stored under a
+	// drifted key ("openAI") is still found, and it reports the key it came
+	// from so the entry is written back in place instead of duplicated.
+	providerKey, provider, providerFound := user.LLMConfig.ProviderEntry(user.LLMConfig.Provider)
 	if !(user.LLMConfig.Provider == "local") {
-		decryptedOAI, err = lib.DecryptSecret(user.LLMConfig.Providers[user.LLMConfig.Provider].APIKey)
+		if !providerFound {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error":   "Failed to decrypt OAI",
+				"details": fmt.Sprintf("no provider entry for %q", user.LLMConfig.Provider),
+			})
+			return
+		}
+		decryptedOAI, err = lib.DecryptSecret(provider.APIKey)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to decrypt OAI"})
 			return
@@ -177,9 +188,13 @@ func UpdateLink(c *gin.Context) {
 		RootEndpoint: decryptedPortfolioURL,
 		APIKey:       decryptedPortfolioKey,
 	}
-	provider := user.LLMConfig.Providers[user.LLMConfig.Provider]
+	if !providerFound {
+		// Provider was "local" (no credential entry) or absent: keep the key
+		// the request used so nothing is invented.
+		providerKey = user.LLMConfig.Provider
+	}
 	provider.APIKey = decryptedOAI
-	user.LLMConfig.Providers[user.LLMConfig.Provider] = provider
+	user.LLMConfig.Providers[providerKey] = provider
 	// return new user obj
 	user.Password = ""
 	c.JSON(http.StatusOK, user)

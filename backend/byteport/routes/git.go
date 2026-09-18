@@ -10,6 +10,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// Canonical LLM provider identifiers. Clients have shipped camelCase variants
+// ("openAI") of both the provider name and the credential field; the backend
+// stores and looks up the lower-case spellings.
+const (
+	defaultLLMProvider = "openai"
+	defaultLLMModal    = "gpt-4o"
+)
+
 func RetrieveRepositories(c *gin.Context) {
 	user := c.MustGet("user").(models.User)
 
@@ -104,6 +112,31 @@ func ValidateLink(c *gin.Context) {
 	// Get the authenticated user for saving later
 	authUser := c.MustGet("user").(models.User)
 
+	// Resolve the LLM credential before validating anything. The lookup is
+	// case-insensitive and AIProvider.UnmarshalJSON accepts the camelCase
+	// `apiKey` spelling, because clients have sent both `openAI` and `apiKey`
+	// while the canonical spellings are `openai` and `api_key`. Misses here
+	// used to be handed to the OpenAI validator as an empty string, which
+	// surfaced as "Failed to validate OAI credentials" on every setup attempt
+	// and silently never persisted the key.
+	providerName := strings.TrimSpace(user.LLMConfig.Provider)
+	if providerName == "" {
+		providerName = defaultLLMProvider
+	}
+	provider, ok := user.LLMConfig.ProviderKey(providerName)
+	if !ok {
+		// A drifted provider name must not be fatal: fall back to the
+		// canonical provider before rejecting the request.
+		provider, ok = user.LLMConfig.ProviderKey(defaultLLMProvider)
+	}
+	if !ok || strings.TrimSpace(provider.APIKey) == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "Missing OpenAI API key",
+			"details": fmt.Sprintf("no provider entry carrying an api_key for %q in llmConfig.providers", providerName),
+		})
+		return
+	}
+
 	// Validate with unencrypted credentials
 	err := lib.ValidateAWSCredentials(
 		user.AwsCreds.AccessKeyID,
@@ -114,7 +147,7 @@ func ValidateLink(c *gin.Context) {
 		return
 	}
 
-	err = lib.ValidateOpenAICredentials(user.LLMConfig.Providers["openai"].APIKey)
+	err = lib.ValidateOpenAICredentials(provider.APIKey)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to validate OAI credentials", "details": err.Error()})
 		return
@@ -140,7 +173,7 @@ func ValidateLink(c *gin.Context) {
 		return
 	}
 
-	encryptedApiKey, err := lib.EncryptSecret(user.LLMConfig.Providers[user.LLMConfig.Provider].APIKey)
+	encryptedApiKey, err := lib.EncryptSecret(provider.APIKey)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to encrypt OpenAI API Key"})
 		return
@@ -164,11 +197,17 @@ func ValidateLink(c *gin.Context) {
 		SecretAccessKey: encryptedSecretAccessKey,
 	}
 
+	// Always persist under the canonical provider name, regardless of the
+	// spelling the client used on the way in.
+	modal := strings.TrimSpace(provider.Modal)
+	if modal == "" {
+		modal = defaultLLMModal
+	}
 	authUser.LLMConfig = models.LLM{
-		Provider: "openai",
+		Provider: defaultLLMProvider,
 		Providers: map[string]models.AIProvider{
-			"openai": {
-				Modal:  "gpt-4o",
+			defaultLLMProvider: {
+				Modal:  modal,
 				APIKey: encryptedApiKey,
 			},
 		}}

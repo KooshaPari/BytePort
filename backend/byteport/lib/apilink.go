@@ -26,7 +26,11 @@ import (
 const portfolioAllowedHostsEnv = "BYTEPORT_PORTFOLIO_API_ALLOWED_HOSTS"
 
 // ValidatePortfolioAPI validates the provided portfolio API key and endpoint.
-func ValidatePortfolioAPI(rootEndpoint, apiKey string) error {
+//
+// Declared as a function value rather than a func so tests can substitute a
+// stub: the real implementation performs an outbound HTTP request, which a unit
+// test must not make. Production code calls it exactly as before.
+var ValidatePortfolioAPI = func(rootEndpoint, apiKey string) error {
 	log.Println("Validating Portfolio API...")
 	validationURL, err := portfolioValidationURL(rootEndpoint)
 	if err != nil {
@@ -284,7 +288,10 @@ func ValidateGitRepo(repoURL, installationToken string) error {
 }
 
 // ValidateOpenAICredentials validates the OpenAI API credentials.
-func ValidateOpenAICredentials(apiToken string) error {
+//
+// Function value (not func) so tests can stub out the outbound request to
+// api.openai.com; see ValidatePortfolioAPI for the rationale.
+var ValidateOpenAICredentials = func(apiToken string) error {
 	log.Println("Validating OpenAI credentials...")
 	req, err := http.NewRequest("GET", "https://api.openai.com/v1/models", nil)
 	if err != nil {
@@ -314,7 +321,10 @@ func ValidateOpenAICredentials(apiToken string) error {
 }
 
 // ValidateAWSCredentials validates AWS credentials.
-func ValidateAWSCredentials(accessKey, secretKey string) error {
+//
+// Function value (not func) so tests can stub out the outbound S3 call; see
+// ValidatePortfolioAPI for the rationale.
+var ValidateAWSCredentials = func(accessKey, secretKey string) error {
 	log.Println("Validating AWS credentials...")
 	sess, err := session.NewSession(&aws.Config{
 		Credentials: credentials.NewStaticCredentials(accessKey, secretKey, ""),
