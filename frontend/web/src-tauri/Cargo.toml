@@ -33,17 +33,27 @@ serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
 tauri = { version = "2.11.2", features = ["protocol-asset"] }
 tauri-plugin-log = "2.8.0"
+tauri-plugin-os = "2.3.2"
 thiserror = "2.0"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+
+[dev-dependencies]
+# Used only by `benches/ipc.rs` (criterion bench target below); not linked
+# into the shipped app.
+criterion = "0.5.1"
 
 [package.metadata.cargo-machete]
 ignored = ["serde", "serde_json", "log"]
 
-# Note: `tracing`, `async-trait`, `thiserror`, `url`, `mockall`, `tauri-plugin-os`,
-# `tokio`, and `aws-sdk-s3` were removed after auditing src/. They are no longer
-# imported by the live code path; the `adapters/`, `ports/`, `network/`, and
-# standalone `ipc.rs` modules that used them have been deleted as dead code
-# (the actual `ipc` module is the inline `pub mod ipc {}` inside `lib.rs`).
+# Note: `tracing`, `async-trait`, `url`, `mockall`, `tokio`, and `aws-sdk-s3`
+# were removed after auditing src/. They are no longer imported by the live
+# code path; the `adapters/`, `ports/`, `network/`, and standalone `ipc.rs`
+# modules that used them have been deleted as dead code (the actual `ipc`
+# module is the inline `pub mod ipc {}` inside `lib.rs`).
+#
+# `tauri-plugin-os` was re-introduced above: the frontend's platform
+# detection reads `window.__TAURI_OS_PLUGIN_INTERNALS__`, which only exists
+# once `tauri_plugin_os::init()` is registered in `src/lib.rs`.
 #
 # To re-introduce AWS SDK support in a future PR, re-add `aws-sdk-s3` and
 # `aws-config` here AND add `mod adapters; mod ports;` to `src/lib.rs` so the

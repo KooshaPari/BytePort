@@ -107,6 +107,14 @@ pub fn run() {
                 .level(log::LevelFilter::Info)
                 .build(),
         )
+        // `tauri_plugin_os` injects the `window.__TAURI_OS_PLUGIN_INTERNALS__`
+        // init script. The frontend reads that global for platform detection
+        // (`getApiBaseUrl()` in `src/lib/api.ts`), so the plugin must be
+        // registered here — without it the global is absent and the lookup
+        // throws a `TypeError` in the webview. The capability
+        // `capabilities/byteport-desktop.json` grants the matching
+        // `os:default` permission set.
+        .plugin(tauri_plugin_os::init())
         .setup(move |app| {
             // Register shared state for IPC handlers.
             app.manage(AppState {
