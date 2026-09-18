@@ -15,7 +15,7 @@ This builds two containers:
 
 | Service | Port | What it runs |
 |---|---|---|
-| `backend` | **8080** | Go API (Gin + SQLite) |
+| `backend` | **8081** | Go API (Gin + SQLite) |
 | `web` | **3000** | SvelteKit frontend |
 
 Open <http://localhost:3000> and follow the on-screen signup flow.
@@ -43,7 +43,7 @@ docker compose logs -f backend
 cd backend/byteport
 go build -o byteport-server
 ./byteport-server
-# API available at http://localhost:8080
+# API available at http://localhost:8081
 ```
 
 ### Frontend
@@ -78,11 +78,17 @@ byteport-cli --help
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `PORT` | `8080` | Backend API port |
+| `PORT` | `8081` | Backend API port |
 | `NVMS_URL` | `http://localhost:8443` | NanoVMS server URL |
 | `NVMS_TOKEN` | (none) | Bearer token for NanoVMS API |
 | `JWT_SECRET` | (generated) | JWT signing secret |
 | `DATABASE_URL` | `file:./byteport.db` | SQLite database path |
+
+> **The port is not arbitrary.** The desktop app connects to a fixed
+> `http://localhost:8081` (`API_PORT` in `frontend/web/src/lib/api.ts`), and
+> the Tauri shell probes the same port for `/health`. Serving the API on any
+> other port leaves the app unable to reach its backend. Override with `PORT`
+> or `BYTEPORT_API_PORT` only if you also change that constant.
 
 ## Integration with NanoVMS
 
@@ -103,7 +109,7 @@ docker compose up -d
 
 **Backend won't start (port in use):**
 ```bash
-lsof -i :8080
+lsof -i :8081
 # Kill existing or change port
 PORT=9090 ./byteport-server
 ```
@@ -111,7 +117,7 @@ PORT=9090 ./byteport-server
 **Frontend can't reach backend:**
 ```bash
 # Check backend is running
-curl http://localhost:8080/health
+curl http://localhost:8081/health
 ```
 
 **Tauri build fails:**
