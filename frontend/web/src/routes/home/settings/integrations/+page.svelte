@@ -1,503 +1,495 @@
 <script lang="ts">
-	// @ts-nocheck
-	import Icon from '@iconify/svelte';
-	import type { SuperValidated } from 'sveltekit-superforms';
-	import { superValidate, message } from 'sveltekit-superforms';
+	/**
+	 * Integration settings.
+	 *
+	 * Was one unlabelled horizontal row of controls (GitHub button, two AWS
+	 * inputs, a provider/model combobox stack, two portfolio fields) with no
+	 * section headings, no descriptions, and a save button whose result was
+	 * never read. It also flipped its own "Linked" label the moment the GitHub
+	 * popup opened, and offered an unlink button that called no endpoint.
+	 *
+	 * Now: four labelled sections with one-line descriptions and explicit
+	 * saving, saved and failed feedback. GitHub state comes from the backend
+	 * and refreshes after the link popup closes.
+	 *
+	 * Endpoints unchanged: GET /user/:id/creds, POST /link, GET /link.
+	 */
 	import { onMount } from 'svelte';
-	import type { User, UserLink } from '$lib/../stores/user';
-	import * as Button from '$lib/components/ui/button';
-	import { setUser, user, initializeUser } from '$lib/../stores/user';
-	import { formSchema } from './schema';
-	import { zod4 } from 'sveltekit-superforms/adapters';
 	import { goto } from '$app/navigation';
-	import CaretSort from 'svelte-radix/CaretSort.svelte';
-	import Check from 'svelte-radix/Check.svelte';
-	import SuperDebug, { type Infer, type SuperForm } from 'sveltekit-superforms';
-	import { superForm } from 'sveltekit-superforms';
-	import { zod4Client } from 'sveltekit-superforms/adapters';
-	import * as Form from '$lib/components/ui/form/index.js';
-	import * as Popover from '$lib/components/ui/popover/index.js';
-	import * as Command from '$lib/components/ui/command/index.js';
-	import { Input } from '$lib/components/ui/input/index.js';
-	import { buttonVariants } from '$lib/components/ui/button/index.js';
-	import { cn } from '$lib/utils.js';
-	import { browser } from '$app/environment';
+	import { user, initializeUser } from '../../../../stores/user';
+	import { ApiError, apiFetch, apiUrl, getApiBaseUrl } from '$lib/api';
+	import Badge from '$lib/components/ui/Badge.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import Input from '$lib/components/ui/Input.svelte';
+	import { modals, providers, type SelectOption } from './models';
+	import { formSchema } from './schema';
 
-	import { string, type z } from 'zod';
-
-	import { writable } from 'svelte/store';
-	import SetComp from '$lib/../components/settings.svelte';
-	export let data;
-	type FormSchema = {
-		github: string;
-		aws: { accessKey: string; secretKey: string };
-		llm: string;
-		demo: { endpoint: string; apiKey: string };
-	};
-	let initialized = false;
-	const modals = [
-		{ label: 'Llama3.2', provider: 'local', value: 'llama3.2' },
-		{ label: 'Llama3.1', provider: 'local', value: 'llama3.1' },
-		{ label: 'Llama3.3(70B)', provider: 'local', value: 'llama3.3' },
-		{ label: 'Mixtral 8x7B', provider: 'local', value: 'mixtral' },
-		{ label: 'QWQ', provider: 'local', value: 'qwq' },
-		{ label: 'Phi 4', provider: 'local', value: 'phi-4' },
-		{ label: 'Command R +', provider: 'local', value: 'cmdR' },
-
-		{ label: 'GPT-4o', provider: 'openai', value: 'gpt-4o' },
-		{ label: 'GPT-4o-mini', provider: 'openai', value: 'gpt-4o-mini' },
-		{ label: 'GPT-o1', provider: 'openai', value: 'gpt-o1' },
-		{ label: 'GPT-o1-mini', provider: 'openai', value: 'gpt-o1-mini' },
-
-		{ label: 'Gemini 2.0 Flash', provider: 'gemini', value: 'gemini-2.0-flash' },
-		{ label: 'Gemini 1.5 Flash', provider: 'gemini', value: 'gemini-1.5-flash' },
-		{ label: 'Gemini 1.5 Pro', provider: 'gemini', value: 'gemini-1.5-pro' },
-
-		{ label: 'Claude 3.5 Sonnet', provider: 'anthropic', value: '3.5-sonnet' },
-		{ label: 'Claude 3.5 Haiku', provider: 'anthropic', value: '3.5-haiku' },
-		{ label: 'Claude 3 Opus', provider: 'anthropic', value: '3-opus' },
-
-		{ label: 'DeepSeek V3', provider: 'deepseek', value: 'deepseek-v3' }
-	] as const;
-	const providers = [
-		{ label: 'OpenAI', value: 'openai' },
-		{ label: 'ByteLlama', value: 'local' },
-		{ label: 'Anthropic', value: 'anthropic' },
-		{ label: 'Gemini', value: 'gemini' },
-		{ label: 'DeepSeek', value: 'deepseek' }
-	] as const;
-	const DEFAULT_CREDS: UserCreds = {
-		github: '',
-		aws: { accessKey: '', secretKey: '' },
-		llmConfig: {
-			provider: '',
-			providers: {}
-		},
-		demo: { endpoint: '', apiKey: '' }
-	};
-	const mform = superForm(data.form, {
-		validators: zod4Client(formSchema),
-		dataType: 'json',
-		onError: ({ result }) => {
-			console.error('Form validation failed:', result);
-		}
-	});
-	const { form, errors, enhance } = mform;
-
-	// State management
-	let userCreds: UserCreds = DEFAULT_CREDS;
-	let client: User | null = null;
-	type Modal = (typeof modals)[number]['value'];
-	type Provider = (typeof providers)[number]['value'];
-	const menuItemsMap = new Map<string, string>([
-		['Home', '/home '],
-		['Profile', '/home/settings/profile'],
-		['Integrations', '/home/settings/integrations'],
-		['Settings', '/home/settings/profile']
-	]);
-	// edit personal info, delete acc
-	// edit, add or delete API INFO
-	const getBaseUrl = async () => {
-		return 'http://localhost:8081';
-	};
-	type AIProvider = {
+	interface ProviderModel {
 		modal: string;
 		apiKey: string;
-	};
-	type UserCreds = {
-		github: string;
-		aws: { accessKey: string; secretKey: string };
-		llmConfig: { provider: string; providers: Record<string, AIProvider> };
-		demo: { endpoint: string; apiKey: string };
-	};
-
-	async function GitLink() {
-		try {
-			const baseUrl = await getBaseUrl();
-			// First, send user data
-
-			const popup = window.open(`${baseUrl}/link`, '_blank', 'width=600,height=600');
-
-			if (!popup) {
-				console.error('Failed to open popup window');
-				return false;
-			}
-
-			return true;
-		} catch (error) {
-			console.error('Error during link process:', error);
-			return false;
-		}
-		// check that link response on get and post is 200
-	}
-	async function subLink() {
-		try {
-			const baseUrl = await getBaseUrl();
-			const userData: UserLink = {
-				UUID: client?.uuid || '',
-				Name: client?.name || '',
-				Email: client?.email || '',
-				awsCreds: {
-					accessKeyId: $form.aws.accessKey,
-					secretAccessKey: $form.aws.secretKey
-				},
-				llmConfig: {
-					provider: $form.llm.provider,
-					providers: $form.llm.providers
-				},
-				portfolio: {
-					rootEndpoint: $form.demo.endpoint,
-					apiKey: $form.demo.apiKey
-				}
-			};
-			console.log('User: ', userData);
-			const response = await fetch(`${baseUrl}/link`, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				},
-				credentials: 'include',
-				body: JSON.stringify(userData)
-			});
-
-			if (!response.ok) {
-				throw new Error('Failed to initialize link process');
-			}
-		} catch (error) {
-			console.error('Error during link process:', error);
-			return false;
-		}
-	}
-	async function getCurrent(user: User, baseUrl: string): Promise<UserCreds> {
-		if (!user?.uuid) {
-			console.log('No user found');
-			return DEFAULT_CREDS;
-		}
-
-		try {
-			const response = await fetch(`${baseUrl}/user/${user.uuid}/creds`, {
-				method: 'GET',
-				credentials: 'include'
-			});
-
-			if (!response.ok) {
-				throw new Error('Failed to fetch credentials');
-			}
-
-			const resp = await response.json();
-			return {
-				github: resp.git.Token === '' ? 'Not Linked' : 'Authenticated',
-				aws: {
-					accessKey: resp.awsCreds.AccessKeyID,
-					secretKey: resp.awsCreds.SecretAccessKey
-				},
-				llmConfig: {
-					provider: resp.llmConfig.provider,
-					providers: resp.llmConfig.providers
-				},
-				demo: {
-					endpoint: resp.portfolio.RootEndpoint,
-					apiKey: resp.portfolio.APIKey
-				}
-			};
-		} catch (error) {
-			console.error('Error fetching credentials:', error);
-			return DEFAULT_CREDS;
-		}
 	}
 
-	// Handle user authentication and initialization
-	const unsubscribe = user.subscribe(async (value) => {
-		if (value.status === 'pending') {
-			console.log('User state pending...');
-			return;
+	// Field names are read defensively: the Go models mix tagged and untagged
+	// fields, so one value can arrive as `api_key` or as `APIKey`.
+	type Json = Record<string, unknown>;
+
+	function asRecord(value: unknown): Json {
+		return value !== null && typeof value === 'object' ? (value as Json) : {};
+	}
+
+	function firstString(...values: unknown[]): string {
+		for (const value of values) {
+			if (typeof value === 'string') return value;
 		}
+		return '';
+	}
 
-		if (value.status !== 'authenticated') {
-			if (browser) {
-				console.log('User unauthenticated, redirecting...');
-				goto('/login');
-			}
-			return;
-		}
+	/** Merge the tagged and untagged spellings of one nested object. */
+	function pick(root: Json, ...keys: string[]): Json {
+		return keys.reduce<Json>((merged, key) => ({ ...merged, ...asRecord(root[key]) }), {});
+	}
 
-		client = value.data;
-		console.log('Authenticated user:', client);
+	let githubToken = $state('');
+	let awsAccessKey = $state('');
+	let awsSecretKey = $state('');
+	let provider = $state('');
+	let providerModels = $state<Record<string, ProviderModel>>({});
+	let portfolioEndpoint = $state('');
+	let portfolioKey = $state('');
 
-		if (client) {
-			const baseUrl = await getBaseUrl();
-			userCreds = await getCurrent(client, baseUrl);
-			console.log('UCP: ', userCreds);
+	let snapshot = $state('');
+	let loading = $state(true);
+	let saving = $state(false);
+	let loadError = $state('');
+	let fieldErrors = $state<Record<string, string>>({});
+	let feedback = $state<{ kind: 'saved' | 'error'; message: string } | null>(null);
+	let linkPending = $state(false);
 
-			// Update form with fetched credentials
-			form.set({
-				github: userCreds.github,
-				aws: userCreds.aws,
-				llm: userCreds.llmConfig,
-				demo: userCreds.demo
-			});
+	const githubLinked = $derived(githubToken.trim().length > 0);
 
-			console.log('Form:', $form.llm);
-		}
+	function currentSnapshot(): string {
+		return JSON.stringify({
+			githubToken,
+			awsAccessKey,
+			awsSecretKey,
+			provider,
+			providerModels,
+			portfolioEndpoint,
+			portfolioKey
+		});
+	}
+
+	const dirty = $derived(snapshot !== '' && currentSnapshot() !== snapshot);
+
+	// One place decides what the header reports, so the label and its colour
+	// cannot disagree.
+	const statusLabel = $derived(
+		loading
+			? 'Loading'
+			: saving
+				? 'Saving'
+				: feedback?.kind === 'saved'
+					? feedback.message
+					: dirty
+						? 'Unsaved changes'
+						: ''
+	);
+	const statusClass = $derived(
+		`text-[12px] ${!loading && !saving && feedback?.kind === 'saved' ? 'text-dark-primary' : 'text-dark-onSurfaceVariant'}`
+	);
+
+	const providerOptions = $derived<SelectOption[]>(
+		provider.length > 0 && !providers.some((entry) => entry.value === provider)
+			? [{ label: `${provider} (saved)`, value: provider }, ...providers]
+			: [...providers]
+	);
+
+	const modelOptions = $derived.by<SelectOption[]>(() => {
+		const known = modals
+			.filter((modal) => modal.provider === provider)
+			.map((modal) => ({ label: modal.label, value: modal.value }));
+		const current = providerModels[provider]?.modal ?? '';
+		if (current.length === 0 || known.some((entry) => entry.value === current)) return known;
+		return [{ label: `${current} (saved)`, value: current }, ...known];
 	});
+
+	async function loadCreds() {
+		const uuid = $user.data?.uuid;
+		if (!uuid) {
+			loading = false;
+			loadError = 'No signed-in user, so credentials could not be loaded.';
+			return;
+		}
+		loading = true;
+		loadError = '';
+		try {
+			const body = asRecord(await apiFetch<unknown>(`/user/${uuid}/creds`));
+			const aws = pick(body, 'AwsCreds', 'awsCreds');
+			const git = pick(body, 'Git', 'git');
+			const llm = pick(body, 'LLMConfig', 'llmConfig');
+			const portfolio = pick(body, 'Portfolio', 'portfolio');
+
+			githubToken = firstString(git.Token, git.token);
+			awsAccessKey = firstString(aws.AccessKeyID, aws.accessKeyId);
+			awsSecretKey = firstString(aws.SecretAccessKey, aws.secretAccessKey);
+			provider = firstString(llm.provider, llm.Provider);
+
+			const loaded: Record<string, ProviderModel> = {};
+			for (const [key, value] of Object.entries(pick(llm, 'providers', 'Providers'))) {
+				const entry = asRecord(value);
+				loaded[key] = {
+					modal: firstString(entry.modal, entry.Modal),
+					apiKey: firstString(entry.api_key, entry.apiKey, entry.APIKey)
+				};
+			}
+			providerModels = loaded;
+			portfolioEndpoint = firstString(portfolio.RootEndpoint, portfolio.rootEndpoint);
+			portfolioKey = firstString(portfolio.APIKey, portfolio.apiKey);
+			snapshot = currentSnapshot();
+		} catch (error) {
+			loadError =
+				error instanceof ApiError
+					? `Loading credentials failed with HTTP ${error.status}.`
+					: 'Could not reach the BytePort backend to load credentials.';
+		} finally {
+			loading = false;
+		}
+	}
+
+	function clearFeedback() {
+		if (feedback) feedback = null;
+	}
+
+	function selectProvider(next: string) {
+		provider = next;
+		if (next.length > 0 && !providerModels[next]) {
+			providerModels = { ...providerModels, [next]: { modal: '', apiKey: '' } };
+		}
+		clearFeedback();
+	}
+
+	function patchProvider(patch: Partial<ProviderModel>) {
+		if (provider.length === 0) return;
+		const existing = providerModels[provider] ?? { modal: '', apiKey: '' };
+		providerModels = { ...providerModels, [provider]: { ...existing, ...patch } };
+		clearFeedback();
+	}
+
+	async function save() {
+		clearFeedback();
+		fieldErrors = {};
+
+		const parsed = formSchema.safeParse({
+			awsAccessKey,
+			awsSecretKey,
+			provider,
+			portfolioEndpoint,
+			portfolioKey
+		});
+		if (!parsed.success) {
+			const errors: Record<string, string> = {};
+			for (const issue of parsed.error.issues) {
+				const path = issue.path.join('.');
+				if (!errors[path]) errors[path] = issue.message;
+			}
+			fieldErrors = errors;
+			feedback = { kind: 'error', message: 'Check the highlighted fields.' };
+			return;
+		}
+
+		saving = true;
+		try {
+			// Mirrors UserLink from src/stores/user.ts. `api_key` travels beside
+			// `apiKey` because the backend's AIProvider struct tags the field
+			// `json:"api_key"` and Go's decoder will not match `apiKey` to it.
+			const payload = {
+				UUID: $user.data?.uuid ?? '',
+				Name: $user.data?.name ?? '',
+				Email: $user.data?.email ?? '',
+				awsCreds: { accessKeyId: awsAccessKey, secretAccessKey: awsSecretKey },
+				llmConfig: {
+					provider,
+					providers: Object.fromEntries(
+						Object.entries(providerModels).map(([key, entry]) => [
+							key,
+							{ modal: entry.modal, apiKey: entry.apiKey, api_key: entry.apiKey }
+						])
+					)
+				},
+				portfolio: { rootEndpoint: portfolioEndpoint, apiKey: portfolioKey }
+			};
+
+			await apiFetch('/link', { method: 'POST', body: JSON.stringify(payload) });
+			snapshot = currentSnapshot();
+			feedback = { kind: 'saved', message: 'Integrations saved.' };
+		} catch (error) {
+			let detail = '';
+			if (error instanceof ApiError) {
+				const body = asRecord(error.body);
+				detail = firstString(body.details, body.error, body.message);
+			}
+			feedback = {
+				kind: 'error',
+				message: detail ? `Could not save: ${detail}` : 'Could not save your integrations.'
+			};
+		} finally {
+			saving = false;
+		}
+	}
+
+	function reset() {
+		void loadCreds();
+		fieldErrors = {};
+		clearFeedback();
+	}
+
+	/**
+	 * Opens the backend's interactive link flow, then re-reads credentials once
+	 * the popup closes. The previous page reported success on open, which
+	 * claimed a link that may never have completed.
+	 */
+	function linkGitHub() {
+		linkPending = true;
+		const popup = window.open(apiUrl('/link'), '_blank', 'width=600,height=600');
+		if (!popup) {
+			linkPending = false;
+			feedback = {
+				kind: 'error',
+				message: 'The link window was blocked. Allow popups for this app and try again.'
+			};
+			return;
+		}
+		const poll = window.setInterval(() => {
+			if (!popup.closed) return;
+			window.clearInterval(poll);
+			linkPending = false;
+			void loadCreds();
+		}, 700);
+	}
 
 	onMount(() => {
-		const baseUrl = 'http://localhost:8081';
-		initializeUser(baseUrl);
+		let started = false;
+		const unsubscribe = user.subscribe((value) => {
+			if (value.status === 'unauthenticated') {
+				goto('/login');
+				return;
+			}
+			if (value.status === 'authenticated' && !started) {
+				started = true;
+				void loadCreds();
+			}
+		});
+		void initializeUser(getApiBaseUrl());
 		return unsubscribe;
 	});
+
+	const sectionLabel =
+		'text-[11px] font-medium tracking-wide text-dark-onSurfaceVariant uppercase';
+	const sectionHelp = 'mt-0.5 text-[12px] text-dark-onSurfaceVariant';
+	const panel = 'rounded-lg border border-border bg-dark-surfaceContainer p-4';
+	const labelClass = 'text-[12px] font-medium tracking-wide text-dark-onSurfaceVariant';
+	const controlClass =
+		'h-9 w-full rounded-md border border-border bg-dark-surfaceContainerLowest px-3 text-sm text-dark-onSurface focus:outline-none focus:ring-2 focus:ring-ring/60';
 </script>
 
-<div class="bg-dark-surface flex h-screen w-screen overflow-x-hidden" id="mainDashPar">
-	<div
-		class="flex-ro bg-dark-surfaceContainer h-5/5 w-1/5 items-center justify-center"
-		id="sideBar"
+<div class="mx-auto max-w-3xl">
+	<form
+		class="space-y-6"
+		onsubmit={(event) => {
+			event.preventDefault();
+			void save();
+		}}
 	>
-		<button on:click={() => goto('/home')}>
-			<img class="py-10" alt="BytePort" src="/src/assets/img/byte.png" />
-		</button>``
-		<div id="sideBarProfileCont"></div>
-		<ul class="" id="menuList">
-			{#each [...menuItemsMap] as [key, value]}
-				<li class=" text-md w-5/5 py-2 text-center text-white">
-					<button
-						class="hover:bg-dark-surfaceContainerHigh active:bg-dark-surfaceContainer active:text-dark-surfaceBright w-4/5 py-2 text-center transition-all hover:-translate-y-1
-						hover:rounded-full active:translate-y-0.5"
-						on:click={() => {
-							if (!value.includes('home')) {
-								const mainBody = document.getElementById('bodyCont');
-								if (mainBody) {
-									mainBody.setAttribute('item', value);
-								}
-							}
-							goto(value);
-						}}
-					>
-						{key}
-					</button>
-				</li>
-			{/each}
-		</ul>
-	</div>
+		<div class="flex items-center justify-end gap-3">
+			<span class={statusClass} aria-live="polite">{statusLabel}</span>
+			<Button variant="ghost" size="sm" disabled={loading || saving} onclick={reset}
+				>Reload</Button
+			>
+			<Button
+				variant="primary"
+				size="sm"
+				disabled={loading || !dirty}
+				loading={saving}
+				onclick={() => void save()}
+			>
+				Save changes
+			</Button>
+		</div>
 
-	<div id="body" class="w-4/5">
-		<div
-			id="header"
-			class=" bg-dark-surfaceContainerLow h-1/5 w-5/5 flex-col justify-between ps-2.5"
-		>
-			<div id="headerNav" class="h-3/5 pt-2.5">
-				<div class="flex justify-end pe-2.5" id="navRight">
-					<Icon
-						class="hover:text-dark-primary active:text-dark-surfaceBright mx-1 h-6 w-6 cursor-pointer text-white"
-						icon="ic:baseline-notifications"
-					/>
-					<Icon
-						class="hover:text-dark-primary active:text-dark-surfaceBright mx-1 h-6 w-6 cursor-pointer text-white"
-						on:click={() => goto('/home/settings')}
-						icon="ic:baseline-account-circle"
-					/>
+		{#snippet notice(message: string)}
+			<div
+				class="border-dark-error/40 bg-dark-errorContainer/40 rounded-lg border px-4 py-3"
+				role="alert"
+			>
+				<p class="text-dark-onSurface text-[13px]">{message}</p>
+			</div>
+		{/snippet}
+
+		{#snippet selectField(
+			id: string,
+			label: string,
+			value: string,
+			options: SelectOption[],
+			placeholder: string,
+			onchange: (next: string) => void,
+			disabled: boolean
+		)}
+			<div class="flex flex-col gap-1.5">
+				<label class={labelClass} for={id}>{label}</label>
+				<select
+					{id}
+					class={controlClass}
+					{value}
+					{disabled}
+					onchange={(event) => onchange(event.currentTarget.value)}
+				>
+					<option value="" disabled>{placeholder}</option>
+					{#each options as option (option.value)}
+						<option value={option.value}>{option.label}</option>
+					{/each}
+				</select>
+			</div>
+		{/snippet}
+
+		{#if loadError}
+			{@render notice(loadError)}
+		{:else if feedback?.kind === 'error'}
+			{@render notice(feedback.message)}
+		{/if}
+
+		<section class="space-y-2">
+			<div class="px-1">
+				<h2 class={sectionLabel}>Source control</h2>
+				<p class={sectionHelp}>Connect GitHub so BytePort can read your repositories.</p>
+			</div>
+			<div class={panel}>
+				<div class="flex items-center justify-between gap-4">
+					<div class="min-w-0">
+						<p class="text-[13px] font-medium">GitHub account</p>
+						<p class="text-dark-onSurfaceVariant text-[12px]">
+							{githubLinked
+								? 'A token is stored for this account.'
+								: 'No token stored. Linking opens a GitHub window.'}
+						</p>
+					</div>
+					<div class="flex shrink-0 items-center gap-3">
+						<Badge tone={githubLinked ? 'primary' : 'neutral'} dot>
+							{githubLinked ? 'linked' : 'not linked'}
+						</Badge>
+						<Button
+							variant="secondary"
+							size="sm"
+							loading={linkPending}
+							onclick={linkGitHub}
+						>
+							{githubLinked ? 'Relink' : 'Link GitHub'}
+						</Button>
+					</div>
 				</div>
 			</div>
-			<div id="headerContent" class="h-2/5 text-4xl text-white">Settings</div>
-		</div>
-		<div id="mainBody">
-			<form method="POST" class="space-y-8" use:enhance>
-				<div class="openAICard align-center flex flex-row gap-3">
-					<Form.Field class=" " name="github" form={mform}>
-						<Form.Control let:attrs>
-							<Form.Label class="flex gap-1"
-								><Icon icon="mdi:github"></Icon>Github</Form.Label
-							>
-							<div class="  flex flex-row gap-2">
-								{#if $form.github === 'Not Linked'}
-									<Button.Root
-										class="   "
-										on:click={() => {
-											GitLink();
-											$form.github = 'Authenticated';
-										}}><Icon icon="mdi:github"></Icon>Link</Button.Root
-									>
-								{:else}
-									<Button.Root class="w-[100px]  "
-										><Icon icon="mdi:check"></Icon>Linked</Button.Root
-									>
-									<Button.Root
-										class="bg-dark-secondaryContainer  w-[50px] "
-										on:click={() => {
-											$form.github = 'Not Linked';
-											//validate('github');
-										}}
-										><Icon
-											icon="mdi:close-circle"
-											class="text-destructive-foreground"
-										></Icon>
-									</Button.Root>
-								{/if}
-							</div>
-						</Form.Control>
-						<Form.FieldErrors />
-					</Form.Field>
-					<Form.Field class=" " name="aws" form={mform}>
-						<Form.Control let:attrs>
-							<Form.Label>AWS Access Key</Form.Label>
-							<Input {...attrs} bind:value={$form.aws.accessKey as string} />
-							<Form.Label>AWS Secret Key</Form.Label>
-							<Input
-								{...attrs}
-								type="password"
-								bind:value={$form.aws.secretKey as string}
-							/>
-						</Form.Control>
-						<Form.FieldErrors />
-					</Form.Field>
-					<Form.Field form={mform} name="llm" class="flex flex-col justify-center">
-						<Popover.Root>
-							<Form.Control let:attrs>
-								<Form.Label>Provider</Form.Label>
-								<Popover.Trigger
-									role="combobox"
-									class={cn(
-										buttonVariants({ variant: 'outline' }),
-										'w-[200px] justify-between',
-										!$form.llm.provider && 'text-muted-foreground'
-									)}
-									{...attrs}
-								>
-									{providers.find(
-										(provider) => provider.value === $form.llm.provider
-									)?.label || 'Select a provider'}
-									<CaretSort class="ml-2 size-4 shrink-0 opacity-50" />
-								</Popover.Trigger>
-							</Form.Control>
-							<Popover.Content class="w-[200px] p-0">
-								<Command.Root>
-									<Command.List>
-										{#each providers as provider}
-											<Command.Item
-												value={provider.label}
-												onSelect={() => {
-													$form.llm.provider = provider.value;
-													// Initialize provider if it doesn't exist
-													if (!$form.llm.providers[provider.value]) {
-														$form.llm.providers[provider.value] = {
-															modal: '',
-															apiKey: ''
-														};
-													}
-												}}
-											>
-												<Check
-													class={cn(
-														'mr-2 size-4',
-														provider.value === $form.llm.provider
-															? 'opacity-100'
-															: 'opacity-0'
-													)}
-												/>
-												{provider.label}
-											</Command.Item>
-										{/each}
-									</Command.List>
-								</Command.Root>
-							</Popover.Content>
-						</Popover.Root>
+		</section>
 
-						{#if $form.llm.provider != ''}
-							<Popover.Root>
-								<Form.Control let:attrs>
-									<Form.Label>Model</Form.Label>
-									<Popover.Trigger
-										role="combobox"
-										class={cn(
-											buttonVariants({ variant: 'outline' }),
-											'w-[200px] justify-between'
-										)}
-										{...attrs}
-									>
-										{#if $form.llm.provider && $form.llm.providers[$form.llm.provider]}
-											{modals.find(
-												(modal) =>
-													modal.value ===
-														$form.llm.providers[$form.llm.provider]
-															.modal &&
-													modal.provider === $form.llm.provider
-											)?.label || 'Select a Model'}
-										{:else}
-											Select a Model
-										{/if}
-										<CaretSort class="ml-2 size-4 shrink-0 opacity-50" />
-									</Popover.Trigger>
-								</Form.Control>
-								<Popover.Content class="w-[200px] p-0">
-									<Command.Root>
-										<Command.List>
-											{#each modals.filter((modal) => modal.provider === $form.llm.provider) as modal}
-												<Command.Item
-													value={modal.label}
-													onSelect={() => {
-														if (
-															$form.llm.providers[$form.llm.provider]
-														) {
-															$form.llm.providers[
-																$form.llm.provider
-															].modal = modal.value;
-														}
-													}}
-												>
-													<Check
-														class={cn(
-															'mr-2 size-4',
-															$form.llm.providers[$form.llm.provider]
-																?.modal === modal.value
-																? 'opacity-100'
-																: 'opacity-0'
-														)}
-													/>
-													{modal.label}
-												</Command.Item>
-											{/each}
-										</Command.List>
-									</Command.Root>
-								</Popover.Content>
-							</Popover.Root>
-						{/if}
+		<section class="space-y-2">
+			<div class="px-1">
+				<h2 class={sectionLabel}>Cloud provider</h2>
+				<p class={sectionHelp}>Validated against AWS when you save, then encrypted.</p>
+			</div>
+			<div class="{panel} space-y-4">
+				<Input
+					label="AWS access key ID"
+					error={fieldErrors['awsAccessKey'] ?? ''}
+					value={awsAccessKey}
+					autocomplete="off"
+					spellcheck={false}
+					oninput={(event) => {
+						awsAccessKey = event.currentTarget.value;
+						clearFeedback();
+					}}
+				/>
+				<Input
+					label="AWS secret access key"
+					error={fieldErrors['awsSecretKey'] ?? ''}
+					type="password"
+					value={awsSecretKey}
+					autocomplete="off"
+					oninput={(event) => {
+						awsSecretKey = event.currentTarget.value;
+						clearFeedback();
+					}}
+				/>
+			</div>
+		</section>
 
-						{#if $form.llm.provider && $form.llm.provider !== 'local'}
-							<Form.Control let:attrs>
-								<Form.Label>{$form.llm.provider} API Key</Form.Label>
-								<Input
-									type="password"
-									{...attrs}
-									bind:value={$form.llm.providers[$form.llm.provider].apiKey}
-								/>
-							</Form.Control>
-						{/if}
-					</Form.Field>
+		<section class="space-y-2">
+			<div class="px-1">
+				<h2 class={sectionLabel}>AI provider</h2>
+				<p class={sectionHelp}>Generates the project templates BytePort deploys.</p>
+			</div>
+			<div class="{panel} space-y-4">
+				{@render selectField(
+					'llm-provider',
+					'Provider',
+					provider,
+					providerOptions,
+					'Select a provider',
+					selectProvider,
+					false
+				)}
+				{@render selectField(
+					'llm-model',
+					'Model',
+					providerModels[provider]?.modal ?? '',
+					modelOptions,
+					'Select a model',
+					(next: string) => patchProvider({ modal: next }),
+					provider.length === 0 || modelOptions.length === 0
+				)}
+				{#if provider.length > 0 && provider !== 'local'}
+					<Input
+						label="API key"
+						hint="Shown because the backend returns it decrypted for this account."
+						type="password"
+						value={providerModels[provider]?.apiKey ?? ''}
+						autocomplete="off"
+						oninput={(event) => patchProvider({ apiKey: event.currentTarget.value })}
+					/>
+				{:else if provider === 'local'}
+					<p class="text-dark-onSurfaceVariant text-[12px]">
+						ByteLlama models run locally, so no API key is needed.
+					</p>
+				{/if}
+			</div>
+		</section>
 
-					<Form.Field class=" " name="demo" form={mform}>
-						<Form.Control let:attrs>
-							<Form.Label>Portfolio URL</Form.Label>
-							<Input {...attrs} bind:value={$form.demo.endpoint as string} />
-							<Form.Label>Portfolio Key</Form.Label>
-							<Input
-								{...attrs}
-								type="password"
-								bind:value={$form.demo.apiKey as string}
-							/>
-						</Form.Control>
-						<Form.FieldErrors />
-					</Form.Field>
-				</div>
-				<Form.Button on:click={() => subLink()}>Save Integrations</Form.Button>
-			</form>
-
-			{#if browser}
-				<SuperDebug data={$form} />
-			{/if}
-		</div>
-		<div id="footer"></div>
-	</div>
+		<section class="space-y-2">
+			<div class="px-1">
+				<h2 class={sectionLabel}>Portfolio</h2>
+				<p class={sectionHelp}>Where BytePort publishes the generated templates.</p>
+			</div>
+			<div class="{panel} space-y-4">
+				<Input
+					label="Endpoint URL"
+					error={fieldErrors['portfolioEndpoint'] ?? ''}
+					value={portfolioEndpoint}
+					autocomplete="off"
+					spellcheck={false}
+					oninput={(event) => {
+						portfolioEndpoint = event.currentTarget.value;
+						clearFeedback();
+					}}
+				/>
+				<Input
+					label="API key"
+					error={fieldErrors['portfolioKey'] ?? ''}
+					type="password"
+					value={portfolioKey}
+					autocomplete="off"
+					oninput={(event) => {
+						portfolioKey = event.currentTarget.value;
+						clearFeedback();
+					}}
+				/>
+			</div>
+		</section>
+	</form>
 </div>
-
-<style>
-</style>

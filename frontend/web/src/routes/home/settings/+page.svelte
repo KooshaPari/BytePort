@@ -1,110 +1,97 @@
 <script lang="ts">
-	import Icon from '@iconify/svelte';
-
+	/**
+	 * Settings index.
+	 *
+	 * Was a shell with an empty body: the sidebar pointed "Integrations" at the
+	 * profile route, and the main pane rendered nothing at all. It now indexes
+	 * the two settings areas as grouped rows, each with a one-line description,
+	 * and states the signed-in identity so the page is never a blank pane.
+	 */
 	import { onMount } from 'svelte';
-	import type { User } from '$lib/../stores/user';
-	import * as Button from '$lib/components/ui/button';
-	import { setUser, user, initializeUser } from '$lib/../stores/user';
-
 	import { goto } from '$app/navigation';
+	import { user, initializeUser } from '../../../stores/user';
+	import { getApiBaseUrl } from '$lib/api';
 
-	let client: User | null = null;
+	interface SettingsRow {
+		label: string;
+		description: string;
+		href: string;
+	}
 
-	const menuItemsMap = new Map<string, string>([
-		['Home', '/home '],
-		['Profile', '/home/settings/profile'],
-		['Integrations', '/home/settings/profile'],
-		['Settings', '/home/settings']
-	]);
-	// edit personal info, delete acc
-	// edit, add or delete API INFO
-	const getBaseUrl = async () => {
-		return 'http://localhost:8081';
-	};
-	const unsubscribe = user.subscribe((value) => {
-		// Handle pending state
-		if (value.status === 'pending') {
-			console.log('User state pending...');
-			return; // Wait for initialization to complete
+	// Grouped deliberately: identity in one group, outbound connections in the
+	// other. Order matches how often each is opened.
+	const groups: { title: string; rows: SettingsRow[] }[] = [
+		{
+			title: 'Your account',
+			rows: [
+				{
+					label: 'Profile',
+					description: 'Display name, email address and password.',
+					href: '/home/settings/profile'
+				}
+			]
+		},
+		{
+			title: 'Connections',
+			rows: [
+				{
+					label: 'Integrations',
+					description: 'GitHub, AWS, AI provider keys and the portfolio endpoint.',
+					href: '/home/settings/integrations'
+				}
+			]
 		}
+	];
 
-		// Redirect if unauthenticated
-		if (value.status !== 'authenticated') {
-			console.log('User unauthenticated, redirecting...');
-			goto('/login');
-		} else {
-			console.log('Authenticated user:', value.data);
-			// Perform actions for authenticated user
-			client = value.data; // Assign the authenticated user to `client`
-		}
-	});
+	const sectionLabel =
+		'px-1 text-[11px] font-medium tracking-wide text-dark-onSurfaceVariant uppercase';
 
 	onMount(() => {
-		getBaseUrl().then((baseUrl) => {
-			console.log('Base URL:', baseUrl);
-			// Ensure the user initialization is complete
-			initializeUser(baseUrl);
+		const unsubscribe = user.subscribe((value) => {
+			if (value.status === 'unauthenticated') {
+				goto('/login');
+			}
 		});
+		void initializeUser(getApiBaseUrl());
 		return unsubscribe;
 	});
 </script>
 
-<div class="bg-dark-surface flex h-screen w-screen overflow-x-hidden" id="mainDashPar">
-	<div
-		class="flex-ro bg-dark-surfaceContainer h-5/5 w-1/5 items-center justify-center"
-		id="sideBar"
-	>
-		<button on:click={() => goto('/home')}>
-			<img class="py-10" alt="BytePort" src="/src/assets/img/byte.png" />
-		</button>``
-		<div id="sideBarProfileCont"></div>
-		<ul class="" id="menuList">
-			{#each [...menuItemsMap] as [key, value]}
-				<li class=" text-md w-5/5 py-2 text-center text-white">
-					<button
-						class="hover:bg-dark-surfaceContainerHigh active:bg-dark-surfaceContainer active:text-dark-surfaceBright w-4/5 py-2 text-center transition-all hover:-translate-y-1
-						hover:rounded-full active:translate-y-0.5"
-						on:click={() => {
-							if (!value.includes('home')) {
-								const mainBody = document.getElementById('bodyCont');
-								if (mainBody) {
-									mainBody.setAttribute('item', value);
-								}
-							}
-							goto(value);
-						}}
+<div class="mx-auto max-w-3xl space-y-6">
+	{#each groups as group (group.title)}
+		<section class="space-y-2">
+			<h2 class={sectionLabel}>{group.title}</h2>
+			<div class="border-border bg-dark-surfaceContainer overflow-hidden rounded-lg border">
+				{#each group.rows as row (row.href)}
+					<a
+						href={row.href}
+						class="border-border/60 hover:bg-dark-surfaceContainerHigh flex items-center justify-between gap-4 border-b px-4 py-3 transition-colors last:border-b-0"
 					>
-						{key}
-					</button>
-				</li>
-			{/each}
-		</ul>
-	</div>
-
-	<div id="body" class="w-4/5">
-		<div
-			id="header"
-			class=" bg-dark-surfaceContainerLow h-1/5 w-5/5 flex-col justify-between ps-2.5"
-		>
-			<div id="headerNav" class="h-3/5 pt-2.5">
-				<div class="flex justify-end pe-2.5" id="navRight">
-					<Icon
-						class="hover:text-dark-primary active:text-dark-surfaceBright mx-1 h-6 w-6 cursor-pointer text-white"
-						icon="ic:baseline-notifications"
-					/>
-					<Icon
-						class="hover:text-dark-primary active:text-dark-surfaceBright mx-1 h-6 w-6 cursor-pointer text-white"
-						on:click={() => goto('/settings')}
-						icon="ic:baseline-account-circle"
-					/>
-				</div>
+						<span class="min-w-0">
+							<span class="text-dark-onSurface block text-[13px] font-medium"
+								>{row.label}</span
+							>
+							<span
+								class="text-dark-onSurfaceVariant mt-0.5 block text-[12px] leading-snug"
+							>
+								{row.description}
+							</span>
+						</span>
+						<svg
+							class="text-dark-onSurfaceVariant h-4 w-4 shrink-0"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="1.75"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							aria-hidden="true"
+						>
+							<path d="m9 18 6-6-6-6" />
+						</svg>
+					</a>
+				{/each}
 			</div>
-			<div id="headerContent" class="h-2/5 text-4xl text-white">Settings</div>
-		</div>
-		<div id="mainBody"></div>
-		<div id="footer"></div>
-	</div>
+		</section>
+	{/each}
 </div>
-
-<style>
-</style>
