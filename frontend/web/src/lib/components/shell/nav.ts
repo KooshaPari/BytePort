@@ -72,8 +72,10 @@ export const NAV_ENTRIES: NavEntry[] = [
 	}
 ];
 
-/** Top-level rows only, in the order they appear in the sidebar. */
-export const SIDEBAR_ENTRIES: NavEntry[] = NAV_ENTRIES.filter(
+/** Top-level rows only, in the order they appear in the sidebar. The type
+ * predicate is load-bearing: the explicit `NavEntry[]` annotation removed it and
+ * widened `item.icon` back to `NavIconName | undefined`. */
+export const SIDEBAR_ENTRIES = NAV_ENTRIES.filter(
 	(entry): entry is NavEntry & { icon: NavIconName } => Boolean(entry.icon)
 );
 

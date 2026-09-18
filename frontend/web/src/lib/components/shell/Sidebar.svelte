@@ -12,18 +12,22 @@
 	import Folder from 'lucide-svelte/icons/folder';
 	import Server from 'lucide-svelte/icons/server';
 	import Settings from 'lucide-svelte/icons/settings';
+	import type { Component } from 'svelte';
 	import { page } from '$app/state';
 	import NavItem from './NavItem.svelte';
 	import ProductMark from './ProductMark.svelte';
 	import UserChip from './UserChip.svelte';
 	import { SIDEBAR_ENTRIES, isActiveHref, type NavIconName } from './nav';
 
-	const icons: Record<NavIconName, typeof Folder> = {
+	// lucide ships Svelte 4 class components and Svelte 5's `Component` type does
+	// not accept them structurally, so the map is cast once here instead of at
+	// every render site.
+	const icons = {
 		projects: Folder,
 		instances: Server,
 		monitor: Activity,
 		settings: Settings
-	};
+	} as unknown as Record<NavIconName, Component>;
 
 	const pathname = $derived(page.url.pathname);
 </script>
