@@ -7,7 +7,7 @@ import (
 
 // Deployment represents a multi-cloud deployment
 type Deployment struct {
-	UUID        string  `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"uuid"`
+	UUID        string  `gorm:"type:uuid;primaryKey" json:"uuid"`
 	Name        string  `gorm:"type:varchar(255);not null" json:"name"`
 	Owner       string  `gorm:"type:uuid;not null;index" json:"owner"`
 	ProjectUUID *string `gorm:"type:uuid;index" json:"project_uuid,omitempty"`

@@ -5,7 +5,7 @@ import "time"
 // WorkOSUser represents the new user model for WorkOS AuthKit integration
 // This will eventually replace the existing User model
 type WorkOSUser struct {
-	UUID      string     `json:"uuid" gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
+	UUID      string     `json:"uuid" gorm:"type:uuid;primaryKey"`
 	WorkOSID  string     `json:"workos_id" gorm:"column:work_os_id;type:varchar(255);uniqueIndex;not null"` // WorkOS user ID
 	Name      string     `json:"name" gorm:"type:varchar(255);not null"`
 	Email     string     `json:"email" gorm:"type:varchar(255);uniqueIndex;not null"`

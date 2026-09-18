@@ -28,7 +28,7 @@ Type        string     `json:"type"`
 */
 type Project struct {
 	gorm.Model
-	UUID  string `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"uuid,omitempty"`
+	UUID  string `gorm:"type:uuid;primaryKey" json:"uuid,omitempty"`
 	ID    string `gorm:"type:text;not null" json:"id,omitempty"`
 	Owner string `gorm:"type:uuid;not null;index" json:"owner,omitempty"`
 	User  User   `gorm:"foreignKey:Owner;references:UUID" json:"user,omitempty"`

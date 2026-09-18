@@ -4,7 +4,7 @@ import "time"
 
 // add owning user uuid
 type Instance struct {
-	UUID          string        `gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
+	UUID          string        `gorm:"type:uuid;primaryKey"`
 	Owner         string        `gorm:"type:uuid;not null;index"`
 	ProjectUUID   string        `gorm:"type:uuid;index"`
 	Name          string        `gorm:"not null"`

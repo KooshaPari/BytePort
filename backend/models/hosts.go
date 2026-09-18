@@ -7,7 +7,7 @@ import (
 
 // Host represents a self-hosted deployment target
 type Host struct {
-	UUID  string `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"uuid"`
+	UUID  string `gorm:"type:uuid;primaryKey" json:"uuid"`
 	Owner string `gorm:"type:uuid;not null;index" json:"owner"`
 	Name  string `gorm:"type:varchar(255);not null" json:"name"`
 
