@@ -149,7 +149,9 @@ jobs:
         with:
           tool: cargo-machete
       - name: Run cargo machete
-        run: cargo machete .
+        # Only our own crates: vendor/clap-ext and src-tauri/vendor/aws-runtime
+        # are third-party sources whose unused deps are not ours to prune.
+        run: cargo machete crates frontend/web/src-tauri
 
   # ---------- Pre-commit (gates slow hooks to CI) ----------
   pre-commit:
