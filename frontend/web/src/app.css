@@ -1,5 +1,15 @@
+/*
+ * Order matters: `@import` must come first.
+ *
+ * CSS requires `@import` to precede every other rule. With `@config` on line 1,
+ * the `@import 'tailwindcss'` below it was a misplaced import, so the CSS parser
+ * in the Vite/rolldown pipeline dropped it silently. Nothing errored: the build
+ * succeeded but shipped with no Tailwind theme, no preflight and no utility
+ * layer, which is why every screen rendered as unstyled HTML. Tailwind's own
+ * standalone parser tolerates the wrong order, so only a real build shows it.
+ */
+@import '../node_modules/tailwindcss/index.css';
 @config '../tailwind.config.ts';
-@import 'tailwindcss';
 
 /*
  * BytePort theme tokens.
