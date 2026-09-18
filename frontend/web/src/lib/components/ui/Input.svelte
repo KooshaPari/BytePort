@@ -12,12 +12,18 @@
 		error = '',
 		hint = '',
 		class: klass = '',
+		// $bindable so `bind:value` works. Without it the prop was spread onto
+		// the DOM element and the binding silently compiled to one-way: the
+		// child updated its own input but never called back, so the parent's
+		// state never changed.
+		value = $bindable(''),
 		...rest
 	}: {
 		label?: string;
 		error?: string;
 		hint?: string;
 		class?: string;
+		value?: string | number;
 	} & HTMLInputAttributes = $props();
 
 	const id = `field-${Math.random().toString(36).slice(2, 9)}`;
@@ -31,6 +37,7 @@
 	{/if}
 	<input
 		{id}
+		bind:value
 		class="h-9 w-full rounded-md border bg-dark-surfaceContainerLowest px-3 text-sm
 			text-dark-onSurface placeholder:text-dark-onSurfaceVariant/60
 			transition-colors focus:outline-none focus:ring-2 focus:ring-ring/60

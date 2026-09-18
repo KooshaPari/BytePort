@@ -1,122 +1,65 @@
 <script lang="ts">
-	import Icon from '@iconify/svelte';
-
-	import { onMount } from 'svelte';
-	import type { User } from '../stores/user';
-	import { user, initializeUser } from '../stores/user';
+	/**
+	 * Entry route.
+	 *
+	 * The Tauri window loads `index.html`, which resolves here, so this is the
+	 * first thing the user sees. It previously rendered a second copy of the
+	 * sidebar (duplicating the app shell) and a product image pointing at
+	 * `/src/assets/img/byte.png`, a path that is never published in the bundle;
+	 * the real files are `Byte.png` / `BytePort.png` under `src/assets/img/`, and
+	 * `src/` is not served, so the brand slot showed a broken image.
+	 *
+	 * It now does one job: initialise the session, then hand off to `/home`,
+	 * which is wrapped by the real shell. The brief branded state below is what
+	 * shows during that hand-off.
+	 */
+	import { onMount, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { platform } from '@tauri-apps/plugin-os';
+	import { user, initializeUser } from '../stores/user';
+	import { getApiBaseUrl } from '$lib/api';
 
-	const getBaseUrl = async () => {
-		if ((window as any).__TAURI_INTERNALS__) {
-			// `platform()` reads window.__TAURI_OS_PLUGIN_INTERNALS__, which only
-			// exists when the Rust shell registers `tauri-plugin-os`. The shell
-			// currently registers only the log plugin, so the call throws a
-			// TypeError; that rejected this promise and skipped initializeUser
-			// entirely, leaving the dashboard with no user data.
-			let currentPlatform = 'unknown';
-			try {
-				currentPlatform = platform();
-			} catch (err) {
-				console.warn('platform() unavailable; defaulting to localhost backend', err);
-			}
-			console.log(currentPlatform);
-			switch (currentPlatform) {
-				case 'android':
-					return 'http://10.0.2.2:8081';
-				default:
-					return 'http://localhost:8081';
-			}
-		}
-		return 'http://localhost:8081';
-	};
-
-	let client: User | null = null;
-	// convert to map name, '/name'
-	const menuItemsMap = new Map<string, string>([
-		['Projects', '/home/projects'],
-
-		['Monitor', '/home/monitor'],
-		['Settings', '/home/settings/profile']
-	]);
-
-	const unsubscribe = user.subscribe((value) => {
-		// Handle pending state
-		if (value.status === 'pending') {
-			console.log('User state pending...');
-			return; // Wait for initialization to complete
-		}
-
-		// Redirect if unauthenticated
-		if (value.status !== 'authenticated') {
-			console.log('User unauthenticated, redirecting...');
-			goto('/login');
-		} else {
-			console.log('Authenticated user:', value.data);
-			// Perform actions for authenticated user
-			client = value.data; // Assign the authenticated user to `client`
-		}
-	});
+	let unsubscribe: (() => void) | undefined;
 
 	onMount(() => {
-		getBaseUrl().then((baseUrl) => {
-			console.log('Base URL:', baseUrl);
-			// Ensure the user initialization is complete
-			initializeUser(baseUrl);
+		unsubscribe = user.subscribe((value) => {
+			// Wait for initialisation to settle before deciding.
+			if (value.status === 'pending') return;
+
+			if (value.status === 'authenticated') {
+				goto('/home');
+			} else {
+				goto('/login');
+			}
 		});
-		return unsubscribe;
+
+		// Never throws: the base URL is resolved defensively in $lib/api.
+		initializeUser(getApiBaseUrl());
 	});
+
+	onDestroy(() => unsubscribe?.());
 </script>
 
-<div class="bg-dark-surface flex h-screen w-screen overflow-x-hidden" id="mainDashPar">
-	<div
-		class="flex-ro bg-dark-surfaceContainer h-5/5 w-1/5 items-center justify-center"
-		id="sideBar"
-	>
-		<button on:click={() => goto('/home')}>
-			<img class="py-10" alt="BytePort" src="/src/assets/img/byte.png" />
-		</button>
-		<div id="sideBarProfileCont"></div>
-		<ul class="" id="menuList">
-			{#each [...menuItemsMap] as [key, value]}
-				<li class=" text-md w-5/5 py-2 text-center text-white">
-					<button
-						class="hover:bg-dark-surfaceContainerHigh active:bg-dark-surfaceContainer active:text-dark-surfaceBright w-4/5 py-2 text-center transition-all hover:-translate-y-1
-						hover:rounded-full active:translate-y-0.5"
-						on:click={() => {
-							goto(value);
-						}}
-					>
-						{key}
-					</button>
-				</li>
-			{/each}
-		</ul>
-	</div>
-
-	<div id="body" class="w-4/5">
-		<div
-			id="header"
-			class=" bg-dark-surfaceContainerLow h-1/5 w-5/5 flex-col justify-between ps-2.5"
+<main class="flex h-screen w-screen items-center justify-center bg-dark-background">
+	<div class="flex flex-col items-center gap-3" role="status" aria-live="polite">
+		<span
+			class="flex h-9 w-9 items-center justify-center rounded-lg bg-dark-primaryContainer text-dark-primary"
+			aria-hidden="true"
 		>
-			<div id="headerNav" class="h-3/5 pt-2.5">
-				<div class="flex justify-end pe-2.5" id="navRight">
-					<Icon
-						class="hover:text-dark-primary active:text-dark-surfaceBright mx-1 h-6 w-6 cursor-pointer text-white"
-						icon="ic:baseline-notifications"
-					/>
-					<Icon
-						class="hover:text-dark-primary active:text-dark-surfaceBright mx-1 h-6 w-6 cursor-pointer text-white"
-						icon="ic:baseline-account-circle"
-					/>
-				</div>
-			</div>
-			<div id="headerContent" class="h-2/5 text-4xl text-white">Hello.</div>
-		</div>
-		<div id="mainBody"></div>
-		<div id="footer"></div>
+			<svg
+				viewBox="0 0 16 16"
+				class="h-4 w-4"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="1.25"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+			>
+				<path d="M8 1.9 13.7 5v6L8 14.1 2.3 11V5z" />
+				<path d="M2.3 5 8 8.1 13.7 5" />
+				<path d="M8 8.1v6" />
+			</svg>
+		</span>
+		<p class="text-[13px] font-medium text-dark-onSurfaceVariant">Starting BytePort</p>
+		<span class="sr-only">Loading</span>
 	</div>
-</div>
-
-<style>
-</style>
+</main>
