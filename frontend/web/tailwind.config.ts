@@ -5,37 +5,59 @@ import tailwindScrollbar from 'tailwind-scrollbar';
 import { fontFamily } from 'tailwindcss/defaultTheme';
 import type { Config } from 'tailwindcss';
 
-// Existing material scheme mapped into Tailwind for both shadcn and bg-dark-X references
+// BytePort dark palette.
+//
+// Replaces the 2023-era Material 3 (Material You) scheme: that palette used
+// desaturated pastel "containers" with a muddy teal-brown cast and heavy
+// rounding, which read as a mobile app rather than a desktop tool.
+//
+// This scale is a cool graphite neutral ramp with a single teal accent. The
+// surface steps are deliberately close together (a few percent lightness each)
+// so elevation reads as subtle layering instead of striped boxes. Accent roles
+// are kept only where they carry meaning: primary = action/brand,
+// secondary = informational, tertiary = deployment/VM state, error = failure.
+//
+// Values stay named `dark*` because ~200 existing `bg-dark-*` / `text-dark-*`
+// class references across 15 components depend on this object; re-skinning the
+// values upgrades every one of them without touching component markup.
 const materialTheme = {
-	primary: '#80d5cf',
-	onPrimary: '#003734',
-	primaryContainer: '#00504c',
-	onPrimaryContainer: '#9df1eb',
-	secondary: '#83d2e3',
-	onSecondary: '#00363e',
-	secondaryContainer: '#004e5a',
-	onSecondaryContainer: '#a2eeff',
-	tertiary: '#9bcbfb',
-	onTertiary: '#003353',
-	tertiaryContainer: '#0e4a73',
-	onTertiaryContainer: '#cee5ff',
-	error: '#ffb4ab',
-	onError: '#690005',
-	background: '#0e1514',
-	onBackground: '#dde4e2',
-	surface: '#101418',
-	onSurface: '#e1e2e8',
-	surfaceVariant: '#3f4948',
-	onSurfaceVariant: '#bec9c7',
-	outline: '#889391',
-	outlineVariant: '#3f4948',
-	surfaceDim: '#101418',
-	surfaceBright: '#36393e',
-	surfaceContainerLowest: '#0b0e13',
-	surfaceContainerLow: '#191c20',
-	surfaceContainer: '#1d2024',
-	surfaceContainerHigh: '#272a2f',
-	surfaceContainerHighest: '#32353a'
+	// --- Accent roles ---
+	primary: '#2dd4bf', // teal 400
+	onPrimary: '#04211d',
+	primaryContainer: '#0f3d38',
+	onPrimaryContainer: '#8df0e3',
+
+	secondary: '#60a5fa', // blue 400 — informational
+	onSecondary: '#04202e',
+	secondaryContainer: '#12354d',
+	onSecondaryContainer: '#c7e4ff',
+
+	tertiary: '#a78bfa', // violet 400 — deployment / VM state
+	onTertiary: '#1b1436',
+	tertiaryContainer: '#2f2757',
+	onTertiaryContainer: '#ddd4ff',
+
+	error: '#f87171',
+	onError: '#2a0a0a',
+	errorContainer: '#4a1d1d',
+	onErrorContainer: '#ffd9d9',
+
+	// --- Neutrals (cool graphite ramp) ---
+	background: '#0d0f13',
+	onBackground: '#e6e9ee',
+	surface: '#121519',
+	onSurface: '#e6e9ee',
+	surfaceDim: '#0a0c0f',
+	surfaceBright: '#31363e',
+	surfaceVariant: '#262a31',
+	onSurfaceVariant: '#9ba3af',
+	outline: '#3a4048',
+	outlineVariant: '#262a31',
+	surfaceContainerLowest: '#0a0c0f',
+	surfaceContainerLow: '#16191e',
+	surfaceContainer: '#1a1e23',
+	surfaceContainerHigh: '#1f2329',
+	surfaceContainerHighest: '#262a31'
 };
 
 const config: Config = {

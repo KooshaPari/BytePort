@@ -1,98 +1,130 @@
 @config '../tailwind.config.ts';
 @import 'tailwindcss';
+
+/*
+ * BytePort theme tokens.
+ *
+ * These are stored as raw HSL *triples* (no `hsl()` wrapper) because
+ * tailwind.config.ts consumes them as `hsl(var(--token) / <alpha-value>)`.
+ * They previously held hex values, which made every derived utility invalid
+ * CSS: `--border: #3f4948` produced `hsl(#3f4948 / 1)`, so `border-border`,
+ * `border-input` and `ring-ring` resolved to nothing and every element fell
+ * back to `currentColor` for its border. That single bug is why borders
+ * appeared to change colour with the text.
+ *
+ * Keep the triples in sync with `materialTheme` in tailwind.config.ts, which
+ * still carries the same palette as hex for the `bg-dark-*` class family.
+ */
 @layer base {
 	:root {
-		--background: #0e1514;
-		--foreground: #dde4e2;
+		/* Neutrals — cool graphite ramp. */
+		--background: 220 19% 6%;
+		--foreground: 218 19% 92%;
 
-		--muted: #101418;
-		--muted-foreground: #bec9c7;
+		--surface: 214 16% 8%;
+		--muted: 218 15% 10%;
+		--muted-foreground: 216 11% 65%;
+		--card: 214 16% 8%;
+		--card-foreground: 218 19% 92%;
+		--popover: 214 16% 8%;
+		--popover-foreground: 218 19% 92%;
 
-		--popover: #0e1514;
-		--popover-foreground: #dde4e2;
+		--border: 214 11% 25%;
+		--input: 216 10% 28%;
 
-		--card: #0e1514;
-		--card-foreground: #dde4e2;
+		/* Accents. */
+		--primary: 172 66% 50%;
+		--primary-foreground: 172 78% 7%;
+		--secondary: 213 94% 68%;
+		--secondary-foreground: 200 84% 10%;
+		--accent: 255 92% 76%;
+		--accent-foreground: 255 60% 12%;
+		--destructive: 0 91% 71%;
+		--destructive-foreground: 0 62% 10%;
+		--ring: 172 66% 50%;
 
-		--border: #3f4948;
-		--input: #3f4948;
-
-		--primary: #80d5cf;
-		--primary-foreground: #003734;
-
-		--secondary: #83d2e3;
-		--secondary-foreground: #00363e;
-
-		--accent: #9bcbfb;
-		--accent-foreground: #003353;
-
-		--destructive: #ffb4ab;
-		--destructive-foreground: #690005;
-
-		--ring: #889391;
-
+		/* Focus ring is drawn by the base layer below. */
 		--radius: 0.5rem;
-
-		--primary-container: #00504c;
-		--on-primary-container: #9df1eb;
-
-		--secondary-container: #004e5a;
-		--on-secondary-container: #a2eeff;
-
-		--tertiary: #9bcbfb;
-		--on-tertiary: #003353;
-		--tertiary-container: #0e4a73;
-		--on-tertiary-container: #cee5ff;
-
-		--error: #ffb4ab;
-		--on-error: #690005;
-
-		--surface: #101418;
-		--on-surface: #e1e2e8;
-
-		--surface-variant: #3f4948;
-		--on-surface-variant: #bec9c7;
-
-		--outline: #889391;
 	}
 
+	/* The app is dark-only; keep `.dark` identical so either class works. */
 	.dark {
-		--background: #101418;
-		--foreground: #e1e2e8;
-
-		--muted: #3f4948;
-		--muted-foreground: #bec9c7;
-
-		--popover: #101418;
-		--popover-foreground: #e1e2e8;
-
-		--card: #101418;
-		--card-foreground: #e1e2e8;
-
-		--border: #3f4948;
-		--input: #3f4948;
-
-		--primary: #80d5cf;
-		--primary-foreground: #003734;
-
-		--secondary: #83d2e3;
-		--secondary-foreground: #00363e;
-
-		--accent: #9bcbfb;
-		--accent-foreground: #003353;
-
-		--destructive: #ffb4ab;
-		--destructive-foreground: #690005;
-
-		--ring: #889391;
+		--background: 220 19% 6%;
+		--foreground: 218 19% 92%;
+		--surface: 214 16% 8%;
+		--muted: 218 15% 10%;
+		--muted-foreground: 216 11% 65%;
+		--card: 214 16% 8%;
+		--card-foreground: 218 19% 92%;
+		--border: 214 11% 25%;
+		--input: 216 10% 28%;
+		--primary: 172 66% 50%;
+		--primary-foreground: 172 78% 7%;
+		--secondary: 213 94% 68%;
+		--secondary-foreground: 200 84% 10%;
+		--accent: 255 92% 76%;
+		--destructive: 0 91% 71%;
+		--ring: 172 66% 50%;
 	}
-}
 
-@layer base {
 	* {
 		@apply border-border;
 	}
+
+	html,
 	body {
-		@apply bg-background text-foreground;
+		height: 100%;
+	}
+
+	body {
+		@apply bg-background text-foreground antialiased;
+		/* A desktop shell must not scroll or rubber-band as a whole. */
+		overflow: hidden;
+		font-synthesis-weight: none;
+		text-rendering: optimizeLegibility;
+	}
+
+	/* Native-feeling text selection in an accent tint. */
+	::selection {
+		background: hsl(var(--primary) / 0.28);
+	}
+
+	/* Keyboard focus only — no ring on mouse clicks. */
+	:focus-visible {
+		outline: 2px solid hsl(var(--ring) / 0.7);
+		outline-offset: 2px;
+	}
+
+	/* Slim scrollbars so panes do not look like a web page. */
+	* {
+		scrollbar-width: thin;
+		scrollbar-color: hsl(var(--border)) transparent;
+	}
+	*::-webkit-scrollbar {
+		width: 10px;
+		height: 10px;
+	}
+	*::-webkit-scrollbar-track {
+		background: transparent;
+	}
+	*::-webkit-scrollbar-thumb {
+		background-color: hsl(var(--border));
+		border-radius: 999px;
+		border: 3px solid transparent;
+		background-clip: content-box;
+	}
+	*::-webkit-scrollbar-thumb:hover {
+		background-color: hsl(var(--muted-foreground) / 0.5);
+	}
+
+	/* Respect users who ask for less motion. */
+	@media (prefers-reduced-motion: reduce) {
+		*,
+		*::before,
+		*::after {
+			animation-duration: 0.01ms !important;
+			animation-iteration-count: 1 !important;
+			transition-duration: 0.01ms !important;
+		}
 	}
 }

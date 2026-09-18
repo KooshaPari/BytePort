@@ -6,6 +6,7 @@ import type { User } from '../stores/user';
 import type { Repository } from './git';
 
 import { platform } from '@tauri-apps/plugin-os';
+import { getApiBaseUrl } from './api';
 export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs));
 }
@@ -112,22 +113,11 @@ export interface ResourceAssociation {
 	Type: string;
 	Role: string;
 }
-export const getBaseUrl = async () => {
-	if ((window as any).__TAURI_INTERNALS__) {
-		const currentPlatform: string = platform();
-		console.log(currentPlatform);
-		switch (currentPlatform) {
-			case 'android':
-				return 'http://10.0.2.2:8081';
-			case 'windows':
-				return 'http://localhost:8081';
-			default:
-				return 'http://localhost:8081';
-		}
-	} else {
-		return 'http://localhost:8081';
-	}
-};
+// Delegates to the shared helper. This used to call platform() from
+// @tauri-apps/plugin-os, which throws because the Rust shell does not
+// register that plugin - the promise then rejected and every caller of
+// populateLists() silently never completed.
+export const getBaseUrl = async () => getApiBaseUrl();
 export async function populateLists() {
 	let projects: Project[] = [];
 
