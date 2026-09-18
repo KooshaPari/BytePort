@@ -119,6 +119,40 @@ Two further defects were found while closing the verification loop:
 
 ---
 
+## 3b. UI redesign (operator: "still ugly / my naive ui from 2023")
+
+Once the app rendered, the operator's next request was the interface itself.
+The theme was a 2023-era Material 3 (Material You) scheme and the token layer
+was **half-broken**, which is worth knowing before changing colours again:
+
+- `app.css` stored hex in `--border` / `--input` / `--ring`, while
+  `tailwind.config.ts` resolved them as `hsl(var(--token))`. The built CSS
+  contained `border-color:hsl(var(--border) / 1)` next to `--border:#3f4948`,
+  which is invalid, so the global `*{border-border}` rule did nothing and
+  **every border in the app fell back to `currentColor`** (text-coloured
+  borders). Tokens now hold HSL triples.
+- The palette was reskinned to a cool graphite ramp with one teal accent. The
+  values keep their `dark*` names so ~200 existing `bg-dark-*` class
+  references upgrade with no markup changes.
+- Shared primitives live in `src/lib/components/ui/`
+  (`Button`, `Card`, `Input`, `Badge`, `EmptyState`). Prefer them over ad-hoc
+  class strings.
+- `src/lib/api.ts` is the single source for the backend URL. Use
+  `getApiBaseUrl()` / `apiUrl()` / `apiFetch()`; never call `platform()` from
+  `@tauri-apps/plugin-os` (unregistered plugin, throws) and never add a new
+  `getBaseUrl` copy.
+
+### Structural debt to be aware of
+
+- `getBaseUrl` had been copy-pasted into **15 files**; several still call
+  `platform()` unguarded, which throws and silently skips user init.
+- Eight files did `import Project from '../+layout.svelte'` (and similar),
+  importing a **layout as a component** under a lying name, then using it as a
+  TypeScript type. Those imports are meaningless and should be deleted.
+- `h-5/5` and similar are not valid Tailwind utilities and produce no CSS.
+
+---
+
 ## 4. Verified vs unverified
 
 **Verified with behavioural evidence (not inspection):**
