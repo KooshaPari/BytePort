@@ -28,8 +28,8 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self' ipc: https://ipc.localhost https://api.byteport.dev; script-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self';",
-      "devCsp": "default-src 'self' http://localhost:5173 ws://localhost:5173; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost https://api.byteport.dev ws://localhost:5173;",
+      "csp": "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self' ipc: https://ipc.localhost https://api.byteport.dev http://localhost:8081 http://127.0.0.1:8081; script-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self';",
+      "devCsp": "default-src 'self' http://localhost:5173 ws://localhost:5173; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost https://api.byteport.dev ws://localhost:5173 http://localhost:8081 http://127.0.0.1:8081;",
       "assetProtocol": {
         "enable": true,
         "scope": [

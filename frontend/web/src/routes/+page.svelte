@@ -9,19 +9,26 @@
 
 	const getBaseUrl = async () => {
 		if ((window as any).__TAURI_INTERNALS__) {
-			const currentPlatform: string = platform();
+			// `platform()` reads window.__TAURI_OS_PLUGIN_INTERNALS__, which only
+			// exists when the Rust shell registers `tauri-plugin-os`. The shell
+			// currently registers only the log plugin, so the call throws a
+			// TypeError; that rejected this promise and skipped initializeUser
+			// entirely, leaving the dashboard with no user data.
+			let currentPlatform = 'unknown';
+			try {
+				currentPlatform = platform();
+			} catch (err) {
+				console.warn('platform() unavailable; defaulting to localhost backend', err);
+			}
 			console.log(currentPlatform);
 			switch (currentPlatform) {
 				case 'android':
 					return 'http://10.0.2.2:8081';
-				case 'windows':
-					return 'http://localhost:8081';
 				default:
 					return 'http://localhost:8081';
 			}
-		} else {
-			return 'http://localhost:8081';
 		}
+		return 'http://localhost:8081';
 	};
 
 	let client: User | null = null;
