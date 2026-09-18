@@ -142,7 +142,7 @@ func UpdateLink(c *gin.Context) {
 	}
 	decryptedOAI := "err"
 	var err error
-	if !(user.LLMConfig.Provider == "local") {
+	if user.LLMConfig.Provider != "local" {
 		decryptedOAI, err = lib.DecryptSecret(user.LLMConfig.Providers[user.LLMConfig.Provider].APIKey)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to decrypt OAI"})

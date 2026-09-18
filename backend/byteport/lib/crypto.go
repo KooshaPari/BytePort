@@ -270,7 +270,7 @@ func PersistEncryptionKey(key string) error {
 	}
 	defer file.Close()
 
-	_, err = file.WriteString(fmt.Sprintf("\nexport ENCRYPTION_KEY=\"%s\"\n", key))
+	_, err = fmt.Fprintf(file, "\nexport ENCRYPTION_KEY=%q\n", key)
 	if err != nil {
 		return err
 	}

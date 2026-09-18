@@ -34,7 +34,7 @@ jobs:
 
       - name: Install lefthook
         run: |
-          curl -fsSL https://raw.githubusercontent.com/evilmartians/lefthook/master/install.sh | sh -s -- -b "$HOME/.local/bin"
+          curl -fsSL https://raw.githubusercontent.com/evilmartians/lefthook/master/install.sh | sh -s -- -b "$HOME/.local/bin" -v 1.11.19
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Install cargo-deny
@@ -64,7 +64,7 @@ jobs:
 
       - name: Install lefthook
         run: |
-          curl -fsSL https://raw.githubusercontent.com/evilmartians/lefthook/master/install.sh | sh -s -- -b "$HOME/.local/bin"
+          curl -fsSL https://raw.githubusercontent.com/evilmartians/lefthook/master/install.sh | sh -s -- -b "$HOME/.local/bin" -v 1.11.19
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Install cargo-deny and cargo-audit
@@ -86,7 +86,7 @@ jobs:
 
       - name: Install lefthook
         run: |
-          curl -fsSL https://raw.githubusercontent.com/evilmartians/lefthook/master/install.sh | sh -s -- -b "$HOME/.local/bin"
+          curl -fsSL https://raw.githubusercontent.com/evilmartians/lefthook/master/install.sh | sh -s -- -b "$HOME/.local/bin" -v 1.11.19
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Lint PR commits against conventional commits

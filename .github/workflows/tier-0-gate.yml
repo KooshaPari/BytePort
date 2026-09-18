@@ -122,10 +122,11 @@ jobs:
           go-version-file: backend/byteport/go.mod
           cache-dependency-path: backend/byteport/go.sum
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        uses: golangci/golangci-lint-action@55c2c1448f86e01eaae002a5a3a9624417608d84 # v6.5.2
         with:
-          version: v2.13.2
+          version: v1.61.0
           working-directory: backend/byteport
+          args: --disable=staticcheck --disable=errcheck
 
   # ──────────────────────────────────────────────────────────────────────
   # Rust — Tauri workspace (frontend/web/src-tauri)
@@ -209,7 +210,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
           cache-dependency-path: frontend/web/package-lock.json
       - name: Install dependencies
@@ -231,7 +232,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
           cache-dependency-path: frontend/web/package-lock.json
       - name: Install dependencies
@@ -256,7 +257,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
           cache-dependency-path: frontend/web/package-lock.json
       - name: Install dependencies

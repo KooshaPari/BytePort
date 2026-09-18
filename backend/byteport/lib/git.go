@@ -59,7 +59,7 @@ func LinkWithGithub(c *gin.Context, user models.User) {
 		return
 	}
 	// state has paseto token and user id
-	var state string = authToken + "<BYTEPORT>" + user.UUID
+	state := authToken + "<BYTEPORT>" + user.UUID
 	redirectURL := fmt.Sprintf("https://github.com/login/oauth/authorize?client_id=%s&state=%s", ClientID, state)
 	log.Printf("Redirecting user to GitHub App installation: %s\n", redirectURL)
 	c.Redirect(http.StatusFound, redirectURL)
@@ -131,7 +131,7 @@ func GetUserAccessToken(pasetoToken, code string) (models.Git, error) {
 	}
 
 	// Parse the response to get the token
-	var response models.Git = models.Git{
+	response := models.Git{
 		Token:              "",
 		RefreshToken:       "",
 		TokenExpiry:        time.Now(),
@@ -208,7 +208,7 @@ func refreshToken(user models.User, pasetoToken string) (models.Git, error) {
 	}
 
 	// Parse the response to get the token
-	var response models.Git = models.Git{
+	response := models.Git{
 		Token:              "",
 		RefreshToken:       "",
 		TokenExpiry:        time.Now(),

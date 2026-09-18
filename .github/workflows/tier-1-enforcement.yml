@@ -43,7 +43,9 @@ jobs:
 
       - name: Generate CycloneDX SBOM
         run: |
-          cargo cyclonedx --format json
+          # --all is required: the default emits nothing for a virtual (workspace)
+          # manifest, which made the validation step fail on every run.
+          cargo cyclonedx --all --format json
           echo "✅ SBOM generated"
 
       - name: Validate SBOM output exists and is non-empty

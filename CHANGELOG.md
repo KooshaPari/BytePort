@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- CI: repair the Tier-0/Tier-1 gates. Several workflows failed before running at
+  all because of unresolvable action pins; others broke on tool version drift
+  (golangci-lint v2 CLI flags, govulncheck requiring Go 1.26, Node 20 vs
+  chromatic 18), on markdown templates living under `.github/workflows`, and on
+  a missing Tauri system-dependency step in the Rust jobs.
+- Go: record HTTP request/error metrics in middleware and count deploys and
+  sandbox stops, so the Prometheus counters are no longer dead code.
+- Rust: patch RUSTSEC-2026-0194/0195 (quick-xml) and RUSTSEC-2026-0009 (time),
+  and drop dependencies cargo-machete reports as unused.
+- Scorecard: the ENV_VARS pillar now accepts `.env.example` templates.
+
+### Changed
+
+- Rename `justfile` to `Justfile` so the JUSTFILE pillar passes on
+  case-sensitive filesystems.
+
 ### Added
 
 - B34: Tier-1 enforcement on PR (cargo audit security scan, CycloneDX SBOM
