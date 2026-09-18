@@ -82,22 +82,14 @@ impl PromptMessage {
     }
 
     /// Construct a `Choice` prompt with the given options.
-    pub fn choice(
-        title: impl Into<String>,
-        body: impl Into<String>,
-        options: Vec<String>,
-    ) -> Self {
+    pub fn choice(title: impl Into<String>, body: impl Into<String>, options: Vec<String>) -> Self {
         let mut msg = Self::new(PromptKind::Choice, title, body);
         msg.options = options;
         msg
     }
 
     /// Construct an `Input` prompt with an optional default value.
-    pub fn input(
-        title: impl Into<String>,
-        body: impl Into<String>,
-        default: Option<String>,
-    ) -> Self {
+    pub fn input(title: impl Into<String>, body: impl Into<String>, default: Option<String>) -> Self {
         let mut msg = Self::new(PromptKind::Input, title, body);
         msg.default = default;
         msg
@@ -249,10 +241,7 @@ impl UiPort for MockUiAdapter {
         if self.invalid_state_for_prompts {
             return Err(UiError::InvalidState);
         }
-        self.responses
-            .borrow_mut()
-            .pop_front()
-            .ok_or(UiError::UserCancelled)
+        self.responses.borrow_mut().pop_front().ok_or(UiError::UserCancelled)
     }
 }
 
@@ -265,10 +254,7 @@ mod tests {
         let ui = MockUiAdapter::new();
         ui.show(&UiView::Dashboard).unwrap();
         ui.show(&UiView::DeviceList).unwrap();
-        assert_eq!(
-            *ui.show_calls.borrow(),
-            vec![UiView::Dashboard, UiView::DeviceList]
-        );
+        assert_eq!(*ui.show_calls.borrow(), vec![UiView::Dashboard, UiView::DeviceList]);
     }
 
     #[test]
@@ -282,22 +268,13 @@ mod tests {
 
     #[test]
     fn mock_prompt_drains_responses_in_order() {
-        let ui = MockUiAdapter::new().with_responses(vec![
-            PromptResponse::Selected(2),
-            PromptResponse::Input("hello".into()),
-        ]);
-        let choice = PromptMessage::choice(
-            "Pick",
-            "Pick one",
-            vec!["a".into(), "b".into(), "c".into()],
-        );
+        let ui = MockUiAdapter::new()
+            .with_responses(vec![PromptResponse::Selected(2), PromptResponse::Input("hello".into())]);
+        let choice = PromptMessage::choice("Pick", "Pick one", vec!["a".into(), "b".into(), "c".into()]);
         let input = PromptMessage::input("Name", "Enter name", None);
 
         assert_eq!(ui.prompt(&choice).unwrap(), PromptResponse::Selected(2));
-        assert_eq!(
-            ui.prompt(&input).unwrap(),
-            PromptResponse::Input("hello".into())
-        );
+        assert_eq!(ui.prompt(&input).unwrap(), PromptResponse::Input("hello".into()));
         assert_eq!(*ui.prompt_calls.borrow(), vec![choice, input]);
     }
 
@@ -317,10 +294,7 @@ mod tests {
         );
         // The flag is cleared, so the next call succeeds.
         ui.show(&UiView::Settings).unwrap();
-        assert_eq!(
-            *ui.show_calls.borrow(),
-            vec![UiView::Settings, UiView::Settings]
-        );
+        assert_eq!(*ui.show_calls.borrow(), vec![UiView::Settings, UiView::Settings]);
     }
 
     #[test]
@@ -328,10 +302,7 @@ mod tests {
         let ui = MockUiAdapter::new().with_all_render_failures();
         assert!(ui.show(&UiView::Dashboard).is_err());
         assert!(ui.show(&UiView::Dashboard).is_err());
-        assert_eq!(
-            *ui.show_calls.borrow(),
-            vec![UiView::Dashboard, UiView::Dashboard]
-        );
+        assert_eq!(*ui.show_calls.borrow(), vec![UiView::Dashboard, UiView::Dashboard]);
     }
 
     #[test]
@@ -347,14 +318,8 @@ mod tests {
 
     #[test]
     fn prompt_message_constructors_set_kind() {
-        assert_eq!(
-            PromptMessage::info("t", "b").kind,
-            PromptKind::Info
-        );
-        assert_eq!(
-            PromptMessage::warning("t", "b").kind,
-            PromptKind::Warning
-        );
+        assert_eq!(PromptMessage::info("t", "b").kind, PromptKind::Info);
+        assert_eq!(PromptMessage::warning("t", "b").kind, PromptKind::Warning);
         assert_eq!(PromptMessage::error("t", "b").kind, PromptKind::Error);
         assert_eq!(PromptMessage::confirm("t", "b").kind, PromptKind::Confirm);
         let choice = PromptMessage::choice("t", "b", vec!["x".into(), "y".into()]);

@@ -145,9 +145,6 @@ mod tests {
     fn test_check_owner_permission_mismatch() {
         let secret = b"key";
         let token = create_token("alice", secret, 600);
-        assert_eq!(
-            check_owner_permission(&token, "bob"),
-            Err(AuthError::Unauthorized)
-        );
+        assert_eq!(check_owner_permission(&token, "bob"), Err(AuthError::Unauthorized));
     }
 }

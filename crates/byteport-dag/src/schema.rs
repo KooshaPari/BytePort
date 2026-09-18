@@ -443,19 +443,15 @@ mod tests {
                     image: "myapp:latest".into(),
                 },
             ],
-            acceptance: vec![
-                AcceptanceCriterion::HttpOk {
-                    url: "https://staging.example.com/health".into(),
-                    expected_status: Some(200),
-                },
-            ],
-            audit_hooks: vec![
-                AuditHook::Webhook {
-                    url: "https://hooks.example.com/deploy".into(),
-                    headers: None,
-                    timing: HookTiming::Post,
-                },
-            ],
+            acceptance: vec![AcceptanceCriterion::HttpOk {
+                url: "https://staging.example.com/health".into(),
+                expected_status: Some(200),
+            }],
+            audit_hooks: vec![AuditHook::Webhook {
+                url: "https://hooks.example.com/deploy".into(),
+                headers: None,
+                timing: HookTiming::Post,
+            }],
             metadata: Some(HashMap::from_iter(vec![
                 ("team".into(), "platform".into()),
                 ("tier".into(), "2".into()),

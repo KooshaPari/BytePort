@@ -55,10 +55,7 @@ where
     }
 
     if order.len() != dag.node_count() {
-        return Err(DagError::CycleDetected(
-            "graph".into(),
-            "contains a cycle".into(),
-        ));
+        return Err(DagError::CycleDetected("graph".into(), "contains a cycle".into()));
     }
 
     Ok(order)
@@ -111,10 +108,7 @@ where
         for child in children {
             match color.get(child).copied().unwrap_or(DfsColor::White) {
                 DfsColor::Gray => {
-                    return Err(DagError::CycleDetected(
-                        format!("{:?}", node),
-                        format!("{:?}", child),
-                    ));
+                    return Err(DagError::CycleDetected(format!("{:?}", node), format!("{:?}", child)));
                 }
                 DfsColor::White => visit(dag, child, color, order)?,
                 DfsColor::Black => continue,

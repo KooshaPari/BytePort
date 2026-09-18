@@ -33,11 +33,9 @@ impl BytePortApp {
     ///
     /// Looks for `{PREFIX}_NAME` and `{PREFIX}_PORT`.
     pub fn new(prefix: &str) -> Result<Self, BytePortError> {
-        let name = env::var(format!("{prefix}NAME"))
-            .map_err(|e| BytePortError::Config(format!("{prefix}NAME: {e}")))?;
-        let port = env::var(format!("{prefix}PORT"))
-            .ok()
-            .and_then(|v| v.parse().ok());
+        let name =
+            env::var(format!("{prefix}NAME")).map_err(|e| BytePortError::Config(format!("{prefix}NAME: {e}")))?;
+        let port = env::var(format!("{prefix}PORT")).ok().and_then(|v| v.parse().ok());
         Ok(Self {
             config: BytePortConfig { name, port },
         })

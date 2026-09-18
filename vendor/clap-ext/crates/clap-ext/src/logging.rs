@@ -11,8 +11,8 @@ use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 /// succeed if a global subscriber is already set. We swallow the
 /// `SetGlobalDefaultError` so library code can be called multiple times.
 pub fn setup_tracing(filter: tracing_subscriber::filter::LevelFilter) {
-    let env_filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::default().add_directive(filter.into()));
+    let env_filter =
+        EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::default().add_directive(filter.into()));
 
     let _ = tracing_subscriber::registry()
         .with(env_filter)

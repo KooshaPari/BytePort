@@ -122,9 +122,7 @@ fn run_codec(action: CodecAction) {
     let codec = WireCodecAdapter::new();
     match action {
         CodecAction::Encode { data } => {
-            let encoded = codec
-                .encode(data.as_bytes())
-                .expect("encode should succeed");
+            let encoded = codec.encode(data.as_bytes()).expect("encode should succeed");
             println!("{}", String::from_utf8_lossy(&encoded));
         }
         CodecAction::Decode { hex } => {
