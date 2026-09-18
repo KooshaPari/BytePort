@@ -4,22 +4,46 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"gorm.io/driver/postgres"
+	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
 
 var DB *gorm.DB
 
+// dialectorFor picks the GORM driver implied by the DSN.
+//
+// A postgres DSN is either a URL ("postgres://…", "postgresql://…") or the
+// key=value form used by libpq, which always carries "host=". Anything else
+// (notably the documented "file:./byteport.db" default) is a SQLite path.
+//
+// This replaces a hardcoded postgres.Open, which contradicted the documented
+// SQLite default and made the documented configuration impossible to run.
+func dialectorFor(dsn string) gorm.Dialector {
+	switch {
+	case strings.HasPrefix(dsn, "postgres://"),
+		strings.HasPrefix(dsn, "postgresql://"),
+		strings.Contains(dsn, "host="):
+		return postgres.Open(dsn)
+	default:
+		return sqlite.Open(dsn)
+	}
+}
+
 func ConnectDatabase() {
 	// Get database URL from environment variable
 	dsn := os.Getenv("DATABASE_URL")
 	if dsn == "" {
-		// Default for local development - use same PostgreSQL as Zen MCP server
-		dsn = "host=localhost user=zen password=zen dbname=zen_mcp port=5432 sslmode=disable"
-		log.Println("DATABASE_URL not set, using Zen PostgreSQL connection")
+		// Documented default: INSTALL.md, DEPLOYMENT.md and docker-compose.yml
+		// all state `file:./byteport.db`. This previously fell back to a
+		// hardcoded external PostgreSQL instance, so the documented default
+		// could never work.
+		dsn = "file:./byteport.db"
+		log.Println("DATABASE_URL not set, using SQLite at ./byteport.db")
 	}
 
 	// Configure GORM logger
@@ -28,8 +52,8 @@ func ConnectDatabase() {
 		logLevel = logger.Warn
 	}
 
-	// Open database connection with PostgreSQL driver
-	database, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
+	// Open database connection with the driver implied by the DSN.
+	database, err := gorm.Open(dialectorFor(dsn), &gorm.Config{
 		Logger: logger.Default.LogMode(logLevel),
 		NowFunc: func() time.Time {
 			return time.Now().UTC()
