@@ -13,6 +13,11 @@ import (
 	"github.com/joho/godotenv"
 )
 
+// defaultPort is the canonical BytePort API port. Every consumer of this
+// server (SvelteKit frontend, Tauri shell + its CSP, .air.toml, the Windows
+// setup script) targets 8081, so the default must match. Override with PORT.
+const defaultPort = "8081"
+
 func main() {
 	// Load orchestrator port before .env overrides
 	orchestratorPort := os.Getenv("PORT")
@@ -41,7 +46,7 @@ func main() {
 
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8080"
+		port = defaultPort
 	}
 
 	env := os.Getenv("ENV")

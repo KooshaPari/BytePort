@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -33,17 +34,37 @@ func initTracer() (*trace.TracerProvider, error) {
 
 func setupRouter() *gin.Engine {
 	r := gin.Default()
+	// Origins without an http/https scheme cannot be listed in AllowOrigins:
+	// gin-contrib/cors panics on them ("bad origin: origins must contain '*' or
+	// include http://,https://"). The macOS/iOS Tauri webview serves the app
+	// from tauri://localhost, so it is admitted through AllowOriginFunc instead.
+	// Omitting it made every preflight from the packaged desktop app fail with
+	// 403, so the app could not reach this backend at all.
+	httpOrigins := []string{
+		"http://localhost:5173",
+		"http://0.0.0.0:5173",
+		// Windows/Linux Tauri webview origin.
+		"http://tauri.localhost",
+		"http://tauri.0.0.0.0:5173",
+		"http://localhost:8081",
+		"http://0.0.0.0:8081",
+		"http://10.0.2.2:5173",
+		"http://10.0.2.2:8081",
+		// Add other needed origins
+	}
+
 	r.Use(cors.New(cors.Config{
-		AllowOrigins: []string{
-			"http://localhost:5173",
-			"http://0.0.0.0:5173",
-			"http://tauri.localhost",
-			"http://tauri.0.0.0.0:5173",
-			"http://localhost:8081",
-			"http://0.0.0.0:8081",
-			"http://10.0.2.2:5173",
-			"http://10.0.2.2:8081",
-			// Add other needed origins
+		AllowOrigins: httpOrigins,
+		AllowOriginFunc: func(origin string) bool {
+			if origin == "tauri://localhost" {
+				return true
+			}
+			for _, allowed := range httpOrigins {
+				if allowed == origin {
+					return true
+				}
+			}
+			return false
 		},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
@@ -77,6 +98,26 @@ func setupRouter() *gin.Engine {
 	// gh webhook at /api/github/auth/webhook
 
 	return r
+}
+
+// canonicalPort is the BytePort API port. It is the single default that every
+// consumer targets: SvelteKit (src/lib/config.ts, getBaseUrl), the Tauri shell
+// and its CSP (src-tauri/src/lib.rs, tauri.conf.json), .air.toml proxy_port,
+// scripts/verify-frontend-boot.py and setup-windows.ps1.
+//
+// Override at runtime with PORT (documented in INSTALL.md/DEPLOYMENT.md) or
+// BYTEPORT_API_PORT (written by setup-windows.ps1). PORT wins.
+const canonicalPort = "8081"
+
+// resolvePort returns the port to listen on, preferring PORT over
+// BYTEPORT_API_PORT, and falling back to canonicalPort.
+func resolvePort() string {
+	for _, key := range []string{"PORT", "BYTEPORT_API_PORT"} {
+		if v := strings.TrimSpace(os.Getenv(key)); v != "" {
+			return v
+		}
+	}
+	return canonicalPort
 }
 
 func main() {
@@ -120,7 +161,9 @@ func main() {
 	//models.DB.Exec("Delete from users")
 
 	go lib.StartTokenRefreshJob()
-	if err := r.Run("0.0.0.0:8081"); err != nil {
+	addr := "0.0.0.0:" + resolvePort()
+	fmt.Printf("BytePort API Server listening on %s\n", addr)
+	if err := r.Run(addr); err != nil {
 		fmt.Printf("Error starting server: %v\n", err)
 		os.Exit(1)
 	}
