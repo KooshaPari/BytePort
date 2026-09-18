@@ -1,14 +1,28 @@
 /*
- * Order matters: `@import` must come first.
+ * Tailwind entry.
  *
- * CSS requires `@import` to precede every other rule. With `@config` on line 1,
- * the `@import 'tailwindcss'` below it was a misplaced import, so the CSS parser
- * in the Vite/rolldown pipeline dropped it silently. Nothing errored: the build
- * succeeded but shipped with no Tailwind theme, no preflight and no utility
- * layer, which is why every screen rendered as unstyled HTML. Tailwind's own
- * standalone parser tolerates the wrong order, so only a real build shows it.
+ * Two rules here are load-bearing; both fail silently, so change them only
+ * against a real production build (see the verification note at the bottom).
+ *
+ * 1. `@import` must precede every other rule. CSS ignores a misplaced
+ *    `@import`, and the Vite/rolldown pipeline dropped it without a word:
+ *    the build exited 0 while shipping no theme, no preflight and no utility
+ *    layer, which is why every screen rendered as unstyled HTML. Tailwind's
+ *    own standalone parser tolerates the wrong order, so only a real build
+ *    shows it.
+ *
+ * 2. The bare `tailwindcss` specifier resolves only because `@tailwindcss/vite`
+ *    is registered in vite.config.ts. Vite's CSS pipeline otherwise joins a
+ *    bare specifier to the *importing file's* directory and fails with
+ *    `ENOENT .../frontend/web/tailwindcss`. That is why this used to carry a
+ *    relative `../node_modules/tailwindcss/index.css` path; the first-party
+ *    Vite plugin removes the need for it.
+ *
+ * Verification: `npx vite build`, then confirm the emitted CSS is well over
+ * 8 KB and contains real utilities. A 0-exit build that emits ~8 KB with no
+ * utilities is the failure mode, not a pass.
  */
-@import '../node_modules/tailwindcss/index.css';
+@import 'tailwindcss';
 @config '../tailwind.config.ts';
 
 /*
