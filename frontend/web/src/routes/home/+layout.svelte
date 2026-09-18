@@ -1,7 +1,16 @@
 <script lang="ts">
-	import '../../app.css';
-	import { user } from '../../stores/user';
+	/**
+	 * Authenticated shell for every /home route.
+	 *
+	 * The sidebar, page header and backend indicator previously lived inside each
+	 * page (copied seven times, drifting each time), which is why navigation looked
+	 * different on every screen. They now exist once, here.
+	 */
+	import AppShell from '$lib/components/shell/AppShell.svelte';
+
 	let { children } = $props();
 </script>
 
-{@render children()}
+<AppShell>
+	{@render children()}
+</AppShell>
