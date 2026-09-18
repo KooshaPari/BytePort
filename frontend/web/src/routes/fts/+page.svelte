@@ -1,350 +1,422 @@
 <script lang="ts">
-	import Icon from '@iconify/svelte';
-	import { fly, fade } from 'svelte/transition';
+	/**
+	 * First-time setup.
+	 *
+	 * Rewritten from the 2023 view, which had four real defects:
+	 *
+	 *  1. It called `platform()` from `@tauri-apps/plugin-os` unguarded. That
+	 *     plugin is not registered in the Rust shell, so the call threw while
+	 *     dereferencing `window.__TAURI_OS_PLUGIN_INTERNALS__`. `getBaseUrl` was
+	 *     async, so the rejection was swallowed by `onMount` and `baseUrl` stayed
+	 *     `undefined`; the final `fetch(`${baseUrl}/link`)` then hit the literal
+	 *     URL "undefined/link". Base URLs now come from `$lib/api`, which never
+	 *     throws.
+	 *  2. Every `<label for="...">` pointed at an id no element had, because the
+	 *     inputs only set `name`. No field was actually labelled.
+	 *  3. Advancement was driven by `document.querySelector` against
+	 *     `#form-stage-N`, with the stage counter incremented in two places. The
+	 *     forms had no submit handler, so Enter did nothing.
+	 *  4. The icon-only buttons carried no accessible name.
+	 */
 	import { onMount } from 'svelte';
-	import { type UserLink, type User, initializeUser } from '../../stores/user';
-	import { setUser, user } from '../../stores/user';
 	import { goto } from '$app/navigation';
-	import { platform } from '@tauri-apps/plugin-os';
-	const getBaseUrl = async () => {
-		if ((window as any).__TAURI_INTERNALS__) {
-			const currentPlatform: string = platform();
-			console.log(currentPlatform);
-			switch (currentPlatform) {
-				case 'android':
-					return 'http://10.0.2.2:8081';
-				case 'windows':
-					return 'http://localhost:8081';
-				default:
-					return 'http://localhost:8081';
-			}
-		} else {
-			return 'http://localhost:8081';
-		}
-	};
-	let baseUrl: string;
-	let startBtn: HTMLElement;
-	let addtl = false;
-	let visible = false;
-	let popup: Window;
-	let ftsCont: HTMLElement;
-	let ftsheadTxt: string = 'Welcome.';
-	let stage = 0;
-	let ftsHeadDescr: string = "Let's Begin First Time Setup";
-	let client: User | null = null;
-	let userData: UserLink = {
-		UUID: '',
-		Name: '',
-		Email: '',
-		awsCreds: {
-			accessKeyId: '',
-			secretAccessKey: ''
-		},
+	import { ApiError, apiFetch, apiUrl, getApiBaseUrl } from '$lib/api';
+	import { initializeUser, user } from '../../stores/user';
+	import Button from '$lib/components/ui/Button.svelte';
+	import Card from '$lib/components/ui/Card.svelte';
+	import Input from '$lib/components/ui/Input.svelte';
+
+	/**
+	 * The wire shape `POST /link` actually binds, declared against the Go
+	 * structs rather than the shared `UserLink` type.
+	 *
+	 * `models.AIProvider` tags its key field `api_key` (snake_case) and
+	 * `ValidateLink` looks the provider up under the literal key "openai"
+	 * (lowercase). `stores/user.ts` models both as `apiKey` / `openAI`, so
+	 * sending that type's casing meant the backend validated an EMPTY OpenAI
+	 * key and every attempt failed with "Failed to validate OAI credentials".
+	 * Go map keys are case-sensitive, so the casing here is load-bearing.
+	 */
+	interface LinkPayload {
+		awsCreds: { accessKeyId: string; secretAccessKey: string };
 		llmConfig: {
-			provider: 'openAI',
-			providers: {
-				openAI: {
-					modal: '',
-					apiKey: ''
-				}
-			}
-		},
-		portfolio: {
-			rootEndpoint: '',
-			apiKey: ''
-		}
-	};
-
-	const unsubscribe = user.subscribe((value) => {
-		// Handle pending state
-		if (value.status === 'pending') {
-			console.log('User state pending...');
-			return; // Wait for initialization to complete
-		}
-
-		// Redirect if unauthenticated
-		if (value.status !== 'authenticated') {
-			console.log('User unauthenticated, redirecting...');
-			goto('/login');
-		} else {
-			console.log('Authenticated user:', value.data);
-			// Perform actions for authenticated user
-			client = value.data; // Assign the authenticated user to `client`
-		}
-	});
-	onMount(async () => {
-		baseUrl = await getBaseUrl();
-		await initializeUser(baseUrl); // Initialize the user store
-	});
-	function firstTimeSetup() {
-		visible = true;
-		addtl = true;
-		if (client) {
-			//console.log('C: ', client);
-			userData = {
-				...userData,
-				UUID: client.uuid,
-				Name: client.name,
-				Email: client.email
-			};
-		}
-		//stage = 4;
-
-		setStage();
-		const startBtn = document.querySelector('#startBtn');
-		if (startBtn) startBtn.remove();
+			provider: string;
+			providers: Record<string, { modal: string; api_key: string }>;
+		};
+		portfolio: { rootEndpoint: string; apiKey: string };
 	}
 
-	async function setStage() {
-		if (stage === 0) {
-			stage++;
-			ftsheadTxt = "Let's Start With Some Basic Information...";
-			ftsHeadDescr = 'Enter Your AWS Credentials Below';
+	const TOTAL_STEPS = 4;
+	const STEPS = [
+		{ title: 'AWS credentials', description: 'BytePort uses these to provision instances.' },
+		{ title: 'OpenAI credentials', description: 'Used to generate your portfolio content.' },
+		{ title: 'Portfolio endpoint', description: 'Where BytePort publishes your portfolio.' },
+		{ title: 'Connect GitHub', description: 'Authorise BytePort to read your repositories.' }
+	] as const;
+	const STEP_INDICES = Array.from({ length: TOTAL_STEPS }, (_, i) => i + 1);
+
+	type AuthState = 'checking' | 'authenticated' | 'unauthenticated';
+
+	let authState = $state<AuthState>('checking');
+	let step = $state(1);
+	let linked = $state(false);
+	let popupBlocked = $state(false);
+	let submitting = $state(false);
+	let formError = $state('');
+	let fieldErrors = $state<Record<string, string>>({});
+
+	let awsAccessKeyId = $state('');
+	let awsSecretAccessKey = $state('');
+	let openAiApiKey = $state('');
+	let portfolioRootEndpoint = $state('');
+	let portfolioApiKey = $state('');
+
+	const currentStep = $derived(STEPS[step - 1]);
+
+	onMount(() => {
+		// `initializeUser` reads the session cookie from the backend and drives
+		// the shared store; the subscription reacts to the result.
+		void initializeUser(getApiBaseUrl());
+
+		const unsubscribe = user.subscribe((value) => {
+			if (value.status === 'pending') return;
+
+			if (value.status !== 'authenticated') {
+				authState = 'unauthenticated';
+				void goto('/login');
+				return;
+			}
+			authState = 'authenticated';
+		});
+
+		return unsubscribe;
+	});
+
+	function validateStep(): boolean {
+		const next: Record<string, string> = {};
+
+		if (step === 1) {
+			if (!awsAccessKeyId.trim()) next.awsAccessKeyId = 'Enter your AWS access key ID.';
+			if (!awsSecretAccessKey.trim())
+				next.awsSecretAccessKey = 'Enter your AWS secret access key.';
+		} else if (step === 2) {
+			// No prefix rule: the backend calls AWS/OpenAI directly to validate,
+			// and guessing key formats client-side only risks false rejections.
+			if (!openAiApiKey.trim()) next.openAiApiKey = 'Enter your OpenAI API key.';
+		} else if (step === 3) {
+			const endpoint = portfolioRootEndpoint.trim();
+			if (!endpoint) next.portfolioRootEndpoint = 'Enter your portfolio root endpoint.';
+			else {
+				try {
+					const parsed = new URL(endpoint);
+					if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+						next.portfolioRootEndpoint = 'Use an http or https URL.';
+					}
+				} catch {
+					next.portfolioRootEndpoint =
+						'Enter a full URL, for example https://example.com.';
+				}
+			}
+			if (!portfolioApiKey.trim()) next.portfolioApiKey = 'Enter your portfolio API key.';
+		}
+
+		fieldErrors = next;
+		return Object.keys(next).length === 0;
+	}
+
+	function describeFailure(err: unknown, what: string): string {
+		if (err instanceof ApiError) {
+			const body = err.body as { message?: string; error?: string; details?: string } | null;
+			const text = body?.message ?? body?.error ?? '';
+			// The backend's `details` field carries the actionable part, e.g. the
+			// reason AWS rejected the key.
+			if (text) return `${text}${body?.details ? `: ${body.details}` : ''}`;
+			if (err.status === 401) return 'Your session expired. Sign in again.';
+			return `${what} failed (HTTP ${err.status}).`;
+		}
+
+		if (err instanceof DOMException && err.name === 'AbortError') {
+			return 'The backend did not respond in time.';
+		}
+
+		return `Could not reach the BytePort backend at ${getApiBaseUrl()}. Check that it is running.`;
+	}
+
+	function onPrimary() {
+		formError = '';
+		if (submitting) return;
+
+		if (step < TOTAL_STEPS) {
+			if (validateStep()) step += 1;
+			return;
+		}
+		void connectGithub();
+	}
+
+	async function onSubmit(event: SubmitEvent) {
+		event.preventDefault();
+		onPrimary();
+	}
+
+	function goBack() {
+		formError = '';
+		fieldErrors = {};
+		if (step > 1) step -= 1;
+	}
+
+	/** Opens the GitHub authorisation window. Returns false if it was blocked. */
+	function openLinkWindow(): boolean {
+		const popup = window.open(apiUrl('/link'), 'byteport-github-link', 'width=620,height=720');
+		return Boolean(popup);
+	}
+
+	async function connectGithub() {
+		submitting = true;
+		formError = '';
+		popupBlocked = false;
+
+		const payload: LinkPayload = {
+			awsCreds: {
+				accessKeyId: awsAccessKeyId.trim(),
+				secretAccessKey: awsSecretAccessKey.trim()
+			},
+			llmConfig: {
+				provider: 'openai',
+				providers: { openai: { modal: 'gpt-4o', api_key: openAiApiKey.trim() } }
+			},
+			portfolio: {
+				rootEndpoint: portfolioRootEndpoint.trim(),
+				apiKey: portfolioApiKey.trim()
+			}
+		};
+
+		try {
+			// Validates and encrypts every credential server-side, so failures
+			// (a bad AWS key, for example) are reported before the user is sent
+			// to GitHub.
+			await apiFetch<{ message: string }>('/link', {
+				method: 'POST',
+				body: JSON.stringify(payload)
+			});
+		} catch (err) {
+			formError = describeFailure(err, 'Credential validation');
+			submitting = false;
 			return;
 		}
 
-		const currentStageForm = document.querySelector(`#form-stage-${stage}`) as HTMLFormElement;
-
-		if (currentStageForm && stage < 4) {
-			if (!currentStageForm.checkValidity()) {
-				currentStageForm.reportValidity(); // Show validation errors
-				return; // Stop progression
-			}
-
-			// Collect form data
-			const formData = new FormData(currentStageForm);
-			const data = Object.fromEntries(formData.entries());
-
-			// Assign data to the appropriate nested object in userData
-			switch (stage) {
-				case 1:
-					userData.awsCreds = {
-						accessKeyId: data.accessKeyId as string,
-						secretAccessKey: data.secretAccessKey as string
-					};
-					break;
-				case 2:
-					userData.llmConfig.providers['openAI'] = {
-						modal: 'gpt-4o',
-						apiKey: data.apiKey as string
-					};
-					break;
-				case 3:
-					userData.portfolio = {
-						rootEndpoint: data.rootEndpoint as string,
-						apiKey: data.portfolioApiKey as string
-					};
-					break;
-				default:
-					console.log('Odd Stage');
-					break;
-			}
-
-			console.log(`Stage ${stage} data collected:`, userData);
-
-			// Increment stage
-		}
-		stage++;
-		switch (stage) {
-			case 1:
-				ftsheadTxt = "Let's Start With Some Basic Information...";
-				ftsHeadDescr = 'Enter Your AWS Credentials Below';
-				break;
-			case 2:
-				ftsheadTxt = "Let's Continue With OpenAI Credentials...";
-				ftsHeadDescr = 'Enter Your OpenAI Credentials Below';
-				break;
-			case 3:
-				ftsheadTxt = "Let's Connect Your Portfolio...";
-				ftsHeadDescr = 'Provide Your Portfolios';
-				break;
-			case 4:
-				ftsheadTxt = "Let's Connect Your Git Provider";
-				ftsHeadDescr = 'Please Continue On GitHub';
-
-				break;
-			case 5:
-				ftsheadTxt = 'Setup Complete!';
-				ftsHeadDescr = 'You have completed the first-time setup.';
-				break;
-			default:
-				ftsheadTxt = 'Setup ERR!';
-				addtl = false; // Hide additional container
-				break;
-		}
-	}
-
-	async function Link() {
-		try {
-			// First, send user data
-			const response = await fetch(`${baseUrl}/link`, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				},
-				credentials: 'include',
-				body: JSON.stringify(userData)
-			});
-
-			if (!response.ok) {
-				throw new Error('Failed to initialize link process');
-			}
-
-			// Then open the popup\
-			setStage();
-
-			const popup = window.open(`${baseUrl}/link`, '_blank', 'width=600,height=600');
-
-			if (!popup) {
-				console.error('Failed to open popup window');
-				return false;
-			}
-
-			return true;
-		} catch (error) {
-			console.error('Error during link process:', error);
-			return false;
-		}
-		// check that link response on get and post is 200
+		// The popup must be opened from the click that started this handler, and
+		// that click has already been consumed by the await above, so browsers
+		// may block it. Report that instead of failing silently.
+		popupBlocked = !openLinkWindow();
+		linked = true;
+		submitting = false;
 	}
 </script>
 
-<div
-	id="background"
-	class="bg-dark-surface flex h-screen w-screen flex-col items-center justify-center"
->
-	{#if visible}
-		<h1
-			in:fly={{ y: -100, duration: 1000 }}
-			out:fade
-			id="ftsHeadTxt"
-			class="ftsHeadText text-dark-primary hover:text-dark-onSurface my-2 w-screen text-center text-6xl transition-all"
-		>
-			{ftsheadTxt}
-		</h1>
-		<h2
-			in:fly={{ y: -50, duration: 2000 }}
-			out:fade
-			id="ftsHeadDescr"
-			class="ftsHeadText text-md text-dark-tertiary hover:text-dark-onSurface mb-4 w-screen text-center transition-all"
-		>
-			{ftsHeadDescr}
-		</h2>
-
-		{#if addtl}
-			<div
-				in:fly={{ y: 50, duration: 2000 }}
-				out:fade
-				id="ftsOuterCont"
-				class="mt-4 flex flex-col items-center justify-center"
-			>
-				<!-- Stage 1: AWS Credentials -->
-				{#if stage === 1}
-					<!-- Stage 1: AWS Credentials -->
-					<form id="form-stage-1" class="flex flex-col items-center justify-center">
-						<label for="accessKeyId">AWS Access Key ID</label>
-						<input
-							name="accessKeyId"
-							type="text"
-							placeholder="AWS Access Key ID"
-							class="mb-2 rounded border p-2"
-							required
-							title="AWS Access Key ID must be alphanumeric, between 16-32 characters."
-							bind:value={userData.awsCreds.accessKeyId}
-						/>
-
-						<label for="secretAccessKey">AWS Secret Access Key</label>
-						<input
-							name="secretAccessKey"
-							type="password"
-							placeholder="AWS Secret Access Key"
-							class="mb-2 rounded border p-2"
-							required
-							title="AWS Secret Access Key must be exactly 40 characters."
-							bind:value={userData.awsCreds.secretAccessKey}
-						/>
-					</form>
-				{:else if stage === 2}
-					<!-- Stage 2: OpenAI Credentials -->
-					<form id="form-stage-2" class="flex flex-col items-center justify-center">
-						<label for="apiKey">OpenAI API Key</label>
-						<input
-							name="apiKey"
-							type="text"
-							placeholder="OpenAI API Key"
-							class="mb-2 rounded border p-2"
-							required
-							title="OpenAI API Key must start with 'sk-' and contain 32-64 alphanumeric characters."
-							bind:value={
-								userData.llmConfig.providers[userData.llmConfig.provider].apiKey
-							}
-						/>
-					</form>
-				{:else if stage === 3}
-					<!-- Stage 3: Portfolio Integration -->
-					<form id="form-stage-3" class="flex flex-col items-center justify-center">
-						<label for="rootEndpoint">Portfolio Root Endpoint URL</label>
-						<input
-							name="rootEndpoint"
-							type="url"
-							placeholder="Portfolio Root Endpoint URL"
-							class="mb-2 rounded border p-2"
-							required
-							title="Please provide a valid URL."
-							bind:value={userData.portfolio.rootEndpoint}
-						/>
-
-						<label for="portfolioApiKey">Portfolio API Key</label>
-						<input
-							name="portfolioApiKey"
-							type="text"
-							placeholder="Portfolio API Key"
-							class="mb-2 rounded border p-2"
-							required
-							title="API Key is required."
-							bind:value={userData.portfolio.apiKey}
-						/>
-					</form>
-				{/if}
-				{#if stage == 4}
-					<button
-						id="actionBtn"
-						on:click={Link}
-						class="bg-dark-secondaryContainer text-dark-onSecondaryContainer hover:bg-dark-tertiaryContainer active:bg-dark-primaryContainer my-4 flex h-10 w-10 items-center justify-center rounded-full p-2 transition-all hover:scale-105 active:scale-100"
+<main class="bg-dark-background h-screen w-full overflow-y-auto">
+	<div class="flex min-h-full items-center justify-center px-4 py-10">
+		<div class="w-full max-w-[420px]">
+			<div class="mb-6 flex flex-col items-center gap-3">
+				<div
+					class="border-border bg-dark-surfaceContainer flex h-10 w-10 items-center justify-center rounded-[10px] border"
+					aria-hidden="true"
+				>
+					<span class="text-dark-primary text-[13px] font-semibold tracking-tight"
+						>BP</span
 					>
-						<Icon icon="maki-arrow" />
-					</button>
-				{/if}
-				{#if stage == 5}
-					<button
-						id="actionBtn"
-						on:click={() => {
-							goto('/home');
-						}}
-						class="bg-dark-secondaryContainer text-dark-onSecondaryContainer hover:bg-dark-tertiaryContainer active:bg-dark-primaryContainer my-4 flex h-10 w-10 items-center justify-center rounded-full p-2 transition-all hover:scale-105 active:scale-100"
+				</div>
+				<div class="text-center">
+					<p
+						class="text-dark-onSurfaceVariant text-[11px] font-medium tracking-wide uppercase"
 					>
-						<Icon icon="maki-arrow" />
-					</button>
-				{/if}
-
-				<!-- Action button to proceed -->
-				{#if stage < 4}
-					<button
-						id="actionBtn"
-						on:click={setStage}
-						class="bg-dark-secondaryContainer text-dark-onSecondaryContainer hover:bg-dark-tertiaryContainer active:bg-dark-primaryContainer my-4 flex h-10 w-10 items-center justify-center rounded-full p-2 transition-all hover:scale-105 active:scale-100"
-					>
-						<Icon icon="maki-arrow" />
-					</button>
-				{/if}
+						First time setup
+					</p>
+					<h1 class="text-dark-onSurface mt-1 text-[15px] font-semibold tracking-tight">
+						{linked ? 'Finish connecting GitHub' : currentStep.title}
+					</h1>
+					<p class="text-dark-onSurfaceVariant mt-1 text-[13px] leading-snug">
+						{linked
+							? 'Complete the authorisation in the GitHub window, then return here.'
+							: currentStep.description}
+					</p>
+				</div>
 			</div>
-		{/if}
-	{/if}
-	<button
-		id="startBtn"
-		class="bg-dark-secondaryContainer text-dark-onSecondaryContainer hover:bg-dark-tertiaryContainer active:bg-dark-primaryContainer my-4 flex h-10 w-20 items-center justify-center rounded-full p-2 transition-all hover:scale-105 active:scale-100"
-		on:click={() => firstTimeSetup()}
-	>
-		Start
-	</button>
-</div>
+
+			{#if authState === 'checking'}
+				<Card padding="lg">
+					<p class="text-dark-onSurfaceVariant text-[13px]" role="status">
+						Checking your session.
+					</p>
+				</Card>
+			{:else if authState === 'unauthenticated'}
+				<Card padding="lg">
+					<p class="text-dark-onSurfaceVariant text-[13px]" role="status">
+						Your session has ended. Redirecting to sign in.
+					</p>
+				</Card>
+			{:else if linked}
+				<Card padding="lg">
+					<div class="flex flex-col gap-4">
+						{#if popupBlocked}
+							<p
+								role="alert"
+								class="border-dark-tertiary/40 bg-dark-tertiaryContainer/40 text-dark-onTertiaryContainer rounded-md border px-3 py-2 text-[12px] leading-snug"
+							>
+								Your browser blocked the GitHub window. Open it with the link below.
+							</p>
+						{/if}
+
+						<a
+							class="text-dark-primary text-[13px] underline underline-offset-4 hover:brightness-110"
+							href={apiUrl('/link')}
+							target="_blank"
+							rel="noreferrer"
+						>
+							Open the GitHub authorisation page
+						</a>
+
+						<Button variant="primary" class="w-full" onclick={() => void goto('/home')}>
+							Go to dashboard
+						</Button>
+					</div>
+				</Card>
+			{:else}
+				<Card padding="lg">
+					<div class="mb-4 flex items-center gap-3">
+						<span
+							class="text-dark-onSurfaceVariant text-[11px] font-medium tracking-wide uppercase"
+						>
+							Step {step} of {TOTAL_STEPS}
+						</span>
+						<span class="flex flex-1 gap-1" aria-hidden="true">
+							{#each STEP_INDICES as index (index)}
+								<span
+									class="h-0.5 flex-1 rounded-full {index <= step
+										? 'bg-dark-primary'
+										: 'bg-dark-surfaceVariant'}"
+								></span>
+							{/each}
+						</span>
+					</div>
+
+					<form class="flex flex-col gap-4" onsubmit={onSubmit} novalidate>
+						{#if step === 1}
+							<Input
+								label="AWS access key ID"
+								name="accessKeyId"
+								type="text"
+								autocomplete="off"
+								autocapitalize="none"
+								spellcheck={false}
+								placeholder="AKIA..."
+								value={awsAccessKeyId}
+								oninput={(e) => (awsAccessKeyId = e.currentTarget.value)}
+								error={fieldErrors.awsAccessKeyId ?? ''}
+								disabled={submitting}
+								required
+							/>
+							<Input
+								label="AWS secret access key"
+								name="secretAccessKey"
+								type="password"
+								autocomplete="off"
+								placeholder="Your secret access key"
+								hint="Stored encrypted once validated."
+								value={awsSecretAccessKey}
+								oninput={(e) => (awsSecretAccessKey = e.currentTarget.value)}
+								error={fieldErrors.awsSecretAccessKey ?? ''}
+								disabled={submitting}
+								required
+							/>
+						{:else if step === 2}
+							<Input
+								label="OpenAI API key"
+								name="apiKey"
+								type="password"
+								autocomplete="off"
+								autocapitalize="none"
+								spellcheck={false}
+								placeholder="sk-..."
+								hint="Validated against OpenAI before it is saved."
+								value={openAiApiKey}
+								oninput={(e) => (openAiApiKey = e.currentTarget.value)}
+								error={fieldErrors.openAiApiKey ?? ''}
+								disabled={submitting}
+								required
+							/>
+						{:else if step === 3}
+							<Input
+								label="Portfolio root endpoint"
+								name="rootEndpoint"
+								type="url"
+								autocomplete="off"
+								autocapitalize="none"
+								spellcheck={false}
+								placeholder="https://example.com"
+								value={portfolioRootEndpoint}
+								oninput={(e) => (portfolioRootEndpoint = e.currentTarget.value)}
+								error={fieldErrors.portfolioRootEndpoint ?? ''}
+								disabled={submitting}
+								required
+							/>
+							<Input
+								label="Portfolio API key"
+								name="portfolioApiKey"
+								type="password"
+								autocomplete="off"
+								placeholder="Your portfolio API key"
+								value={portfolioApiKey}
+								oninput={(e) => (portfolioApiKey = e.currentTarget.value)}
+								error={fieldErrors.portfolioApiKey ?? ''}
+								disabled={submitting}
+								required
+							/>
+						{:else}
+							<p class="text-dark-onSurfaceVariant text-[13px] leading-snug">
+								Your credentials are validated and encrypted before GitHub is
+								contacted. Nothing is sent to GitHub until you approve it in the
+								next window.
+							</p>
+						{/if}
+
+						{#if formError}
+							<p
+								role="alert"
+								class="border-dark-error/40 bg-dark-errorContainer/40 text-dark-onErrorContainer rounded-md border px-3 py-2 text-[12px] leading-snug"
+							>
+								{formError}
+							</p>
+						{/if}
+
+						<div class="flex items-center gap-2">
+							{#if step > 1}
+								<Button variant="ghost" disabled={submitting} onclick={goBack}
+									>Back</Button
+								>
+							{/if}
+							<Button
+								type="submit"
+								variant="primary"
+								loading={submitting}
+								class="flex-1"
+							>
+								{step < TOTAL_STEPS ? 'Continue' : 'Validate and connect GitHub'}
+							</Button>
+						</div>
+					</form>
+				</Card>
+			{/if}
+
+			{#if authState === 'authenticated' && !linked}
+				<p class="text-dark-onSurfaceVariant mt-4 text-center text-[13px]">
+					<a
+						href="/home"
+						class="text-dark-primary underline-offset-4 hover:underline focus-visible:underline"
+					>
+						Skip for now
+					</a>
+				</p>
+			{/if}
+		</div>
+	</div>
+</main>

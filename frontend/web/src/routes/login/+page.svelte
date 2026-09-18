@@ -1,164 +1,193 @@
 <script lang="ts">
+	/**
+	 * Sign in.
+	 *
+	 * Rewritten from the 2023 view, which had three real defects:
+	 *
+	 *  1. It called `platform()` from `@tauri-apps/plugin-os` unguarded (twice).
+	 *     That plugin is not registered in the Rust shell, so the call threw a
+	 *     TypeError while dereferencing `window.__TAURI_OS_PLUGIN_INTERNALS__`.
+	 *     Base-URL detection now goes through `$lib/api`, which is total.
+	 *  2. It imported the route LAYOUT as a component under the name `tempUser`
+	 *     (`import tempUser from '../+layout.svelte'`), which rendered the layout
+	 *     a second time and was never used. Removed.
+	 *  3. The form had no field validation, no disabled/loading state and no
+	 *     visible error surface: failures were only `console.log`ged.
+	 */
 	import { goto } from '$app/navigation';
-	import tempUser from '../+layout.svelte';
-	import { initializeUser, setUser, user } from '../../stores/user';
-	import { Button } from '$lib/components/ui/button';
-	import type { User } from '../../stores/user';
-	import { platform } from '@tauri-apps/plugin-os';
+	import { ApiError, apiFetch, getApiBaseUrl } from '$lib/api';
+	import { initializeUser } from '../../stores/user';
+	import Button from '$lib/components/ui/Button.svelte';
+	import Card from '$lib/components/ui/Card.svelte';
+	import Input from '$lib/components/ui/Input.svelte';
 
-	let newUser: User;
-	let Error: string = '';
-	const getBaseUrl = async () => {
-		if (window.__TAURI_INTERNALS__) {
-			const currentPlatform: string = platform();
-			console.log(currentPlatform);
-			switch (currentPlatform) {
-				case 'android':
-					return 'http://10.0.2.2:8081';
-				case 'windows':
-					return 'http://localhost:8081';
-				default:
-					return 'http://localhost:8081';
-			}
-		} else {
-			return 'http://localhost:8081';
+	interface LoginResponse {
+		message: string;
+		user: { uuid: string; name: string; email: string };
+	}
+
+	let email = $state('');
+	let password = $state('');
+	let submitting = $state(false);
+	let formError = $state('');
+	let fieldErrors = $state<{ email?: string; password?: string }>({});
+
+	/** Client-side checks only. The backend is the authority on credentials. */
+	function validate(): boolean {
+		const next: { email?: string; password?: string } = {};
+		const trimmed = email.trim();
+
+		if (!trimmed) next.email = 'Enter your email address.';
+		else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed))
+			next.email = 'Enter a valid email address.';
+
+		// No complexity rule here on purpose: the password on an existing account
+		// may predate any policy we would invent, and rejecting it client-side
+		// would lock the user out with no way to tell why.
+		if (!password) next.password = 'Enter your password.';
+
+		fieldErrors = next;
+		return Object.keys(next).length === 0;
+	}
+
+	function describeFailure(err: unknown): string {
+		if (err instanceof ApiError) {
+			// The backend answers 401 with either "Failed, user not found" or
+			// "Failed, invalid credentials". Reporting those verbatim would let
+			// anyone test whether an email is registered, so collapse them.
+			if (err.status === 401) return 'Email or password is incorrect.';
+			if (err.status === 400)
+				return 'The sign-in request was rejected. Check the email format.';
+			if (err.status >= 500)
+				return 'The BytePort backend hit an error. Try again in a moment.';
+
+			const body = err.body as { message?: string; error?: string; details?: string } | null;
+			const text = body?.message ?? body?.error ?? '';
+			return text
+				? `${text}${body?.details ? `: ${body.details}` : ''}`
+				: `Sign-in failed (HTTP ${err.status}).`;
 		}
-	};
 
-	const getClientUrl = () => {
-		if (window.__TAURI_INTERNALS__) {
-			const currentPlatform: string | null = platform();
-			if (currentPlatform == null) {
-				return 'http://localhost:5173';
-			}
-
-			switch (currentPlatform) {
-				case 'android':
-					return 'http:///10.0.2.2:5173';
-				case 'windows':
-					return 'http://localhost:5173';
-				default:
-					return 'http://localhost:5173';
-			}
-		} else {
-			return 'http://localhost:5173';
+		if (err instanceof DOMException && err.name === 'AbortError') {
+			return 'The backend did not respond in time.';
 		}
-	};
 
-	async function login() {
-		const baseUrl = await getBaseUrl();
-		console.log('Base URL:', baseUrl);
-		const regUserForm = document.forms.namedItem('regUser');
-		if (!regUserForm) {
-			Error = 'Login form was not found.';
-			return;
-		}
-		const formData = new FormData(regUserForm);
-		let newUser = {
-			Email: String(formData.get('email') ?? ''),
-			Password: String(formData.get('password') ?? '')
-		};
-		const { Email, Password } = newUser;
+		return `Could not reach the BytePort backend at ${getApiBaseUrl()}. Check that it is running.`;
+	}
+
+	async function onSubmit(event: SubmitEvent) {
+		event.preventDefault();
+		formError = '';
+
+		if (submitting) return;
+		if (!validate()) return;
+
+		submitting = true;
 		try {
-			console.log(`${baseUrl}/login`);
-			const response = await fetch(`${baseUrl}/login`, {
+			// Field names match the Go `LoginRequest` json tags exactly.
+			await apiFetch<LoginResponse>('/login', {
 				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({ Email, Password }),
-				credentials: 'include'
+				body: JSON.stringify({ email: email.trim(), password })
 			});
 
-			console.log('Response Status:', response.status);
-			console.log('Response OK:', response.ok);
-			console.log('Resp Credentials: ', response.headers.get('Authorization'));
-			console.log('Resp Cookies: ', response.headers.get('authToken'));
-			console.log('All Response Headers:');
-			for (const [key, value] of response.headers.entries()) {
-				console.log(`${key}: ${value}`);
-			}
-			console.log('Response: ', response);
+			// Confirms the session cookie was actually stored before we navigate.
+			await initializeUser(getApiBaseUrl());
 
-			const data = await response.json();
-
-			if (response.ok) {
-				console.log('Login successful:', data);
-				console.log('Initializing User: ', baseUrl);
-				await initializeUser(baseUrl);
-				if (window.__TAURI_INTERNALS__) {
-					//const { getCookies } =   await import('@tauri-apps/plugin-http');
-					//const cookies = await getCookies();
-					//console.log('Tauri Stored Cookies:', cookies);
-				}
-				//setUser(true, data as User);
-				goto(`/home`);
-			} else {
-				Error = data.message || data.error || 'An unknown error occurred';
-				console.log('Login failed:', Error);
-			}
+			submitting = false;
+			await goto('/home');
 		} catch (err) {
-			console.error('Error during Login:', err);
-			Error = 'An error occurred during login.';
+			formError = describeFailure(err);
+			submitting = false;
 		}
 	}
 </script>
 
-<div class="bg-dark-surface h-screen w-screen overflow-x-hidden">
-	<div
-		id="header"
-		class=" bg-dark-surfaceContainerLow h-1/5 w-5/5 flex-col justify-between ps-2.5"
-	>
-		<div id="headerNav" class="h-3/5 pt-2.5"></div>
-		<div id="headerContent" class="h-2/5 text-4xl text-white">Hello.</div>
-	</div>
-	<div id="body" class="px-2.5 pt-5">
-		<h1 class="text-2xl text-white">Please Register Below...</h1>
-		<div id="logCont">
-			<form class="flex-row" name="regUser" on:submit|preventDefault={login}>
-				<div>
-					<label for="email">Email</label>
-					<input name="email" placeholder="Email" required type="email" />
-				</div>
-				<div>
-					<label for="password">Password</label>
-					<input
-						name="password"
-						pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z])+"
-						type="password"
-						required
-						placeholder="Password"
-					/>
-				</div>
-				<div>
-					<input
-						type="submit"
-						value="Log In"
-						class="bg-dark-surfaceContainerHigh text-dark-onSurface hover:bg-dark-surfaceContainerHighest active:bg-dark-surfaceContainer rounded-full p-2"
-					/>
-					<button
-						on:click={() => goto(`${getClientUrl()}/signup`)}
-						class="bg-dark-surfaceContainerHigh text-dark-onSurface hover:bg-dark-surfaceContainerHighest active:bg-dark-surfaceContainer my-3 rounded-full p-2"
+<main class="bg-dark-background h-screen w-full overflow-y-auto">
+	<div class="flex min-h-full items-center justify-center px-4 py-10">
+		<div class="w-full max-w-[400px]">
+			<!-- Product mark. A typographic monogram avoids depending on the
+			     brand PNG, which lives in src/assets (Vite-processed) and is not
+			     published from static/, so a raw <img> path would 404 in the
+			     packaged desktop build. -->
+			<div class="mb-6 flex flex-col items-center gap-3">
+				<div
+					class="border-border bg-dark-surfaceContainer flex h-10 w-10 items-center justify-center rounded-[10px] border"
+					aria-hidden="true"
+				>
+					<span class="text-dark-primary text-[13px] font-semibold tracking-tight"
+						>BP</span
 					>
-						Sign up
-					</button>
 				</div>
-			</form>
+				<div class="text-center">
+					<h1 class="text-dark-onSurface text-[15px] font-semibold tracking-tight">
+						Sign in to BytePort
+					</h1>
+					<p class="text-dark-onSurfaceVariant mt-1 text-[13px] leading-snug">
+						Deploy and manage your portfolio infrastructure.
+					</p>
+				</div>
+			</div>
+
+			<Card padding="lg">
+				<form class="flex flex-col gap-4" onsubmit={onSubmit} novalidate>
+					<p
+						class="text-dark-onSurfaceVariant text-[11px] font-medium tracking-wide uppercase"
+					>
+						Account
+					</p>
+
+					<Input
+						label="Email"
+						name="email"
+						type="email"
+						autocomplete="username"
+						autocapitalize="none"
+						spellcheck={false}
+						placeholder="you@example.com"
+						value={email}
+						oninput={(e) => (email = e.currentTarget.value)}
+						error={fieldErrors.email ?? ''}
+						disabled={submitting}
+						required
+					/>
+
+					<Input
+						label="Password"
+						name="password"
+						type="password"
+						autocomplete="current-password"
+						placeholder="Your password"
+						value={password}
+						oninput={(e) => (password = e.currentTarget.value)}
+						error={fieldErrors.password ?? ''}
+						disabled={submitting}
+						required
+					/>
+
+					{#if formError}
+						<p
+							role="alert"
+							class="border-dark-error/40 bg-dark-errorContainer/40 text-dark-onErrorContainer rounded-md border px-3 py-2 text-[12px] leading-snug"
+						>
+							{formError}
+						</p>
+					{/if}
+
+					<Button type="submit" variant="primary" loading={submitting} class="w-full">
+						{submitting ? 'Signing in' : 'Sign in'}
+					</Button>
+				</form>
+			</Card>
+
+			<p class="text-dark-onSurfaceVariant mt-4 text-center text-[13px]">
+				No account yet?
+				<a
+					href="/signup"
+					class="text-dark-primary underline-offset-4 hover:underline focus-visible:underline"
+				>
+					Create one
+				</a>
+			</p>
 		</div>
 	</div>
-</div>
-
-<style>
-	@reference '../../app.css';
-
-	#logCont form > div > input {
-		@apply bg-dark-surfaceContainerHigh text-dark-onSurface placeholder-dark-onSurfaceVariant selection:bg-dark-surfaceContainer hover:bg-dark-surfaceContainerHighest my-2 rounded-full;
-		border: none;
-	}
-	#logCont form > div > label {
-		@apply text-dark-onSurface;
-	}
-	#logCont form > div {
-		@apply h-1/5 w-screen flex-row items-center justify-center;
-	}
-</style>
+</main>
