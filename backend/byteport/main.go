@@ -34,6 +34,8 @@ func initTracer() (*trace.TracerProvider, error) {
 
 func setupRouter() *gin.Engine {
 	r := gin.Default()
+	r.Use(routes.MetricsMiddleware())
+
 	// Origins without an http/https scheme cannot be listed in AllowOrigins:
 	// gin-contrib/cors panics on them ("bad origin: origins must contain '*' or
 	// include http://,https://"). The macOS/iOS Tauri webview serves the app
@@ -52,7 +54,6 @@ func setupRouter() *gin.Engine {
 		"http://10.0.2.2:8081",
 		// Add other needed origins
 	}
-
 	r.Use(cors.New(cors.Config{
 		AllowOrigins: httpOrigins,
 		AllowOriginFunc: func(origin string) bool {

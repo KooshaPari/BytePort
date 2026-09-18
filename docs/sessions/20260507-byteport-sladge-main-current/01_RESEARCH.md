@@ -14,4 +14,3 @@
 The previous validation blocker was concrete and small: `backend/byteport/main.go`
 imported `go.opentelemetry.io/otel/attribute` and
 `go.opentelemetry.io/otel/sdk/resource` without using them.
-

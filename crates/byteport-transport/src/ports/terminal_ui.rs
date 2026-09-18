@@ -47,9 +47,7 @@ impl TerminalUiAdapter {
     /// Build a non-interactive adapter. Every prompt returns
     /// `Err(UiError::UserCancelled)` without reading from stdin.
     pub fn non_interactive() -> Self {
-        Self {
-            non_interactive: true,
-        }
+        Self { non_interactive: true }
     }
 
     /// Returns `true` when the adapter will short-circuit every
@@ -98,10 +96,7 @@ impl TerminalUiAdapter {
     /// `options`. Returns `Err(UiError::InvalidState)` for non-numeric
     /// input or out-of-range indices.
     pub fn parse_choice(text: &str, options: &[String]) -> Result<PromptResponse, UiError> {
-        let idx: usize = text
-            .trim()
-            .parse()
-            .map_err(|_| UiError::InvalidState)?;
+        let idx: usize = text.trim().parse().map_err(|_| UiError::InvalidState)?;
         if idx >= options.len() {
             return Err(UiError::InvalidState);
         }
@@ -145,8 +140,7 @@ impl UiPort for TerminalUiAdapter {
     fn show(&self, view: &UiView) -> Result<(), UiError> {
         let header = Self::render_view(view);
         let mut out = io::stdout().lock();
-        writeln!(out, "{header}")
-            .map_err(|e| UiError::RenderFailed(format!("write to stdout failed: {e}")))?;
+        writeln!(out, "{header}").map_err(|e| UiError::RenderFailed(format!("write to stdout failed: {e}")))?;
         out.flush()
             .map_err(|e| UiError::RenderFailed(format!("flush stdout failed: {e}")))?;
         Ok(())
@@ -167,9 +161,7 @@ impl UiPort for TerminalUiAdapter {
             .map_err(|e| UiError::RenderFailed(format!("read from stdin failed: {e}")))?;
 
         match msg.kind {
-            PromptKind::Info | PromptKind::Warning | PromptKind::Error => {
-                Ok(PromptResponse::Acknowledge)
-            }
+            PromptKind::Info | PromptKind::Warning | PromptKind::Error => Ok(PromptResponse::Acknowledge),
             PromptKind::Confirm => Ok(Self::parse_confirm(&line)),
             PromptKind::Choice => Self::parse_choice(&line, &msg.options),
             PromptKind::Input => Ok(Self::parse_input(&line, msg.default.as_deref())),
@@ -183,10 +175,7 @@ mod tests {
 
     #[test]
     fn render_view_matches_each_variant() {
-        assert_eq!(
-            TerminalUiAdapter::render_view(&UiView::Dashboard),
-            "=== Dashboard ==="
-        );
+        assert_eq!(TerminalUiAdapter::render_view(&UiView::Dashboard), "=== Dashboard ===");
         assert_eq!(
             TerminalUiAdapter::render_view(&UiView::DeviceList),
             "=== Device List ==="
@@ -195,49 +184,25 @@ mod tests {
             TerminalUiAdapter::render_view(&UiView::TestResults),
             "=== Test Results ==="
         );
-        assert_eq!(
-            TerminalUiAdapter::render_view(&UiView::Settings),
-            "=== Settings ==="
-        );
+        assert_eq!(TerminalUiAdapter::render_view(&UiView::Settings), "=== Settings ===");
     }
 
     #[test]
     fn kind_label_matches_each_variant() {
         assert_eq!(TerminalUiAdapter::kind_label(&PromptKind::Info), "info");
-        assert_eq!(
-            TerminalUiAdapter::kind_label(&PromptKind::Warning),
-            "warning"
-        );
+        assert_eq!(TerminalUiAdapter::kind_label(&PromptKind::Warning), "warning");
         assert_eq!(TerminalUiAdapter::kind_label(&PromptKind::Error), "error");
-        assert_eq!(
-            TerminalUiAdapter::kind_label(&PromptKind::Confirm),
-            "confirm"
-        );
-        assert_eq!(
-            TerminalUiAdapter::kind_label(&PromptKind::Choice),
-            "choice"
-        );
+        assert_eq!(TerminalUiAdapter::kind_label(&PromptKind::Confirm), "confirm");
+        assert_eq!(TerminalUiAdapter::kind_label(&PromptKind::Choice), "choice");
         assert_eq!(TerminalUiAdapter::kind_label(&PromptKind::Input), "input");
     }
 
     #[test]
     fn parse_confirm_recognises_yes_variants() {
-        assert_eq!(
-            TerminalUiAdapter::parse_confirm("y"),
-            PromptResponse::Confirmed(true)
-        );
-        assert_eq!(
-            TerminalUiAdapter::parse_confirm("Y"),
-            PromptResponse::Confirmed(true)
-        );
-        assert_eq!(
-            TerminalUiAdapter::parse_confirm("yes"),
-            PromptResponse::Confirmed(true)
-        );
-        assert_eq!(
-            TerminalUiAdapter::parse_confirm("YES"),
-            PromptResponse::Confirmed(true)
-        );
+        assert_eq!(TerminalUiAdapter::parse_confirm("y"), PromptResponse::Confirmed(true));
+        assert_eq!(TerminalUiAdapter::parse_confirm("Y"), PromptResponse::Confirmed(true));
+        assert_eq!(TerminalUiAdapter::parse_confirm("yes"), PromptResponse::Confirmed(true));
+        assert_eq!(TerminalUiAdapter::parse_confirm("YES"), PromptResponse::Confirmed(true));
         assert_eq!(
             TerminalUiAdapter::parse_confirm("  y  "),
             PromptResponse::Confirmed(true)
@@ -246,18 +211,9 @@ mod tests {
 
     #[test]
     fn parse_confirm_treats_other_input_as_no() {
-        assert_eq!(
-            TerminalUiAdapter::parse_confirm("n"),
-            PromptResponse::Confirmed(false)
-        );
-        assert_eq!(
-            TerminalUiAdapter::parse_confirm("no"),
-            PromptResponse::Confirmed(false)
-        );
-        assert_eq!(
-            TerminalUiAdapter::parse_confirm(""),
-            PromptResponse::Confirmed(false)
-        );
+        assert_eq!(TerminalUiAdapter::parse_confirm("n"), PromptResponse::Confirmed(false));
+        assert_eq!(TerminalUiAdapter::parse_confirm("no"), PromptResponse::Confirmed(false));
+        assert_eq!(TerminalUiAdapter::parse_confirm(""), PromptResponse::Confirmed(false));
         assert_eq!(
             TerminalUiAdapter::parse_confirm("maybe"),
             PromptResponse::Confirmed(false)

@@ -28,4 +28,3 @@ type DeploymentListDTO struct {
 	Offset      int             `json:"offset,omitempty"`
 	Limit       int             `json:"limit,omitempty"`
 }
-

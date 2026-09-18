@@ -177,3 +177,7 @@ http-1x = [
 ]
 sigv4a = ["aws-sigv4/sigv4a"]
 test-util = ["dep:regex-lite"]
+
+# Vendored upstream source; dependency list is managed upstream.
+[package.metadata.cargo-machete]
+ignored = ["http-1x", "http-body-1x"]

@@ -10,4 +10,3 @@ Refresh BytePort Sladge evidence against current `main`, replacing the stale
 - Added the Sladge badge to the current README badge block.
 - Removed unused OTel imports that blocked Go validation.
 - Preserved the canonical checkout until isolated validation completed.
-

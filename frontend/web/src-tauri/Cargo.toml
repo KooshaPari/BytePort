@@ -24,10 +24,9 @@ tauri-build = { version = "2.5.6", features = [] }
 custom-protocol = ["tauri/custom-protocol"]
 
 [dependencies]
-byteport-dag = { path = "../../../crates/byteport-dag" }
-byteport-transport = { path = "../../../crates/byteport-transport" }
+byteport-dag = { version = "0.1.0", path = "../../../crates/byteport-dag" }
+byteport-transport = { version = "0.1.0", path = "../../../crates/byteport-transport" }
 clap = { version = "4.5", features = ["derive"] }
-clap-ext = { path = "../../../vendor/clap-ext/crates/clap-ext" }
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
@@ -35,7 +34,6 @@ tauri = { version = "2.11.2", features = ["protocol-asset"] }
 tauri-plugin-log = "2.8.0"
 tauri-plugin-os = "2.3.2"
 thiserror = "2.0"
-tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 
 [dev-dependencies]
 # Used only by `benches/ipc.rs` (criterion bench target below); not linked

@@ -9,3 +9,8 @@ yarn.lock
 node_modules/
 build/
 dist/
+target/
+
+# Vendored third-party sources (not ours to format)
+src-tauri/vendor/
+src-tauri/gen/

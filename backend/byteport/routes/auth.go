@@ -146,7 +146,7 @@ func UpdateLink(c *gin.Context) {
 	// drifted key ("openAI") is still found, and it reports the key it came
 	// from so the entry is written back in place instead of duplicated.
 	providerKey, provider, providerFound := user.LLMConfig.ProviderEntry(user.LLMConfig.Provider)
-	if !(user.LLMConfig.Provider == "local") {
+	if user.LLMConfig.Provider != "local" {
 		if !providerFound {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error":   "Failed to decrypt OAI",

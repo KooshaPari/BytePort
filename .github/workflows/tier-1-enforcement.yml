@@ -17,9 +17,12 @@ jobs:
   security-audit:
     name: Security Audit (cargo-audit)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
     steps:
-      - uses: actions/checkout@v6
-      - uses: rustsec/audit-check@v2
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: rustsec/audit-check@69366f33c96575abad1ee0dba8212993eecbe998 # v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -28,27 +31,28 @@ jobs:
     name: SBOM Generation & Validation
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
 
       - name: Install cargo-cyclonedx
-        uses: taiki-e/install-action@v2
+        uses: taiki-e/install-action@76c2e6406e52637deed7160d77bded76bd83e06e # v2
         with:
           tool: cargo-cyclonedx
 
       - name: Generate CycloneDX SBOM
         run: |
-          cargo cyclonedx --output-format json
+          # --all is required: the default emits nothing for a virtual (workspace)
+          # manifest, which made the validation step fail on every run.
+          cargo cyclonedx --all --format json
           echo "✅ SBOM generated"
 
       - name: Validate SBOM output exists and is non-empty
         run: |
-          sbom_file="$(ls *.cdx.json 2>/dev/null | head -1)"
+          sbom_file="$(find . -name '*.cdx.json' -not -path './target/*' | head -1)"
           if [ -z "$sbom_file" ]; then
             echo "❌ No .cdx.json file found after generation"
-            ls -la
             exit 1
           fi
           echo "✅ SBOM file: $sbom_file"
@@ -60,10 +64,10 @@ jobs:
           echo "✅ SBOM is valid ($size bytes)"
 
       - name: Upload SBOM as artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: sbom-bomlet
-          path: '*.cdx.json'
+          path: '**/*.cdx.json'
           retention-days: 60
 
   # ── Job 3: LICENSE presence & content check ─────────────────────────
@@ -71,7 +75,7 @@ jobs:
     name: LICENSE Presence Check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Verify LICENSE file exists
         run: |
@@ -102,6 +106,17 @@ jobs:
 
       - name: Check LICENSE is not boilerplate empty
         run: |
+          lic_file=""
+          for candidate in LICENSE LICENSE-MIT LICENSE.md LICENSE-Apache-2.0 LICENSE.txt; do
+            if [ -f "$candidate" ]; then
+              lic_file="$candidate"
+              break
+            fi
+          done
+          if [ -z "$lic_file" ]; then
+            echo "❌ No LICENSE file found"
+            exit 1
+          fi
           line_count=$(wc -l < "$lic_file")
           if [ "$line_count" -lt 5 ]; then
             echo "❌ $lic_file appears too short ($line_count lines); may be a placeholder"
@@ -114,7 +129,7 @@ jobs:
     name: CHANGELOG Update Check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
 

@@ -52,4 +52,3 @@
   "validation": "python3 -c \"import yaml; yaml.safe_load(open('.github/dependabot.yml'))\"",
   "status": "implemented"
 }
-

@@ -65,12 +65,7 @@ impl Router {
 
     /// Authorise a request: find the route **and** verify that
     /// `request_owner` is allowed to access it.
-    pub fn authorize(
-        &self,
-        path: &str,
-        method: &str,
-        request_owner: &str,
-    ) -> Result<&Route, RouteError> {
+    pub fn authorize(&self, path: &str, method: &str, request_owner: &str) -> Result<&Route, RouteError> {
         let route = self.find_route(path, method)?;
         match &route.owner {
             Some(owner) if owner != request_owner => Err(RouteError::Forbidden),
@@ -111,10 +106,7 @@ mod tests {
     #[test]
     fn test_find_route_not_found() {
         let router = Router::new();
-        assert_eq!(
-            router.find_route("/nonexistent", "GET"),
-            Err(RouteError::NotFound)
-        );
+        assert_eq!(router.find_route("/nonexistent", "GET"), Err(RouteError::NotFound));
     }
 
     #[test]
@@ -132,9 +124,6 @@ mod tests {
         let mut router = Router::new();
         router.add_route(sample_route("/v1/data"));
 
-        assert_eq!(
-            router.authorize("/v1/data", "GET", "bob"),
-            Err(RouteError::Forbidden)
-        );
+        assert_eq!(router.authorize("/v1/data", "GET", "bob"), Err(RouteError::Forbidden));
     }
 }

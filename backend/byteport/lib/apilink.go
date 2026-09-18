@@ -213,12 +213,12 @@ func validatedPortfolioDialAddress(ctx context.Context, host, port string) (stri
 }
 
 func isPublicIP(ip net.IP) bool {
-	return !(ip.IsLoopback() ||
-		ip.IsPrivate() ||
-		ip.IsLinkLocalUnicast() ||
-		ip.IsLinkLocalMulticast() ||
-		ip.IsMulticast() ||
-		ip.IsUnspecified())
+	return !ip.IsLoopback() &&
+		!ip.IsPrivate() &&
+		!ip.IsLinkLocalUnicast() &&
+		!ip.IsLinkLocalMulticast() &&
+		!ip.IsMulticast() &&
+		!ip.IsUnspecified()
 }
 
 func isLocalhostName(host string) bool {
@@ -236,7 +236,7 @@ func ValidateGit(user models.User) error {
 
 	// Ensure the user has already linked GitHub
 	if user.Git.Token == "" {
-		return fmt.Errorf("GitHub is not linked for user. Access token is missing.")
+		return fmt.Errorf("GitHub is not linked for user: access token is missing")
 	}
 	log.Printf("Token: [REDACTED]\n")
 
