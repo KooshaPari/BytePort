@@ -34,7 +34,7 @@ export function getApiBaseUrl(): string {
 		return `http://localhost:${API_PORT}`;
 	}
 
-	let platform = '';
+	let platform: string;
 	try {
 		// Dynamic import keeps this synchronous-looking while avoiding a hard
 		// dependency at module load in non-Tauri contexts.

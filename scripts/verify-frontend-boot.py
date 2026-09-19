@@ -5,6 +5,7 @@ If the Tauri window were still blank, no JS would run and no request would
 arrive here. A hit on /authenticate proves the root route mounted and its
 onMount logic executed.
 """
+
 import json
 import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer

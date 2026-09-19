@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Frontend: the lint gate was failing on `prettier --check` (22 unformatted files,
+  including `package.json` and the Tauri config, which used spaces while
+  `.prettierrc` sets `useTabs`) and on `eslint` (`@eslint/js` is imported by
+  `eslint.config.js` but was never declared, so a clean `npm ci` could not
+  resolve it). Also fixes `no-useless-assignment` in `src/lib/api.ts`.
+- Benchmarks: the baseline comparison step lost its closing `fi`, which made the
+  shell script fail with "syntax error: unexpected end of file".
 - CI: repair the Tier-0/Tier-1 gates. Several workflows failed before running at
   all because of unresolvable action pins; others broke on tool version drift
   (golangci-lint v2 CLI flags, govulncheck requiring Go 1.26, Node 20 vs
