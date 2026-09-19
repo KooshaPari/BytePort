@@ -117,9 +117,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     # All workspace crates are publish = false, so there is no crates.io baseline
-    # to diff against. Advisory until a published baseline (or git baseline rev)
-    # exists.
-    continue-on-error: true
+    # to diff against: the action fails with "failed to retrieve crate data from
+    # registry" and posts a red check even with continue-on-error. Skipped until
+    # there is a published baseline (or a `baseline-rev` is configured).
+    if: false
     permissions:
       contents: read
     steps:
@@ -178,7 +179,11 @@ jobs:
     name: SonarCloud
     runs-on: ubuntu-24.04
     timeout-minutes: 30
-    continue-on-error: true
+    # SonarCloud's Automatic Analysis is enabled on this project, and the scanner
+    # refuses to run CI analysis while it is ("You are running CI analysis while
+    # Automatic Analysis is enabled"). Automatic Analysis already covers this
+    # repo, so the CI scan stays off until that project setting is turned off.
+    if: false
     permissions:
       contents: read
     steps:

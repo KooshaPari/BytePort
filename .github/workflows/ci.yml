@@ -177,6 +177,13 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             libglib2.0-dev libgtk-3-dev libwebkit2gtk-4.1-dev libsoup-3.0-dev \
             libjavascriptcoregtk-4.1-dev pkg-config
+      # The clippy hook runs with --all-features, which enables
+      # tauri/custom-protocol; tauri::generate_context!() then requires the
+      # configured frontendDist directory to exist.
+      - name: Create frontend dist placeholder
+        run: |
+          mkdir -p frontend/web/build
+          [ -f frontend/web/build/index.html ] || printf '<!doctype html><title>ci</title>\n' > frontend/web/build/index.html
       - name: Run pre-commit
         uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd # v3.0.1
         with:
