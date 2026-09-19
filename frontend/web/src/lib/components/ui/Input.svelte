@@ -31,23 +31,23 @@
 
 <div class="flex flex-col gap-1.5 {klass}">
 	{#if label}
-		<label for={id} class="text-[12px] font-medium tracking-wide text-dark-onSurfaceVariant">
+		<label for={id} class="text-dark-onSurfaceVariant text-[12px] font-medium tracking-wide">
 			{label}
 		</label>
 	{/if}
 	<input
 		{id}
 		bind:value
-		class="h-9 w-full rounded-md border bg-dark-surfaceContainerLowest px-3 text-sm
-			text-dark-onSurface placeholder:text-dark-onSurfaceVariant/60
-			transition-colors focus:outline-none focus:ring-2 focus:ring-ring/60
+		class="bg-dark-surfaceContainerLowest text-dark-onSurface placeholder:text-dark-onSurfaceVariant/60 focus:ring-ring/60 h-9 w-full rounded-md
+			border px-3
+			text-sm transition-colors focus:ring-2 focus:outline-none
 			{error ? 'border-dark-error' : 'border-border focus:border-dark-primary'}"
 		aria-invalid={Boolean(error)}
 		{...rest}
 	/>
 	{#if error}
-		<p class="text-[12px] text-dark-error">{error}</p>
+		<p class="text-dark-error text-[12px]">{error}</p>
 	{:else if hint}
-		<p class="text-[12px] text-dark-onSurfaceVariant">{hint}</p>
+		<p class="text-dark-onSurfaceVariant text-[12px]">{hint}</p>
 	{/if}
 </div>

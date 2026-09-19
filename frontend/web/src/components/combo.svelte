@@ -42,7 +42,9 @@
 	let trigger = $state<HTMLButtonElement | null>(null);
 
 	const selected = $derived(options.find((option) => option.value === value) ?? null);
-	const activeId = $derived(open && options[activeIndex] ? `${uid}-opt-${activeIndex}` : undefined);
+	const activeId = $derived(
+		open && options[activeIndex] ? `${uid}-opt-${activeIndex}` : undefined
+	);
 
 	function openList() {
 		if (disabled) return;
@@ -73,7 +75,10 @@
 				return;
 			}
 			const step = event.key === 'ArrowDown' ? 1 : -1;
-			activeIndex = Math.min(Math.max(activeIndex + step, 0), Math.max(options.length - 1, 0));
+			activeIndex = Math.min(
+				Math.max(activeIndex + step, 0),
+				Math.max(options.length - 1, 0)
+			);
 			return;
 		}
 
@@ -122,7 +127,9 @@
 
 <div class="relative {klass}" bind:this={root}>
 	{#if label}
-		<span class="mb-1 block text-[11px] font-medium tracking-wide text-dark-onSurfaceVariant uppercase">
+		<span
+			class="text-dark-onSurfaceVariant mb-1 block text-[11px] font-medium tracking-wide uppercase"
+		>
 			{label}
 		</span>
 	{/if}
@@ -138,10 +145,10 @@
 		aria-expanded={open}
 		aria-controls={listId}
 		aria-activedescendant={activeId}
-		class="flex h-8 w-full items-center justify-between gap-2 rounded-md border border-border
-			bg-dark-surfaceContainerLowest px-2.5 text-[13px] transition-colors
-			hover:border-dark-outline hover:bg-dark-surfaceContainerLow
-			focus-visible:border-dark-primary focus-visible:outline-none disabled:opacity-50"
+		class="border-border bg-dark-surfaceContainerLowest hover:border-dark-outline hover:bg-dark-surfaceContainerLow focus-visible:border-dark-primary flex h-8 w-full items-center
+			justify-between gap-2 rounded-md border
+			px-2.5 text-[13px]
+			transition-colors focus-visible:outline-none disabled:opacity-50"
 	>
 		<span class="truncate {selected ? 'text-dark-onSurface' : 'text-dark-onSurfaceVariant'}">
 			{selected?.label ?? placeholder}
@@ -149,7 +156,7 @@
 		<ChevronDown
 			size={14}
 			strokeWidth={1.75}
-			class="shrink-0 text-dark-onSurfaceVariant"
+			class="text-dark-onSurfaceVariant shrink-0"
 			aria-hidden="true"
 		/>
 	</button>
@@ -158,8 +165,8 @@
 		<div
 			id={listId}
 			role="listbox"
-			class="absolute left-0 z-30 mt-1 max-h-64 w-full min-w-[11rem] overflow-y-auto rounded-lg
-				border border-border bg-dark-surfaceContainerHigh p-1"
+			class="border-border bg-dark-surfaceContainerHigh absolute left-0 z-30 mt-1 max-h-64 w-full min-w-[11rem]
+				overflow-y-auto rounded-lg border p-1"
 		>
 			{#each options as option, index (option.value)}
 				<button

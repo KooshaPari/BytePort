@@ -44,9 +44,7 @@ export function getApiBaseUrl(): string {
 	}
 
 	// Android is the only platform whose host loopback differs.
-	return platform === 'android'
-		? `http://10.0.2.2:${API_PORT}`
-		: `http://localhost:${API_PORT}`;
+	return platform === 'android' ? `http://10.0.2.2:${API_PORT}` : `http://localhost:${API_PORT}`;
 }
 
 /** Absolute URL for a backend path, tolerating a leading slash or not. */
@@ -97,7 +95,11 @@ export async function apiFetch<T = unknown>(
 			} catch {
 				body = await response.text().catch(() => undefined);
 			}
-			throw new ApiError(`Request to ${path} failed with ${response.status}`, response.status, body);
+			throw new ApiError(
+				`Request to ${path} failed with ${response.status}`,
+				response.status,
+				body
+			);
 		}
 
 		if (response.status === 204) return undefined as T;

@@ -26,9 +26,9 @@
 		<div class="text-dark-onSurfaceVariant/50">{@render icon()}</div>
 	{/if}
 	<div class="max-w-sm space-y-1">
-		<p class="text-sm font-medium text-dark-onSurface">{title}</p>
+		<p class="text-dark-onSurface text-sm font-medium">{title}</p>
 		{#if description}
-			<p class="text-[13px] leading-relaxed text-dark-onSurfaceVariant">{description}</p>
+			<p class="text-dark-onSurfaceVariant text-[13px] leading-relaxed">{description}</p>
 		{/if}
 	</div>
 	{#if actions}

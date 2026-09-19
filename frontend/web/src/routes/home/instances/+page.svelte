@@ -56,7 +56,10 @@
 		if (phase !== 'ready') phase = 'loading';
 		errorMessage = '';
 		try {
-			const [nextInstances, nextProjects] = await Promise.all([fetchInstances(), fetchProjects()]);
+			const [nextInstances, nextProjects] = await Promise.all([
+				fetchInstances(),
+				fetchProjects()
+			]);
 			instances = nextInstances;
 			projects = nextProjects;
 			phase = 'ready';
@@ -132,7 +135,7 @@
 
 		<div class="ms-auto flex items-center gap-2 pb-0.5">
 			{#if phase === 'ready'}
-				<span class="text-[11px] text-dark-onSurfaceVariant">
+				<span class="text-dark-onSurfaceVariant text-[11px]">
 					{filtered.length} of {instances.length}
 				</span>
 			{/if}
@@ -144,24 +147,40 @@
 	</div>
 
 	{#if phase === 'error'}
-		<div class="flex items-start gap-3 rounded-lg border border-border bg-dark-surfaceContainer p-4" role="alert">
-			<CircleAlert size={16} strokeWidth={1.75} class="mt-0.5 shrink-0 text-dark-error" aria-hidden="true" />
+		<div
+			class="border-border bg-dark-surfaceContainer flex items-start gap-3 rounded-lg border p-4"
+			role="alert"
+		>
+			<CircleAlert
+				size={16}
+				strokeWidth={1.75}
+				class="text-dark-error mt-0.5 shrink-0"
+				aria-hidden="true"
+			/>
 			<div class="flex min-w-0 flex-1 flex-col gap-1">
-				<p class="text-[13px] font-medium text-dark-onSurface">Instances could not be loaded</p>
-				<p class="text-[12px] break-words text-dark-onSurfaceVariant">{errorMessage}</p>
+				<p class="text-dark-onSurface text-[13px] font-medium">
+					Instances could not be loaded
+				</p>
+				<p class="text-dark-onSurfaceVariant text-[12px] break-words">{errorMessage}</p>
 			</div>
 			<Button variant="secondary" size="sm" onclick={load}>Retry</Button>
 		</div>
 	{/if}
 
-	<div class="overflow-hidden rounded-lg border border-border bg-dark-surfaceContainer">
+	<div class="border-border bg-dark-surfaceContainer overflow-hidden rounded-lg border">
 		{#if phase === 'loading'}
 			<div aria-busy="true" aria-label="Loading instances">
 				{#each Array(4) as _, index (index)}
-					<div class="flex h-11 items-center gap-3 border-b border-border px-4 last:border-b-0">
-						<span class="h-3.5 w-40 animate-pulse rounded bg-dark-surfaceContainerHigh"></span>
-						<span class="h-3.5 w-20 animate-pulse rounded bg-dark-surfaceContainerHigh"></span>
-						<span class="ms-auto h-3.5 w-24 animate-pulse rounded bg-dark-surfaceContainerHigh"></span>
+					<div
+						class="border-border flex h-11 items-center gap-3 border-b px-4 last:border-b-0"
+					>
+						<span class="bg-dark-surfaceContainerHigh h-3.5 w-40 animate-pulse rounded"
+						></span>
+						<span class="bg-dark-surfaceContainerHigh h-3.5 w-20 animate-pulse rounded"
+						></span>
+						<span
+							class="bg-dark-surfaceContainerHigh ms-auto h-3.5 w-24 animate-pulse rounded"
+						></span>
 					</div>
 				{/each}
 			</div>
@@ -203,38 +222,55 @@
 		{:else}
 			<table class="w-full text-left">
 				<thead>
-					<tr class="h-9 border-b border-border bg-dark-surfaceContainerLow">
+					<tr class="border-border bg-dark-surfaceContainerLow h-9 border-b">
 						<th scope="col" class="w-10 px-2"><span class="sr-only">Expand</span></th>
-						<th scope="col" class="px-4 text-[11px] font-medium tracking-wide text-dark-onSurfaceVariant uppercase">
+						<th
+							scope="col"
+							class="text-dark-onSurfaceVariant px-4 text-[11px] font-medium tracking-wide uppercase"
+						>
 							Instance
 						</th>
-						<th scope="col" class="w-36 px-4 text-[11px] font-medium tracking-wide text-dark-onSurfaceVariant uppercase">
+						<th
+							scope="col"
+							class="text-dark-onSurfaceVariant w-36 px-4 text-[11px] font-medium tracking-wide uppercase"
+						>
 							State
 						</th>
-						<th scope="col" class="px-4 text-[11px] font-medium tracking-wide text-dark-onSurfaceVariant uppercase">
+						<th
+							scope="col"
+							class="text-dark-onSurfaceVariant px-4 text-[11px] font-medium tracking-wide uppercase"
+						>
 							Project
 						</th>
-						<th scope="col" class="w-28 px-4 text-[11px] font-medium tracking-wide text-dark-onSurfaceVariant uppercase">
+						<th
+							scope="col"
+							class="text-dark-onSurfaceVariant w-28 px-4 text-[11px] font-medium tracking-wide uppercase"
+						>
 							Resources
 						</th>
-						<th scope="col" class="w-32 px-4 text-[11px] font-medium tracking-wide text-dark-onSurfaceVariant uppercase">
+						<th
+							scope="col"
+							class="text-dark-onSurfaceVariant w-32 px-4 text-[11px] font-medium tracking-wide uppercase"
+						>
 							Updated
 						</th>
 					</tr>
 				</thead>
-				<tbody class="divide-y divide-border">
+				<tbody class="divide-border divide-y">
 					{#each filtered as instance (instance.uuid || instance.name)}
 						{@const key = instance.uuid || instance.name}
 						{@const open = expanded.has(key)}
-						<tr class="h-11 transition-colors hover:bg-dark-surfaceContainerHigh">
+						<tr class="hover:bg-dark-surfaceContainerHigh h-11 transition-colors">
 							<td class="px-2">
 								<button
 									type="button"
 									onclick={() => toggle(key)}
 									aria-expanded={open}
-									aria-label={open ? `Collapse ${instance.name}` : `Expand ${instance.name}`}
-									class="flex h-7 w-7 items-center justify-center rounded-md text-dark-onSurfaceVariant
-										transition-colors hover:bg-dark-surfaceContainerHighest hover:text-dark-onSurface
+									aria-label={open
+										? `Collapse ${instance.name}`
+										: `Expand ${instance.name}`}
+									class="text-dark-onSurfaceVariant hover:bg-dark-surfaceContainerHighest hover:text-dark-onSurface flex h-7 w-7 items-center
+										justify-center rounded-md transition-colors
 										focus-visible:outline-none"
 								>
 									<ChevronRight
@@ -246,10 +282,14 @@
 								</button>
 							</td>
 							<td class="max-w-0 px-4">
-								<span class="block truncate text-[13px] leading-tight font-medium text-dark-onSurface">
+								<span
+									class="text-dark-onSurface block truncate text-[13px] leading-tight font-medium"
+								>
 									{instance.name}
 								</span>
-								<span class="block truncate text-[11px] leading-tight text-dark-onSurfaceVariant">
+								<span
+									class="text-dark-onSurfaceVariant block truncate text-[11px] leading-tight"
+								>
 									{instance.os}
 								</span>
 							</td>
@@ -261,20 +301,24 @@
 									<button
 										type="button"
 										onclick={() => openProject(instance)}
-										class="block max-w-full truncate text-left text-[12px] text-dark-primary hover:underline focus-visible:outline-none"
+										class="text-dark-primary block max-w-full truncate text-left text-[12px] hover:underline focus-visible:outline-none"
 									>
 										{projectName(instance)}
 									</button>
 								{:else}
-									<span class="block truncate text-[12px] text-dark-onSurfaceVariant">
+									<span
+										class="text-dark-onSurfaceVariant block truncate text-[12px]"
+									>
 										{projectName(instance)}
 									</span>
 								{/if}
 							</td>
-							<td class="px-4 text-[12px] text-dark-onSurfaceVariant">
+							<td class="text-dark-onSurfaceVariant px-4 text-[12px]">
 								{instance.resources.length}
 							</td>
-							<td class="px-4 text-[12px] whitespace-nowrap text-dark-onSurfaceVariant">
+							<td
+								class="text-dark-onSurfaceVariant px-4 text-[12px] whitespace-nowrap"
+							>
 								<span title={formatAbsolute(instance.lastUpdated)}>
 									{instance.lastUpdatedLabel}
 								</span>
@@ -286,28 +330,34 @@
 								<td></td>
 								<td colspan="5" class="px-4 py-3">
 									{#if instance.resources.length === 0}
-										<p class="text-[12px] text-dark-onSurfaceVariant">
+										<p class="text-dark-onSurfaceVariant text-[12px]">
 											No resources reported for this instance.
 										</p>
 									{:else}
-										<ul class="divide-y divide-border overflow-hidden rounded-md border border-border">
+										<ul
+											class="divide-border border-border divide-y overflow-hidden rounded-md border"
+										>
 											{#each instance.resources as resource (resource.id + resource.name)}
 												<li class="flex items-center gap-3 px-3 py-1.5">
 													<span
-														class="w-24 shrink-0 truncate text-[11px] tracking-wide text-dark-onSurfaceVariant uppercase"
+														class="text-dark-onSurfaceVariant w-24 shrink-0 truncate text-[11px] tracking-wide uppercase"
 													>
 														{resource.service}
 													</span>
-													<span class="min-w-0 flex-1 truncate text-[12px] text-dark-onSurface">
+													<span
+														class="text-dark-onSurface min-w-0 flex-1 truncate text-[12px]"
+													>
 														{resource.name}
 													</span>
 													<span
-														class="hidden min-w-0 max-w-[18rem] truncate text-[11px] text-dark-onSurfaceVariant lg:block"
+														class="text-dark-onSurfaceVariant hidden max-w-[18rem] min-w-0 truncate text-[11px] lg:block"
 														title={resource.arn}
 													>
 														{resource.region || resource.type}
 													</span>
-													<Badge tone={resource.statusTone}>{resource.status}</Badge>
+													<Badge tone={resource.statusTone}
+														>{resource.status}</Badge
+													>
 												</li>
 											{/each}
 										</ul>

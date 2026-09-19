@@ -160,30 +160,30 @@
 	<DialogPrimitive.Portal>
 		<DialogPrimitive.Overlay class="fixed inset-0 z-50 bg-black/65" />
 		<DialogPrimitive.Content
-			class="fixed top-1/2 left-1/2 z-50 flex max-h-[85vh] w-[min(560px,92vw)] -translate-x-1/2
-				-translate-y-1/2 flex-col overflow-hidden rounded-lg border border-border
-				bg-dark-surfaceContainer outline-none"
+			class="border-border bg-dark-surfaceContainer fixed top-1/2 left-1/2 z-50 flex max-h-[85vh]
+				w-[min(560px,92vw)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-lg
+				border outline-none"
 			onInteractOutside={(event) => {
 				if (busy) event.preventDefault();
 			}}
 		>
-			<header class="flex items-start justify-between gap-4 border-b border-border px-5 py-4">
+			<header class="border-border flex items-start justify-between gap-4 border-b px-5 py-4">
 				<div class="flex min-w-0 flex-col gap-1" aria-live="polite">
 					<DialogPrimitive.Title
-						class="text-[14px] leading-tight font-semibold text-dark-onSurface"
+						class="text-dark-onSurface text-[14px] leading-tight font-semibold"
 					>
 						{title}
 					</DialogPrimitive.Title>
 					<DialogPrimitive.Description
-						class="text-[12px] leading-snug text-dark-onSurfaceVariant"
+						class="text-dark-onSurfaceVariant text-[12px] leading-snug"
 					>
 						{subtitle}
 					</DialogPrimitive.Description>
 				</div>
 
 				<DialogPrimitive.Close
-					class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-dark-onSurfaceVariant
-						transition-colors hover:bg-dark-surfaceContainerHigh hover:text-dark-onSurface
+					class="text-dark-onSurfaceVariant hover:bg-dark-surfaceContainerHigh hover:text-dark-onSurface flex h-7 w-7 shrink-0 items-center
+						justify-center rounded-md transition-colors
 						focus-visible:outline-none disabled:opacity-40"
 					disabled={busy}
 				>
@@ -193,8 +193,10 @@
 			</header>
 
 			{#if stepIndex >= 0}
-				<div class="flex items-center gap-3 border-b border-border px-5 py-3">
-					<span class="text-[11px] font-medium tracking-wide text-dark-onSurfaceVariant uppercase">
+				<div class="border-border flex items-center gap-3 border-b px-5 py-3">
+					<span
+						class="text-dark-onSurfaceVariant text-[11px] font-medium tracking-wide uppercase"
+					>
 						Step {stepIndex + 1} of {STEPS.length}
 					</span>
 					<div class="flex flex-1 items-center gap-1.5" aria-hidden="true">
@@ -225,29 +227,53 @@
 				{:else if step === 'review'}
 					<ReviewCard {name} {description} {type} {platform} {repository} />
 				{:else if step === 'deploying'}
-					<div class="flex flex-col items-center justify-center gap-3 py-12" role="status">
+					<div
+						class="flex flex-col items-center justify-center gap-3 py-12"
+						role="status"
+					>
 						<span
-							class="h-5 w-5 animate-spin rounded-full border-2 border-dark-primary border-t-transparent"
+							class="border-dark-primary h-5 w-5 animate-spin rounded-full border-2 border-t-transparent"
 							aria-hidden="true"
 						></span>
-						<p class="text-[13px] text-dark-onSurface">Sending the deploy request</p>
-						<p class="text-[12px] text-dark-onSurfaceVariant">
-							The backend registers the project, then asks NanoVMS to start the sandbox.
+						<p class="text-dark-onSurface text-[13px]">Sending the deploy request</p>
+						<p class="text-dark-onSurfaceVariant text-[12px]">
+							The backend registers the project, then asks NanoVMS to start the
+							sandbox.
 						</p>
 					</div>
 				{:else if step === 'done'}
-					<div class="flex flex-col items-center justify-center gap-3 py-12" role="status">
-						<CircleCheck size={28} strokeWidth={1.5} class="text-dark-primary" aria-hidden="true" />
-						<p class="text-[13px] font-medium text-dark-onSurface">{name} is deploying</p>
-						<p class="text-[12px] text-dark-onSurfaceVariant">
-							Sandbox status: {deployedStatus}. It will appear on the projects list shortly.
+					<div
+						class="flex flex-col items-center justify-center gap-3 py-12"
+						role="status"
+					>
+						<CircleCheck
+							size={28}
+							strokeWidth={1.5}
+							class="text-dark-primary"
+							aria-hidden="true"
+						/>
+						<p class="text-dark-onSurface text-[13px] font-medium">
+							{name} is deploying
+						</p>
+						<p class="text-dark-onSurfaceVariant text-[12px]">
+							Sandbox status: {deployedStatus}. It will appear on the projects list
+							shortly.
 						</p>
 					</div>
 				{:else}
 					<div class="flex flex-col items-center justify-center gap-3 py-12" role="alert">
-						<CircleAlert size={28} strokeWidth={1.5} class="text-dark-error" aria-hidden="true" />
-						<p class="text-[13px] font-medium text-dark-onSurface">The project was not deployed</p>
-						<p class="max-w-sm text-center text-[12px] break-words text-dark-onSurfaceVariant">
+						<CircleAlert
+							size={28}
+							strokeWidth={1.5}
+							class="text-dark-error"
+							aria-hidden="true"
+						/>
+						<p class="text-dark-onSurface text-[13px] font-medium">
+							The project was not deployed
+						</p>
+						<p
+							class="text-dark-onSurfaceVariant max-w-sm text-center text-[12px] break-words"
+						>
 							{deployError}
 						</p>
 					</div>
@@ -255,18 +281,24 @@
 			</div>
 
 			<footer
-				class="flex items-center justify-end gap-2 border-t border-border bg-dark-surfaceContainerLow px-5 py-3"
+				class="border-border bg-dark-surfaceContainerLow flex items-center justify-end gap-2 border-t px-5 py-3"
 			>
 				{#if step === 'repository'}
 					<Button variant="ghost" onclick={() => (open = false)}>Cancel</Button>
-					<Button variant="primary" disabled={!repository} onclick={() => goTo('details')}>
+					<Button
+						variant="primary"
+						disabled={!repository}
+						onclick={() => goTo('details')}
+					>
 						Continue
 					</Button>
 				{:else if step === 'details'}
 					<Button variant="ghost" onclick={() => goTo('repository')}>Back</Button>
 					<Button variant="primary" onclick={submitDetails}>Review</Button>
 				{:else if step === 'review'}
-					<Button variant="ghost" disabled={busy} onclick={() => goTo('details')}>Back</Button>
+					<Button variant="ghost" disabled={busy} onclick={() => goTo('details')}
+						>Back</Button
+					>
 					<Button variant="primary" onclick={deploy}>Deploy project</Button>
 				{:else if step === 'deploying'}
 					<Button variant="secondary" disabled>Deploying</Button>

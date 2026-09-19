@@ -29,7 +29,12 @@
 	import Combo from '../../../components/combo.svelte';
 	import AddProjectDialog from '../../../components/addProjectDialog.svelte';
 	import ProjectPopup from '../../../components/projectPopup.svelte';
-	import { fetchProjects, formatAbsolute, watchAuth, type ProjectRow } from '../../../components/projectData';
+	import {
+		fetchProjects,
+		formatAbsolute,
+		watchAuth,
+		type ProjectRow
+	} from '../../../components/projectData';
 
 	const ICON_BUTTON =
 		'flex h-7 w-7 items-center justify-center rounded-md text-dark-onSurfaceVariant ' +
@@ -125,7 +130,7 @@
 
 		<div class="ms-auto flex items-center gap-2 pb-0.5">
 			{#if phase === 'ready'}
-				<span class="text-[11px] text-dark-onSurfaceVariant">
+				<span class="text-dark-onSurfaceVariant text-[11px]">
 					{filtered.length} of {projects.length}
 				</span>
 			{/if}
@@ -141,24 +146,40 @@
 	</div>
 
 	{#if phase === 'error'}
-		<div class="flex items-start gap-3 rounded-lg border border-border bg-dark-surfaceContainer p-4" role="alert">
-			<CircleAlert size={16} strokeWidth={1.75} class="mt-0.5 shrink-0 text-dark-error" aria-hidden="true" />
+		<div
+			class="border-border bg-dark-surfaceContainer flex items-start gap-3 rounded-lg border p-4"
+			role="alert"
+		>
+			<CircleAlert
+				size={16}
+				strokeWidth={1.75}
+				class="text-dark-error mt-0.5 shrink-0"
+				aria-hidden="true"
+			/>
 			<div class="flex min-w-0 flex-1 flex-col gap-1">
-				<p class="text-[13px] font-medium text-dark-onSurface">Projects could not be loaded</p>
-				<p class="text-[12px] break-words text-dark-onSurfaceVariant">{errorMessage}</p>
+				<p class="text-dark-onSurface text-[13px] font-medium">
+					Projects could not be loaded
+				</p>
+				<p class="text-dark-onSurfaceVariant text-[12px] break-words">{errorMessage}</p>
 			</div>
 			<Button variant="secondary" size="sm" onclick={load}>Retry</Button>
 		</div>
 	{/if}
 
-	<div class="overflow-hidden rounded-lg border border-border bg-dark-surfaceContainer">
+	<div class="border-border bg-dark-surfaceContainer overflow-hidden rounded-lg border">
 		{#if phase === 'loading'}
 			<div aria-busy="true" aria-label="Loading projects">
 				{#each Array(5) as _, index (index)}
-					<div class="flex h-11 items-center gap-3 border-b border-border px-4 last:border-b-0">
-						<span class="h-3.5 w-48 animate-pulse rounded bg-dark-surfaceContainerHigh"></span>
-						<span class="h-3.5 w-20 animate-pulse rounded bg-dark-surfaceContainerHigh"></span>
-						<span class="ms-auto h-3.5 w-28 animate-pulse rounded bg-dark-surfaceContainerHigh"></span>
+					<div
+						class="border-border flex h-11 items-center gap-3 border-b px-4 last:border-b-0"
+					>
+						<span class="bg-dark-surfaceContainerHigh h-3.5 w-48 animate-pulse rounded"
+						></span>
+						<span class="bg-dark-surfaceContainerHigh h-3.5 w-20 animate-pulse rounded"
+						></span>
+						<span
+							class="bg-dark-surfaceContainerHigh ms-auto h-3.5 w-28 animate-pulse rounded"
+						></span>
 					</div>
 				{/each}
 			</div>
@@ -201,17 +222,29 @@
 		{:else}
 			<table class="w-full text-left">
 				<thead>
-					<tr class="h-9 border-b border-border bg-dark-surfaceContainerLow">
-						<th scope="col" class="px-4 text-[11px] font-medium tracking-wide text-dark-onSurfaceVariant uppercase">
+					<tr class="border-border bg-dark-surfaceContainerLow h-9 border-b">
+						<th
+							scope="col"
+							class="text-dark-onSurfaceVariant px-4 text-[11px] font-medium tracking-wide uppercase"
+						>
 							Project
 						</th>
-						<th scope="col" class="w-36 px-4 text-[11px] font-medium tracking-wide text-dark-onSurfaceVariant uppercase">
+						<th
+							scope="col"
+							class="text-dark-onSurfaceVariant w-36 px-4 text-[11px] font-medium tracking-wide uppercase"
+						>
 							State
 						</th>
-						<th scope="col" class="px-4 text-[11px] font-medium tracking-wide text-dark-onSurfaceVariant uppercase">
+						<th
+							scope="col"
+							class="text-dark-onSurfaceVariant px-4 text-[11px] font-medium tracking-wide uppercase"
+						>
 							Target
 						</th>
-						<th scope="col" class="w-32 px-4 text-[11px] font-medium tracking-wide text-dark-onSurfaceVariant uppercase">
+						<th
+							scope="col"
+							class="text-dark-onSurfaceVariant w-32 px-4 text-[11px] font-medium tracking-wide uppercase"
+						>
 							Last deploy
 						</th>
 						<th scope="col" class="w-12 px-2">
@@ -219,19 +252,23 @@
 						</th>
 					</tr>
 				</thead>
-				<tbody class="divide-y divide-border">
+				<tbody class="divide-border divide-y">
 					{#each filtered as project (project.uuid || project.name)}
-						<tr class="h-11 transition-colors hover:bg-dark-surfaceContainerHigh">
+						<tr class="hover:bg-dark-surfaceContainerHigh h-11 transition-colors">
 							<td class="max-w-0 px-4">
 								<button
 									type="button"
 									onclick={() => openDetail(project)}
 									class="flex w-full flex-col text-left focus-visible:outline-none"
 								>
-									<span class="truncate text-[13px] leading-tight font-medium text-dark-onSurface">
+									<span
+										class="text-dark-onSurface truncate text-[13px] leading-tight font-medium"
+									>
 										{project.name}
 									</span>
-									<span class="truncate text-[11px] leading-tight text-dark-onSurfaceVariant">
+									<span
+										class="text-dark-onSurfaceVariant truncate text-[11px] leading-tight"
+									>
 										{project.type} on {project.platform}
 									</span>
 								</button>
@@ -240,25 +277,39 @@
 								<Badge tone={project.statusTone} dot>{project.status}</Badge>
 							</td>
 							<td class="max-w-0 px-4">
-								<span class="block truncate text-[12px] text-dark-onSurfaceVariant">
+								<span class="text-dark-onSurfaceVariant block truncate text-[12px]">
 									{project.target}
 								</span>
 							</td>
-							<td class="px-4 text-[12px] whitespace-nowrap text-dark-onSurfaceVariant">
-								<span title={formatAbsolute(project.lastDeployAt)}>{project.lastDeployLabel}</span>
+							<td
+								class="text-dark-onSurfaceVariant px-4 text-[12px] whitespace-nowrap"
+							>
+								<span title={formatAbsolute(project.lastDeployAt)}
+									>{project.lastDeployLabel}</span
+								>
 							</td>
 							<td class="px-2 text-right">
 								<Menu.Root>
-									<Menu.Trigger class={ICON_BUTTON} aria-label="Actions for {project.name}">
-										<EllipsisVertical size={15} strokeWidth={1.75} aria-hidden="true" />
+									<Menu.Trigger
+										class={ICON_BUTTON}
+										aria-label="Actions for {project.name}"
+									>
+										<EllipsisVertical
+											size={15}
+											strokeWidth={1.75}
+											aria-hidden="true"
+										/>
 									</Menu.Trigger>
 
 									<Menu.Content
 										align="end"
 										sideOffset={4}
-										class="z-50 min-w-[12rem] rounded-lg border border-border bg-dark-surfaceContainerHigh p-1"
+										class="border-border bg-dark-surfaceContainerHigh z-50 min-w-[12rem] rounded-lg border p-1"
 									>
-										<Menu.Item class={MENU_ITEM} onSelect={() => openDetail(project)}>
+										<Menu.Item
+											class={MENU_ITEM}
+											onSelect={() => openDetail(project)}
+										>
 											Open details
 										</Menu.Item>
 										<Menu.Item
@@ -266,10 +317,14 @@
 											disabled={!project.accessUrl}
 											onSelect={() => openAccess(project)}
 										>
-											<ExternalLink size={13} strokeWidth={1.75} aria-hidden="true" />
+											<ExternalLink
+												size={13}
+												strokeWidth={1.75}
+												aria-hidden="true"
+											/>
 											Open access URL
 										</Menu.Item>
-										<Menu.Separator class="my-1 h-px bg-border" />
+										<Menu.Separator class="bg-border my-1 h-px" />
 										<Menu.Item
 											class="{MENU_ITEM} text-dark-error"
 											onSelect={() => openDetail(project)}

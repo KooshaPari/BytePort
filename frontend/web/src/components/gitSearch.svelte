@@ -146,14 +146,22 @@
 		{onkeydown}
 	/>
 
-	<div class="h-64 overflow-hidden rounded-lg border border-border bg-dark-surfaceContainerLowest">
+	<div
+		class="border-border bg-dark-surfaceContainerLowest h-64 overflow-hidden rounded-lg border"
+	>
 		{#if phase === 'loading'}
-			<div class="flex h-full flex-col gap-1 p-2" aria-busy="true" aria-label="Loading repositories">
+			<div
+				class="flex h-full flex-col gap-1 p-2"
+				aria-busy="true"
+				aria-label="Loading repositories"
+			>
 				{#each [0, 1, 2, 3, 4] as row (row)}
 					<div class="flex h-11 items-center gap-2.5 rounded-md px-2.5">
-						<div class="h-5 w-5 shrink-0 animate-pulse rounded bg-dark-surfaceContainerHigh"></div>
 						<div
-							class="h-3 flex-1 animate-pulse rounded bg-dark-surfaceContainerHigh"
+							class="bg-dark-surfaceContainerHigh h-5 w-5 shrink-0 animate-pulse rounded"
+						></div>
+						<div
+							class="bg-dark-surfaceContainerHigh h-3 flex-1 animate-pulse rounded"
 							style="max-width: {60 - row * 8}%"
 						></div>
 					</div>
@@ -161,14 +169,17 @@
 			</div>
 		{:else if phase === 'error'}
 			<div class="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
-				<p class="text-[13px] text-dark-onSurfaceVariant">{errorMessage}</p>
+				<p class="text-dark-onSurfaceVariant text-[13px]">{errorMessage}</p>
 				<Button variant="secondary" size="sm" onclick={() => load({ useCache: false })}>
 					<RefreshCw size={13} strokeWidth={1.75} aria-hidden="true" />
 					Retry
 				</Button>
 			</div>
 		{:else if repos.length === 0}
-			<EmptyState title="No repositories found" description="Connect GitHub in Settings to deploy from a repository.">
+			<EmptyState
+				title="No repositories found"
+				description="Connect GitHub in Settings to deploy from a repository."
+			>
 				{#snippet icon()}
 					<FolderGit2 size={22} strokeWidth={1.5} aria-hidden="true" />
 				{/snippet}
@@ -186,14 +197,12 @@
 							onclick={() => onselect(repo)}
 							onmousemove={() => (highlight = index)}
 							class="flex h-11 w-full items-center gap-2.5 rounded-md px-2 text-left transition-colors
-								{index === highlight && !isSelected
-								? 'bg-dark-surfaceContainerHigh'
-								: ''}
+								{index === highlight && !isSelected ? 'bg-dark-surfaceContainerHigh' : ''}
 								{isSelected ? 'bg-dark-primaryContainer/40' : ''}"
 						>
 							<span
-								class="flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded
-									bg-dark-surfaceContainerHighest text-[9px] font-semibold text-dark-onSurfaceVariant"
+								class="bg-dark-surfaceContainerHighest text-dark-onSurfaceVariant flex h-5 w-5 shrink-0 items-center justify-center
+									overflow-hidden rounded text-[9px] font-semibold"
 								aria-hidden="true"
 							>
 								{#if repo.owner?.avatar_url && !failedAvatars.has(repo.full_name)}
@@ -209,22 +218,33 @@
 							</span>
 
 							<span class="flex min-w-0 flex-1 flex-col">
-								<span class="truncate text-[13px] leading-tight font-medium text-dark-onSurface">
+								<span
+									class="text-dark-onSurface truncate text-[13px] leading-tight font-medium"
+								>
 									{repo.full_name}
 								</span>
-								<span class="truncate text-[11px] leading-tight text-dark-onSurfaceVariant">
+								<span
+									class="text-dark-onSurfaceVariant truncate text-[11px] leading-tight"
+								>
 									{repo.description || 'No description'}
 								</span>
 							</span>
 
 							{#if repo.language}
-								<span class="shrink-0 text-[11px] text-dark-onSurfaceVariant">{repo.language}</span>
+								<span class="text-dark-onSurfaceVariant shrink-0 text-[11px]"
+									>{repo.language}</span
+								>
 							{/if}
 							{#if repo.private}
 								<Badge tone="neutral">Private</Badge>
 							{/if}
 							{#if isSelected}
-								<Check size={14} strokeWidth={2} class="shrink-0 text-dark-primary" aria-hidden="true" />
+								<Check
+									size={14}
+									strokeWidth={2}
+									class="text-dark-primary shrink-0"
+									aria-hidden="true"
+								/>
 							{/if}
 						</button>
 					</li>
@@ -233,7 +253,7 @@
 		{/if}
 	</div>
 
-	<p class="text-[11px] text-dark-onSurfaceVariant">
+	<p class="text-dark-onSurfaceVariant text-[11px]">
 		{repos.length}
 		{repos.length === 1 ? 'repository' : 'repositories'} available
 	</p>

@@ -39,10 +39,10 @@
 	onDestroy(() => unsubscribe?.());
 </script>
 
-<main class="flex h-screen w-screen items-center justify-center bg-dark-background">
+<main class="bg-dark-background flex h-screen w-screen items-center justify-center">
 	<div class="flex flex-col items-center gap-3" role="status" aria-live="polite">
 		<span
-			class="flex h-9 w-9 items-center justify-center rounded-lg bg-dark-primaryContainer text-dark-primary"
+			class="bg-dark-primaryContainer text-dark-primary flex h-9 w-9 items-center justify-center rounded-lg"
 			aria-hidden="true"
 		>
 			<svg
@@ -59,7 +59,7 @@
 				<path d="M8 8.1v6" />
 			</svg>
 		</span>
-		<p class="text-[13px] font-medium text-dark-onSurfaceVariant">Starting BytePort</p>
+		<p class="text-dark-onSurfaceVariant text-[13px] font-medium">Starting BytePort</p>
 		<span class="sr-only">Loading</span>
 	</div>
 </main>

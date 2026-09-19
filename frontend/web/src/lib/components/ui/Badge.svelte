@@ -26,7 +26,7 @@
 
 <span
 	class="inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px]
-		font-medium uppercase tracking-wide {tones[tone]} {klass}"
+		font-medium tracking-wide uppercase {tones[tone]} {klass}"
 >
 	{#if dot}
 		<span class="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true"></span>
