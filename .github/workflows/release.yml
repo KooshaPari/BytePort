@@ -60,12 +60,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # ---------- Monthly: refresh SBOM ----------
-  sbom-refresh:
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    timeout-minutes: 20
-    name: Monthly SBOM refresh
-    uses: KooshaPari/phenotype-tooling/.github/workflows/sbom-monthly.yml@79dff2b798fb8a3bc64237e4b2d054a08d3a4601
-    with:
-      repo_path: '.'
-      build_system: 'rust'
+  # NOTE: the monthly SBOM refresh job was removed. It called
+  # KooshaPari/phenotype-tooling/.github/workflows/sbom-monthly.yml@79dff2b7, which
+  # does not exist (GitHub returns 404), so the whole workflow file failed to
+  # load and every push to main produced a zero-job failed run. SBOM generation
+  # is covered by .github/workflows/sbom.yml (Generate SBOM), which passes.
+  # A reusable-workflow job also cannot carry `timeout-minutes`, which the same
+  # GitHub validation rejected.
