@@ -2,18 +2,15 @@ package routes
 
 import (
 	"byteport/models"
-	"fmt"
+	"log"
 )
 
 func addNewProject(project models.Project) error {
-	fmt.Println("Adding project to db: ", project)
-	result := models.DB.Create(&project)
-	return result.Error
-
+	log.Printf("project %s: writing row", project.UUID)
+	return models.DB.Create(&project).Error
 }
-func removeProject(project models.Project) error {
-	fmt.Println("Removing Project From DB: ", project)
-	result := models.DB.Delete(&project)
-	return result.Error
 
+func removeProject(project models.Project) error {
+	log.Printf("project %s: deleting row", project.UUID)
+	return models.DB.Delete(&project).Error
 }

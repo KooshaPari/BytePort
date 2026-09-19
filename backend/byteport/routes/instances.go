@@ -8,14 +8,8 @@ import (
 )
 
 func GetInstances(c *gin.Context) {
-	userVal, exists := c.Get("user")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-		return
-	}
-	user, ok := userVal.(models.User)
+	user, ok := currentUser(c)
 	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user context"})
 		return
 	}
 

@@ -11,6 +11,24 @@ import (
 	"github.com/google/uuid"
 )
 
+// currentUser resolves the authenticated user that AuthMiddleware stored in
+// the gin context. When the context carries no usable user it writes the error
+// response itself and reports false, so protected handlers cannot forget to
+// check the session before trusting request data.
+func currentUser(c *gin.Context) (models.User, bool) {
+	value, exists := c.Get("user")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return models.User{}, false
+	}
+	user, ok := value.(models.User)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user context"})
+		return models.User{}, false
+	}
+	return user, true
+}
+
 func setAuthCookie(c *gin.Context, token string) {
 	c.SetSameSite(http.SameSiteLaxMode)
 	c.SetCookie("authToken", token, 3600, "/", c.GetHeader("Host"), true, true)

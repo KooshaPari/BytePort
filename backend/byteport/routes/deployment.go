@@ -6,8 +6,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
+	"net/url"
 	"os"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -46,25 +49,81 @@ type nvmsSandboxResponse struct {
 	IPAddress string `json:"ip_address"`
 }
 
+// deployRequest is the validated client contract for POST /deploy.
+//
+// Ownership is deliberately absent from the contract. `owner`, the project
+// `uuid` and the project `id` are all derived from the authenticated session,
+// so a caller cannot attribute a deployment to another account (or adopt an
+// existing row) by putting `user`, `owner` or `uuid` in the body.
+type deployRequest struct {
+	Name         string             `json:"name" binding:"required"`
+	Description  string             `json:"description"`
+	Type         string             `json:"type"`
+	Platform     string             `json:"platform"`
+	Readme       string             `json:"readme"`
+	RepositoryID string             `json:"repository_id"`
+	Repository   *models.Repository `json:"repository"`
+}
+
+// repositoryID resolves the repository link, preferring the explicit
+// `repository_id` and falling back to the id of an embedded `repository`
+// object, which is the shape the web client posts.
+func (r deployRequest) repositoryID() string {
+	if r.RepositoryID != "" {
+		return r.RepositoryID
+	}
+	if r.Repository != nil && r.Repository.ID != 0 {
+		return strconv.FormatUint(uint64(r.Repository.ID), 10)
+	}
+	return ""
+}
+
+// terminateRequest is the validated client contract for POST /terminate.
+type terminateRequest struct {
+	UUID string `json:"uuid" binding:"required"`
+}
+
+// DeployProject creates a project owned by the authenticated caller and asks
+// NanoVMS to provision a sandbox for it.
+//
+// The request is rejected with 400 before any database write or outbound call
+// when the body is malformed or `name` is missing, so the endpoint never
+// proxies an unvalidated body upstream.
 func DeployProject(c *gin.Context) {
-	var newProject models.Project
-	if err := c.ShouldBindJSON(&newProject); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	user, ok := currentUser(c)
+	if !ok {
 		return
 	}
-	if err := newProject.BeforeSave(models.DB); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save project"})
+
+	var req deployRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid deploy request: " + err.Error()})
 		return
 	}
-	fmt.Println("Deploying project: ", newProject)
+
+	projectUUID := uuid.New().String()
+	project := models.Project{
+		UUID:         projectUUID,
+		ID:           projectUUID,
+		Owner:        user.UUID,
+		Name:         req.Name,
+		RepositoryID: req.repositoryID(),
+		Readme:       req.Readme,
+		Description:  req.Description,
+		Type:         req.Type,
+		Platform:     req.Platform,
+	}
+	if req.Repository != nil {
+		project.Repository = *req.Repository
+	}
 
 	// Translate BytePort Project → NanoVMS SandboxConfig
 	sandboxCfg := nvmsSandboxConfig{
-		Name:        newProject.Name,
+		Name:        project.Name,
 		Image:       "alpine:latest", // default image
 		SandboxType: "native",
 		Labels: map[string]string{
-			"byteport-project-id": newProject.UUID,
+			"byteport-project-id": project.UUID,
 		},
 	}
 
@@ -74,23 +133,21 @@ func DeployProject(c *gin.Context) {
 		return
 	}
 
-	url := nvmsURL() + "/v1/deploy"
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonBody))
+	req2, err := http.NewRequest("POST", nvmsURL()+"/v1/deploy", bytes.NewBuffer(jsonBody))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create request"})
 		return
 	}
 
 	// Auth: NanoVMS expects Authorization header, not cookie.
-	token := nvmsToken()
-	if token != "" {
-		req.Header.Set("Authorization", "Bearer "+token)
+	if token := nvmsToken(); token != "" {
+		req2.Header.Set("Authorization", "Bearer "+token)
 	}
-	req.Header.Set("Content-Type", "application/json")
+	req2.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := (&http.Client{}).Do(req2)
 	if err != nil {
+		log.Printf("deploy: sandbox provisioning failed for project %s: %v", project.UUID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to deploy project: " + err.Error()})
 		return
 	}
@@ -103,6 +160,7 @@ func DeployProject(c *gin.Context) {
 	}
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+		log.Printf("deploy: sandbox provisioning rejected project %s with status %d", project.UUID, resp.StatusCode)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":  "Failed to deploy project",
 			"status": resp.StatusCode,
@@ -118,41 +176,27 @@ func DeployProject(c *gin.Context) {
 		return
 	}
 
-	fmt.Println("Deployed sandbox: ", sandboxResp)
-
-	newProject.SetDeploy(map[string]models.Instance{
+	project.SetDeploy(map[string]models.Instance{
 		"default": {
 			UUID:    sandboxResp.ID,
-			Owner:   newProject.User.UUID,
+			Owner:   user.UUID,
 			Name:    sandboxResp.Name,
 			Status:  sandboxResp.Status,
-			ResUUID: newProject.UUID,
+			ResUUID: project.UUID,
 		},
 	})
 
-	finalProject := models.Project{
-		ID:           newProject.UUID,
-		Owner:        newProject.User.UUID,
-		Name:         newProject.Name,
-		RepositoryID: newProject.RepositoryID,
-		UUID:         newProject.UUID,
-		Repository:   newProject.Repository,
-		Readme:       newProject.Readme,
-		Description:  newProject.Description,
-		AccessURL:    newProject.AccessURL,
-	}
-	if finalProject.ID == "" {
-		finalProject.ID = uuid.New().String()
-	}
-	if err := finalProject.BeforeSave(models.DB); err != nil {
+	if err := project.BeforeSave(models.DB); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save project to DB"})
 		return
 	}
-	if err := addNewProject(finalProject); err != nil {
+	if err := addNewProject(project); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add project to database"})
 		return
 	}
+
 	recordDeploy()
+	log.Printf("deploy: project %s provisioned sandbox %s (%s)", project.UUID, sandboxResp.ID, sandboxResp.Status)
 	c.JSON(http.StatusOK, gin.H{
 		"message":    "Success",
 		"sandbox_id": sandboxResp.ID,
@@ -160,14 +204,28 @@ func DeployProject(c *gin.Context) {
 	})
 }
 
+// TerminateInstance stops the sandbox behind a project and deletes the project.
+//
+// Both the stop and the delete are scoped to the authenticated owner: a caller
+// can only terminate a project it owns, and a project owned by somebody else is
+// reported as missing rather than forbidden so existence is not leaked.
 func TerminateInstance(c *gin.Context) {
-	user := c.MustGet("user").(models.User)
-	var project models.Project
-	if err := c.ShouldBindJSON(&project); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	user, ok := currentUser(c)
+	if !ok {
 		return
 	}
-	project.User = user
+
+	var req terminateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid terminate request: " + err.Error()})
+		return
+	}
+
+	var project models.Project
+	if err := models.DB.Where("uuid = ? AND owner = ?", req.UUID, user.UUID).First(&project).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Project not found"})
+		return
+	}
 
 	// NanoVMS stop expects POST /v1/stop?id=<sandbox_id> with query param.
 	sandboxID := project.UUID
@@ -176,33 +234,33 @@ func TerminateInstance(c *gin.Context) {
 		return
 	}
 
-	url := fmt.Sprintf("%s/v1/stop?id=%s", nvmsURL(), sandboxID)
-	req, err := http.NewRequest("POST", url, nil)
+	stopURL := fmt.Sprintf("%s/v1/stop?id=%s", nvmsURL(), url.QueryEscape(sandboxID))
+	req2, err := http.NewRequest("POST", stopURL, nil)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create request"})
 		return
 	}
 
 	// Auth: NanoVMS expects Authorization header.
-	token := nvmsToken()
-	if token != "" {
-		req.Header.Set("Authorization", "Bearer "+token)
+	if token := nvmsToken(); token != "" {
+		req2.Header.Set("Authorization", "Bearer "+token)
 	}
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := (&http.Client{}).Do(req2)
 	if err != nil {
+		log.Printf("terminate: stopping sandbox for project %s failed: %v", project.UUID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to stop sandbox: " + err.Error()})
 		return
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		respBody, _ := io.ReadAll(resp.Body)
+		log.Printf("terminate: sandbox stop for project %s returned status %d", project.UUID, resp.StatusCode)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":  "Failed to stop sandbox",
 			"status": resp.StatusCode,
-			"body":   string(body),
+			"body":   string(respBody),
 		})
 		return
 	}
@@ -211,6 +269,7 @@ func TerminateInstance(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to remove project from database"})
 		return
 	}
+
 	recordSandboxStopped()
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Success",
