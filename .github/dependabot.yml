@@ -43,6 +43,16 @@ updates:
     reviewers:
       - "kooshapari"
     open-pull-requests-limit: 10
+    # TypeScript major-version updates are deferred. TS 7.0 requires shipping
+    # `typescript@~6` + `@typescript/native@npm:typescript@7` (npm alias) and a
+    # `svelte-check --tsgo` invocation, but `frontend/web/src/lib/components/ui/`
+    # still uses the pre-1.0 `bits-ui` `Props`/`Events` namespaces with
+    # `on:event` forwarding (16 shadcn-svelte wrappers, 46 svelte-check errors).
+    # The migration is out of scope for the Dependabot burndown track; minor
+    # and patch updates continue to flow.
+    ignore:
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
     groups:
       minor-and-patch:
         applies-to: version-updates
