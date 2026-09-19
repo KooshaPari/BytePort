@@ -53,7 +53,8 @@ jobs:
     name: Update release draft
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
+      pull-requests: read
     steps:
       - name: Update release draft
         uses: release-drafter/release-drafter@34d80673e067bdc0c24568d3af899c216adcfaa9 # v7.7.0
