@@ -24,7 +24,7 @@ func TestSQLiteFilePathForStripsSchemes(t *testing.T) {
 }
 
 // TestSQLiteDSNForKeepsDriverUsableSchemes covers what is actually handed to
-// gorm.io/driver/sqlite: "file:" is understood by the driver, other schemes
+// The SQLite driver: "file:" is understood by the driver, other schemes
 // are not.
 func TestSQLiteDSNForKeepsDriverUsableSchemes(t *testing.T) {
 	cases := map[string]string{

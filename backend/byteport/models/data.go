@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"gorm.io/driver/sqlite"
+	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -92,7 +92,7 @@ func descriptionOf(dsn string) string {
 // schema. It returns errors rather than exiting so callers (and tests) can
 // decide how to report a failure.
 func connectDatabase(dsn string) (*gorm.DB, error) {
-	// This module only links gorm.io/driver/sqlite and its schema uses portable
+	// This module only links a SQLite driver and its schema uses portable
 	// column types; a PostgreSQL DSN would otherwise be opened as a file whose
 	// name is the DSN, which fails far from the cause.
 	if isPostgresDSN(dsn) {
