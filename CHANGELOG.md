@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- CI: the `go-vet`, `go-build`, and `go-test` jobs in `ci.yml` now cover the
+  `backend` module (module `github.com/byteport/api`) as well as
+  `backend/byteport`. Previously the matrix listed only `backend/byteport` and
+  `go-test` hard-coded that working directory, so the `github.com/byteport/api`
+  module was never built, vetted, or tested by any workflow. It has 51 test files
+  and its `models` package is a divergent fork of `backend/byteport/models` with
+  different GORM column types and primary keys, which means that drift accumulated
+  with no gate able to see it. See #382.
+
 - test(go): pin the `/projects` wire contract that `frontend/web` depends on.
   `frontend/web/src/components/projectData.ts` (`parseDeployments`) reads the
   `DeploymentsJSON` key off each project and `JSON.parse`s it, because the decoded
