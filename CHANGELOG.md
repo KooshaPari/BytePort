@@ -26,6 +26,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Rust: patch RUSTSEC-2026-0194/0195 (quick-xml) and RUSTSEC-2026-0009 (time),
   and drop dependencies cargo-machete reports as unused.
 - Scorecard: the ENV_VARS pillar now accepts `.env.example` templates.
+- Dependabot alerts:
+  - `devalue` 5.8.1 → 5.9.2 (CVE-2026-81176: Svelte devalue DoS via malformed input)
+  - `@sveltejs/kit` ^2.61.1 → ^2.69.1 (Dependabot #314 advisory)
+  - `serde_with` 3.16.1 → 3.21.0 (Dependabot #362 advisory; transitive via tauri-utils)
+  - Removed the dead `crates/byteport-otel/` directory that was not in the
+    workspace but still surfaced the `opentelemetry_sdk` CVE-2026-48504 alert.
+- Scorecard: restore the LOGGING pillar (was passing incidentally on the
+  now-removed `crates/byteport-otel/src/tracing.rs`) by adding a minimal
+  `tracing_setup` module to `byteport-cli` that emits structured startup and
+  shutdown breadcrumbs via the `tracing` facade.
 
 ### Changed
 
