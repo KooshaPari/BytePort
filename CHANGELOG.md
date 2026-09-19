@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- CI: `release.yml` `Update release draft` job was declared with
+  `permissions: contents: read`, but release-drafter@v7 calls the GitHub
+  Releases API (`POST /repos/{owner}/{repo}/releases`) to create/update the
+  draft. Every push to main failed with `##[error]Resource not accessible by
+  integration`. PR #376 grants `contents: write` (the minimum
+  release-drafter needs) plus `pull-requests: read` for category-label
+  harvesting. The `Publish GitHub release` job (tag-driven) already had
+  `contents: write` and is unchanged.
+
 - CI: Tier-2 Coverage Gate (`tier2-coverage-gate.yml`) had been failing every
   push for ~17 days because GitHub Actions does not support the ternary
   `cond ? a : b` operator in expressions (only `&&` / `||`), so the workflow
