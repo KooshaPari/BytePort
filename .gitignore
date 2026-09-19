@@ -69,3 +69,11 @@ _log_bp.txt
 _logs_*/
 crt.pem
 .local-runs/
+
+# SQLite databases created by running the backend locally.
+# backend/byteport defaults DATABASE_URL to file:./byteport.db, so simply
+# starting the server used to leave an untracked database in the tree.
+backend/byteport.db
+backend/byteport/byteport.db
+backend/*.db-wal
+backend/*.db-shm
