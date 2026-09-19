@@ -246,9 +246,9 @@ jobs:
               '',
               '| Tier | Threshold | Status |',
               '|------|-----------|--------|',
-              `| Rust lib (byteport-transport) | ≥71% | ${{ needs.rust-lib-coverage.result == 'success' ? '✅ Pass' : '❌ Fail' }} |`,
-              `| Go framework (backend/byteport) | ≥70% | ${{ needs.go-framework-coverage.result == 'success' ? '✅ Pass' : '❌ Fail' }} |`,
-              `| Service/E2E (frontend/web) | ≥60% | ${{ needs.service-coverage.result == 'success' ? '✅ Pass' : '❌ Fail' }} |`,
+              `| Rust lib (byteport-transport) | ≥71% | ${{ needs.rust-lib-coverage.result == 'success' && '✅ Pass' || '❌ Fail' }} |`,
+              `| Go framework (backend/byteport) | ≥70% | ${{ needs.go-framework-coverage.result == 'success' && '✅ Pass' || '❌ Fail' }} |`,
+              `| Service/E2E (frontend/web) | ≥60% | ${{ needs.service-coverage.result == 'success' && '✅ Pass' || '❌ Fail' }} |`,
             ].join('\n');
 
             await github.rest.issues.createComment({
