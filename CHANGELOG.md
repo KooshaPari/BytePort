@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- test(go): `routes.testDB` now closes its SQLite connection pool on cleanup.
+  `t.TempDir()` was registered before the only cleanup, so on Windows the still-open
+  `test.db` handle made `TempDir RemoveAll` fail with "The process cannot access the
+  file because it is being used by another process" — the test body itself passed, so
+  the failure looked like a flake. This fixes three failing tests on Windows
+  development machines (`TestDeployProjectDerivesOwnerFromSession`,
+  `TestTerminateInstanceScopedToOwner`, `TestTerminateInstanceStopsOwnProject`);
+  Linux CI was unaffected because POSIX allows unlinking an open file.
+
 - test(go): add 50+ new tests across `byteport/lib` and `byteport/routes`,
   raising Go framework coverage from 35.0% to 70.3% — basically doubling it
   (PR #379, wave 2/3/4 of the #377 test-density uplift plan):
