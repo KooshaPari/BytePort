@@ -20,6 +20,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   closed without merge; minor and patch updates for `typescript` are still
   delivered.
 
+### Changed
+
+- Frontend: bump `prettier` 3.9.6 → 3.9.7 (markdown task-list / indented code-block
+  regressions; upstream fix in 3.9.7). The bump came in via Dependabot PR #368
+  with a stale `package-lock.json`; #369 regenerated the npm lockfile so the
+  CI `npm ci` workflows stay green. `yarn.lock` is unchanged.
+
 ### Fixed
 
 - Frontend: the lint gate was failing on `prettier --check` (22 unformatted files,
