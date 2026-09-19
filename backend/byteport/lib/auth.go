@@ -21,11 +21,65 @@ const (
 	serviceKeyService = "NVMService"
 )
 
+// keyringTimeout bounds every keychain call.
+//
+// On macOS zalando/go-keyring shells out to /usr/bin/security with no timeout
+// and no way to point it elsewhere (keyring_darwin.go pins
+// execPathKeychain = "/usr/bin/security"). When the login keychain is locked,
+// or the SecurityAgent is not responding, that call blocks indefinitely. Since
+// InitAuthSystem runs before the router is mounted, the server prints
+// "Connected to SQLite database" and then never binds a port: a supervisor sees
+// a live process holding no port, forever, with no error to act on.
+//
+// Observed on this host: the process sat in state S for over 2.5 minutes with
+// no listener, its only child being a blocked
+// `/usr/bin/security find-generic-password`.
+//
+// Bounding these calls turns an indefinite hang into a clear startup error.
+const keyringTimeout = 10 * time.Second
+
+// keyringGet is keyring.Get with a deadline.
+func keyringGet(service, user string) (string, error) {
+	type result struct {
+		secret string
+		err    error
+	}
+	done := make(chan result, 1) // buffered: a slow goroutine must not leak
+	go func() {
+		secret, err := keyring.Get(service, user)
+		done <- result{secret, err}
+	}()
+	select {
+	case r := <-done:
+		return r.secret, r.err
+	case <-time.After(keyringTimeout):
+		return "", fmt.Errorf(
+			"keychain read for service %q timed out after %s; is the login keychain unlocked?",
+			service, keyringTimeout)
+	}
+}
+
+// keyringSet is keyring.Set with a deadline.
+func keyringSet(service, user, secret string) error {
+	done := make(chan error, 1)
+	go func() {
+		done <- keyring.Set(service, user, secret)
+	}()
+	select {
+	case err := <-done:
+		return err
+	case <-time.After(keyringTimeout):
+		return fmt.Errorf(
+			"keychain write for service %q timed out after %s; is the login keychain unlocked?",
+			service, keyringTimeout)
+	}
+}
+
 func getSymmetricKey() (string, error) {
-	return keyring.Get(tokenKeyService, keyringUser)
+	return keyringGet(tokenKeyService, keyringUser)
 }
 func ensureKeyExists(service, user string) error {
-	_, err := keyring.Get(service, user)
+	_, err := keyringGet(service, user)
 	if err == nil {
 		log.Printf("Key already exists: %s\n", service)
 		return nil // Key already exists
@@ -40,7 +94,7 @@ func ensureKeyExists(service, user string) error {
 			return err
 		}
 	}
-	return keyring.Set(service, user, newKey)
+	return keyringSet(service, user, newKey)
 }
 
 func InitAuthSystem() error {
@@ -99,7 +153,7 @@ func GenerateNVMSToken(project models.Project) (string, error) {
 	token.SetNotBefore(time.Now())
 	token.SetString("user-id", project.User.UUID)
 	token.SetString("project-id", project.UUID)
-	keyHex, err := keyring.Get(serviceKeyService, keyringUser)
+	keyHex, err := keyringGet(serviceKeyService, keyringUser)
 	if err != nil {
 		log.Fatal(err)
 	}
