@@ -1,13 +1,5 @@
 // Configuration for BytePort Windows deployment
 export const config = {
-	// API Configuration
-	api: {
-		// Use environment variable or default to Windows setup port
-		baseUrl: import.meta.env.VITE_API_URL || 'http://localhost:8081',
-		nvmsUrl: import.meta.env.VITE_NVMS_URL || 'http://localhost:3000',
-		timeout: 30000 // 30 seconds
-	},
-
 	// Deployment Configuration
 	deployment: {
 		// Windows-specific deployment settings
@@ -18,7 +10,6 @@ export const config = {
 		// Default ports for services
 		defaultPorts: {
 			main: 8080,
-			api: 8081,
 			database: 5432,
 			redis: 6379
 		},
@@ -93,54 +84,6 @@ export const config = {
 		storage: {
 			projectsPath: 'C:\\BytePort\\projects',
 			backupsPath: 'C:\\BytePort\\backups'
-		}
-	}
-};
-
-// Helper functions for API calls
-export const apiHelpers = {
-	// Get full API URL
-	getApiUrl: (endpoint: string) => {
-		return `${config.api.baseUrl}${endpoint.startsWith('/') ? endpoint : '/' + endpoint}`;
-	},
-
-	// Get full NVMS URL
-	getNvmsUrl: (endpoint: string) => {
-		return `${config.api.nvmsUrl}${endpoint.startsWith('/') ? endpoint : '/' + endpoint}`;
-	},
-
-	// Default fetch options
-	getDefaultOptions: () => ({
-		headers: {
-			'Content-Type': 'application/json'
-		},
-		credentials: 'include' as RequestCredentials
-	}),
-
-	// Make API request with error handling
-	makeRequest: async (url: string, options: RequestInit = {}) => {
-		const defaultOptions = apiHelpers.getDefaultOptions();
-		const mergedOptions = {
-			...defaultOptions,
-			...options,
-			headers: {
-				...defaultOptions.headers,
-				...options.headers
-			}
-		};
-
-		try {
-			const response = await fetch(url, mergedOptions);
-
-			if (!response.ok) {
-				const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
-				throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
-			}
-
-			return response;
-		} catch (error) {
-			console.error('API request failed:', error);
-			throw error;
 		}
 	}
 };

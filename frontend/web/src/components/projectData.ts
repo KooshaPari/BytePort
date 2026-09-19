@@ -24,7 +24,7 @@
  * Endpoints are unchanged (`GET /projects`, `GET /instances`,
  * `POST /deploy`, `POST /terminate`); only the reading of the response is.
  */
-import { apiFetch, getApiBaseUrl } from '../lib/api';
+import { apiFetch } from '../lib/api';
 import { initializeUser, user } from '../stores/user';
 
 /** Badge tones. Mirrors `src/lib/components/ui/Badge.svelte`. */
@@ -459,7 +459,7 @@ export function watchAuth(
 	navigate: (path: string) => void,
 	onAuthenticated: (payload: unknown) => void
 ): () => void {
-	void initializeUser(getApiBaseUrl());
+	void initializeUser();
 
 	const unsubscribe = user.subscribe((value) => {
 		if (value.status === 'pending') return;

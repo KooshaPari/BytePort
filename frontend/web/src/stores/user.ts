@@ -1,4 +1,5 @@
 import { writable } from 'svelte/store';
+import { apiFetch } from '../lib/api';
 
 // Define the User interface
 export interface UserLink {
@@ -53,30 +54,14 @@ export function setUser(authenticated: boolean, userData: User | null = null) {
 		user.set({ status: 'unauthenticated', data: null });
 	}
 }
-export async function initializeUser(SERVER_URL: string) {
+export async function initializeUser() {
 	try {
 		console.log('Initializing user');
-		console.log('URL: ', SERVER_URL);
-		const response = await fetch(`${SERVER_URL}/authenticate`, {
-			method: 'GET',
-			headers: {
-				'Content-Type': 'application/json'
-			},
-			credentials: 'include'
-		});
-
-		if (response.ok) {
-			const data = await response.json();
-			console.log('JS: ', data);
-			const authenticatedUser: User = data.User; // Adjust based on backend response structure
-			console.log('Authenticated user:', authenticatedUser);
-			setUser(true, authenticatedUser);
-		} else {
-			// Token is invalid or expired
-			console.log('Token is invalid or expired');
-			setUser(false);
-			localStorage.removeItem('authToken'); // Clear invalid token
-		}
+		const data = await apiFetch<{ User: User }>('/authenticate');
+		console.log('JS: ', data);
+		const authenticatedUser: User = data.User; // Adjust based on backend response structure
+		console.log('Authenticated user:', authenticatedUser);
+		setUser(true, authenticatedUser);
 	} catch (error) {
 		console.error('Error validating token:', error);
 		setUser(false);

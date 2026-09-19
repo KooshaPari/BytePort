@@ -5,8 +5,7 @@ import type { TransitionConfig } from 'svelte/transition';
 import type { User } from '../stores/user';
 import type { Repository } from './git';
 
-import { platform } from '@tauri-apps/plugin-os';
-import { getApiBaseUrl } from './api';
+import { apiFetch } from './api';
 export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs));
 }
@@ -113,31 +112,8 @@ export interface ResourceAssociation {
 	Type: string;
 	Role: string;
 }
-// Delegates to the shared helper. This used to call platform() from
-// @tauri-apps/plugin-os, which throws because the Rust shell does not
-// register that plugin - the promise then rejected and every caller of
-// populateLists() silently never completed.
-export const getBaseUrl = async () => getApiBaseUrl();
 export async function populateLists() {
-	let projects: Project[] = [];
-
-	const baseUrl = await getBaseUrl();
-	const response = await fetch(`${baseUrl}/projects`, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json'
-		},
-		credentials: 'include'
-	});
-
-	if (response.ok) {
-		const data = await response.json();
-		projects = data;
-		console.log('Projects:', projects);
-	} else {
-		const errorData = await response.json();
-		console.error('Error:', errorData);
-	}
-
+	const projects = await apiFetch<Project[]>('/projects');
+	console.log('Projects:', projects);
 	return projects;
 }

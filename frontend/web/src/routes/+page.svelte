@@ -16,7 +16,6 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { user, initializeUser } from '../stores/user';
-	import { getApiBaseUrl } from '$lib/api';
 
 	let unsubscribe: (() => void) | undefined;
 
@@ -33,7 +32,7 @@
 		});
 
 		// Never throws: the base URL is resolved defensively in $lib/api.
-		initializeUser(getApiBaseUrl());
+		initializeUser();
 	});
 
 	onDestroy(() => unsubscribe?.());

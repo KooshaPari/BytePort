@@ -16,7 +16,7 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { user, initializeUser } from '../../../../stores/user';
-	import { apiFetch, getApiBaseUrl } from '$lib/api';
+	import { apiFetch } from '$lib/api';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Input from '$lib/components/ui/Input.svelte';
 	import { formSchema } from './schema';
@@ -129,7 +129,7 @@
 				initialEmail = email;
 			}
 		});
-		void initializeUser(getApiBaseUrl());
+		void initializeUser();
 		return unsubscribe;
 	});
 </script>

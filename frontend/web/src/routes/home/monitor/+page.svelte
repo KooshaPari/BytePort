@@ -18,7 +18,7 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { user, initializeUser } from '../../../stores/user';
-	import { ApiError, apiFetch, getApiBaseUrl } from '$lib/api';
+	import { ApiError, apiFetch } from '$lib/api';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Card from '$lib/components/ui/Card.svelte';
@@ -250,7 +250,7 @@
 				void load();
 			}
 		});
-		void initializeUser(getApiBaseUrl());
+		void initializeUser();
 		return unsubscribe;
 	});
 </script>

@@ -10,7 +10,6 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { user, initializeUser } from '../../../stores/user';
-	import { getApiBaseUrl } from '$lib/api';
 
 	interface SettingsRow {
 		label: string;
@@ -52,7 +51,7 @@
 				goto('/login');
 			}
 		});
-		void initializeUser(getApiBaseUrl());
+		void initializeUser();
 		return unsubscribe;
 	});
 </script>

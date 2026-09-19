@@ -117,7 +117,7 @@
 
 			// Signup sets the session cookie, so the first-time-setup wizard can
 			// read the new session before it runs.
-			await initializeUser(getApiBaseUrl());
+			await initializeUser();
 
 			submitting = false;
 			await goto('/fts');

@@ -76,7 +76,7 @@
 	onMount(() => {
 		// `initializeUser` reads the session cookie from the backend and drives
 		// the shared store; the subscription reacts to the result.
-		void initializeUser(getApiBaseUrl());
+		void initializeUser();
 
 		const unsubscribe = user.subscribe((value) => {
 			if (value.status === 'pending') return;

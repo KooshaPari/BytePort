@@ -91,7 +91,7 @@
 			});
 
 			// Confirms the session cookie was actually stored before we navigate.
-			await initializeUser(getApiBaseUrl());
+			await initializeUser();
 
 			submitting = false;
 			await goto('/home');
