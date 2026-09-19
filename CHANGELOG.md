@@ -9,6 +9,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- test(go): add 21 new tests across `byteport/models`, `byteport/routes`, and
+  `byteport/lib`, raising Go framework coverage from 30.9% to 35.0%:
+
+  | Package | Before | After | Δ |
+  |---|---|---|---|
+  | byteport/models | 57.3% | 64.0% | +6.7pp |
+  | byteport/routes | 32.3% | 40.7% | +8.4pp |
+  | byteport/lib | 27.6% | 27.6% | (unchanged) |
+  | byteport (cmd) | 0.0% | 0.0% | (unchanged) |
+  | **Total weighted** | **30.9%** | **35.0%** | **+4.1pp** |
+
+  Per-file new tests (PR #378):
+  - `backend/byteport/routes/metrics_test.go` — recordRequest/recordError/
+    recordDeploy/recordSandboxStopped counters, MetricsMiddleware error
+    recording, MetricsHandler Prometheus output shape, HealthHandler JSON
+    shape, formatFloat/formatInt helpers (8 funcs → 100%)
+  - `backend/byteport/routes/auth_test.go` — currentUser missing/wrong-type/
+    happy-path branches, setAuthCookie attributes (Secure, HttpOnly,
+    SameSite=Lax), Authenticate missing-cookie branch, Login/Signup
+    non-JSON-body branch
+  - `backend/byteport/routes/protected_test.go` — GetProjects and
+    GetInstances unauthorized branches (DB-bound happy path still needs
+    sqlite test fixtures; tracked in #377)
+  - `backend/byteport/models/projects_test.go` — GetDeploy/SetDeploy
+    round-trip, BeforeSave UUID generation + JSON serialization, AfterFind
+    deserialization + invalid-JSON error path
+  - `backend/byteport/models/data_test.go` — descriptionOf absolute-path
+    rendering, sqliteFilePathFor scheme stripping, sqliteDSNFor file-prefix
+    preservation, isPostgresDSN detection
+
+  Issue #377 tracks the remaining 35pp gap to the aspirational 70%
+  threshold; the dominant untested surface is `byteport/lib/auth.go`
+  (token gen/validate/AuthMiddleware, 12 funcs) and `byteport/lib/git.go`
+  (GitHub OAuth flow, 8 funcs), both of which need either OS-keyring mocks
+  or HTTP fixtures.
+
+- CI: Tier-2 Coverage Gate Go threshold raised from 30% to 33% (PR #378) to
+  act as a regression guard against losing the +4.1pp uplift. The
+  threshold should be raised again as more tests land, eventually back to
+  the original 70% aspirational target tracked in #377.
+
 - CI: `release.yml` `Update release draft` job was declared with
   `permissions: contents: read`, but release-drafter@v7 calls the GitHub
   Releases API (`POST /repos/{owner}/{repo}/releases`) to create/update the
