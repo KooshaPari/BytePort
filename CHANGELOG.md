@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Dependabot: ignore major-version updates for `typescript` in
+  `frontend/web/`. TypeScript 7.0 requires the consumer to ship both
+  `typescript@~6` and `@typescript/native@npm:typescript@7` (npm alias) plus a
+  `svelte-check --tsgo` invocation, and `frontend/web/src/lib/components/ui/`
+  still uses the pre-1.0 `bits-ui` `Props`/`Events` namespaces with `on:event`
+  forwarding (16 shadcn-svelte wrappers, 46 `svelte-check` errors). The
+  migration is out of scope for the Dependabot burndown track and will be
+  picked up as a dedicated refactor PR. PR #363 (Dependabot auto-PR) is
+  closed without merge; minor and patch updates for `typescript` are still
+  delivered.
+
 ### Fixed
 
 - Frontend: the lint gate was failing on `prettier --check` (22 unformatted files,
