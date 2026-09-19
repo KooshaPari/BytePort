@@ -2,11 +2,8 @@ package routes
 
 import (
 	"encoding/json"
-	"net/http"
-	"net/http/httptest"
 	"testing"
 
-	"byteport/lib"
 	"byteport/models"
 
 	"github.com/gin-gonic/gin"
@@ -50,23 +47,7 @@ func TestGetProjectsResponseExposesDeploymentsJSON(t *testing.T) {
 		t.Fatalf("seed project: %v", err)
 	}
 
-	tok, err := lib.GenerateToken(user)
-	if err != nil {
-		t.Fatalf("GenerateToken: %v", err)
-	}
-
-	r := gin.New()
-	r.Use(lib.AuthMiddleware())
-	r.GET("/projects", GetProjects)
-
-	req := httptest.NewRequest(http.MethodGet, "/projects", nil)
-	req.AddCookie(&http.Cookie{Name: "authToken", Value: tok})
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Fatalf("status = %d, want 200 (body %s)", w.Code, w.Body.String())
-	}
+	w := authedGet(t, user, "/projects", GetProjects)
 
 	var decoded []map[string]any
 	if err := json.Unmarshal(w.Body.Bytes(), &decoded); err != nil {

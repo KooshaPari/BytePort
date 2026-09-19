@@ -151,22 +151,7 @@ func TestGetInstancesHappyPath(t *testing.T) {
 		t.Fatalf("seed theirs: %v", err)
 	}
 
-	tok, err := lib.GenerateToken(user)
-	if err != nil {
-		t.Fatalf("GenerateToken: %v", err)
-	}
-
-	r := gin.New()
-	r.Use(lib.AuthMiddleware())
-	r.GET("/instances", GetInstances)
-	req := httptest.NewRequest(http.MethodGet, "/instances", nil)
-	req.AddCookie(&http.Cookie{Name: "authToken", Value: tok})
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Fatalf("status = %d, want 200 (body %s)", w.Code, w.Body.String())
-	}
+	w := authedGet(t, user, "/instances", GetInstances)
 	body := w.Body.String()
 	if !strings.Contains(body, "mine-1") || !strings.Contains(body, "mine-2") {
 		t.Errorf("body did not include owned instances: %s", body)
@@ -205,22 +190,7 @@ func TestGetProjectsHappyPath(t *testing.T) {
 		}
 	}
 
-	tok, err := lib.GenerateToken(user)
-	if err != nil {
-		t.Fatalf("GenerateToken: %v", err)
-	}
-
-	r := gin.New()
-	r.Use(lib.AuthMiddleware())
-	r.GET("/projects", GetProjects)
-	req := httptest.NewRequest(http.MethodGet, "/projects", nil)
-	req.AddCookie(&http.Cookie{Name: "authToken", Value: tok})
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Fatalf("status = %d, want 200 (body %s)", w.Code, w.Body.String())
-	}
+	w := authedGet(t, user, "/projects", GetProjects)
 	body := w.Body.String()
 	// The owned projects must be present; the other user's must not.
 	for _, name := range []string{"p-0", "p-1"} {

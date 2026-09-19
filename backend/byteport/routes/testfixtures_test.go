@@ -3,12 +3,15 @@ package routes
 import (
 	"encoding/base64"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"sync/atomic"
 	"testing"
 
 	"byteport/lib"
 	"byteport/models"
 
+	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
 	"github.com/zalando/go-keyring"
 	"gorm.io/gorm"
@@ -79,4 +82,30 @@ func mustEncrypt(t *testing.T, s string) string {
 		t.Fatalf("EncryptSecret(%q): %v", s, err)
 	}
 	return out
+}
+
+// authedGet drives a GET through a router wired the way main.go wires the
+// protected group, and fails the test unless the handler answers 200. It exists
+// so the token/cookie/middleware boilerplate lives in one place.
+func authedGet(t *testing.T, user models.User, path string, handler gin.HandlerFunc) *httptest.ResponseRecorder {
+	t.Helper()
+
+	tok, err := lib.GenerateToken(user)
+	if err != nil {
+		t.Fatalf("GenerateToken: %v", err)
+	}
+
+	r := gin.New()
+	r.Use(lib.AuthMiddleware())
+	r.GET(path, handler)
+
+	req := httptest.NewRequest(http.MethodGet, path, nil)
+	req.AddCookie(&http.Cookie{Name: "authToken", Value: tok})
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET %s: status = %d, want 200 (body %s)", path, w.Code, w.Body.String())
+	}
+	return w
 }

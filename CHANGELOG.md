@@ -22,6 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   which is why this has to be a coordinated change rather than a drive-by tag
   edit. Note the sibling module `backend/models` (module `github.com/byteport/api`)
   tags the same field `json:"-"`, so its response omits the key — see #382.
+  The authenticated-request boilerplate that this test and the two existing
+  `GetProjects`/`GetInstances` tests each carried a copy of is now a single
+  `authedGet` helper in `routes/testfixtures_test.go` (-20 net lines).
 
 - test(go): add 18 tests for the `byteport` cmd package, taking it from 0.0% to
   52.9% and total Go framework coverage from 70.3% to 74.1%. The new tests pin
