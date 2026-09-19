@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- test(go): add 18 tests for the `byteport` cmd package, taking it from 0.0% to
+  52.9% and total Go framework coverage from 70.3% to 74.1%. The new tests pin
+  two contracts that are easy to break silently: `resolvePort()` precedence
+  (`PORT` > `BYTEPORT_API_PORT` > the canonical `8081`, as consumed by
+  INSTALL.md, `.air.toml`, the Tauri CSP, and the SvelteKit client) and the CORS
+  rule that admits the scheme-less `tauri://localhost` webview origin through
+  `AllowOriginFunc` while refusing unlisted origins. They also assert the route
+  table and that the protected group really is behind `lib.AuthMiddleware()`.
+  The Tier-2 Coverage Gate Go threshold moves 65% → 71% to lock the gain in.
+
 - test(go): `routes.testDB` now closes its SQLite connection pool on cleanup.
   `t.TempDir()` was registered before the only cleanup, so on Windows the still-open
   `test.db` handle made `TempDir RemoveAll` fail with "The process cannot access the
