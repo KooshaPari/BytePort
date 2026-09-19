@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- test(go): pin the `/projects` wire contract that `frontend/web` depends on.
+  `frontend/web/src/components/projectData.ts` (`parseDeployments`) reads the
+  `DeploymentsJSON` key off each project and `JSON.parse`s it, because the decoded
+  map on `models.Project` is a private field tagged `json:"-"` and never reaches
+  the client. Nothing covered this: there is no frontend test for `projectData.ts`
+  and no backend assertion on the response shape. The new
+  `TestGetProjectsResponseExposesDeploymentsJSON` drives the real handler through
+  `lib.AuthMiddleware()` and asserts the key is present and parseable the way the
+  frontend parses it. Verified by mutation: adding `json:"-"` to the field makes
+  the test fail with a diagnostic naming the frontend function that would break,
+  which is why this has to be a coordinated change rather than a drive-by tag
+  edit. Note the sibling module `backend/models` (module `github.com/byteport/api`)
+  tags the same field `json:"-"`, so its response omits the key — see #382.
+
 - test(go): add 18 tests for the `byteport` cmd package, taking it from 0.0% to
   52.9% and total Go framework coverage from 70.3% to 74.1%. The new tests pin
   two contracts that are easy to break silently: `resolvePort()` precedence
