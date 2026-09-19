@@ -94,7 +94,15 @@ func testDB(t *testing.T) *gorm.DB {
 
 	previous := models.DB
 	models.DB = db
-	t.Cleanup(func() { models.DB = previous })
+	t.Cleanup(func() {
+		models.DB = previous
+		// Close the pool before t.TempDir's RemoveAll runs. Cleanups are LIFO
+		// and TempDir was registered first, so without this the open SQLite
+		// file handle makes RemoveAll fail on Windows.
+		if sqlDB, err := db.DB(); err == nil {
+			_ = sqlDB.Close()
+		}
+	})
 
 	return db
 }
