@@ -35,6 +35,7 @@ jobs:
       matrix:
         module:
           - backend/byteport
+          - backend
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -58,6 +59,7 @@ jobs:
       matrix:
         module:
           - backend/byteport
+          - backend
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -76,18 +78,22 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: read
-    defaults:
-      run:
-        working-directory: backend/byteport
+    strategy:
+      fail-fast: false
+      matrix:
+        module:
+          - backend/byteport
+          - backend
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Set up Go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version-file: backend/byteport/go.mod
-          cache-dependency-path: backend/byteport/go.sum
+          go-version-file: ${{ matrix.module }}/go.mod
+          cache-dependency-path: ${{ matrix.module }}/go.sum
       - name: go test
+        working-directory: ${{ matrix.module }}
         run: go test ./...
 
   go-fmt:
