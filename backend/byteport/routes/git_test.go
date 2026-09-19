@@ -1,12 +1,10 @@
 package routes
 
 import (
-	"encoding/base64"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -14,55 +12,8 @@ import (
 	"byteport/models"
 
 	"github.com/gin-gonic/gin"
-	"github.com/glebarez/sqlite"
 	"github.com/google/uuid"
-	"github.com/zalando/go-keyring"
-	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
 )
-
-// gitDBSeq hands every subtest its own in-memory database; see newHappyDB.
-var gitDBSeq int64
-
-// newGitRouteDB swaps models.DB for an in-memory SQLite holding every table
-// the git routes touch.
-func newGitRouteDB(t *testing.T) *gorm.DB {
-	t.Helper()
-
-	dsn := fmt.Sprintf("file:gitroute%d?mode=memory&cache=shared", atomic.AddInt64(&gitDBSeq, 1))
-	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Silent),
-	})
-	if err != nil {
-		t.Fatalf("open sqlite: %v", err)
-	}
-	if err := db.AutoMigrate(&models.User{}, &models.Project{}, &models.Instance{}, &models.GitSecret{}); err != nil {
-		t.Fatalf("migrate: %v", err)
-	}
-
-	prev := models.DB
-	models.DB = db
-	t.Cleanup(func() { models.DB = prev })
-	return db
-}
-
-// resetMockKeyringGit installs a fresh in-memory keyring backend for the
-// test.
-func resetMockKeyringGit(t *testing.T) {
-	t.Helper()
-	keyring.MockInit()
-	t.Cleanup(func() { keyring.MockInit() })
-}
-
-// seedGitRouteKeyring initializes the auth system and seeds the encryption
-// env var; routes/git.go calls into both.
-func seedGitRouteKeyring(t *testing.T) {
-	t.Helper()
-	t.Setenv("ENCRYPTION_KEY", base64.StdEncoding.EncodeToString([]byte("0123456789abcdef0123456789abcdef")))
-	if err := lib.InitAuthSystem(); err != nil {
-		t.Fatalf("InitAuthSystem: %v", err)
-	}
-}
 
 // TestRetrieveRepositoriesHappyPath covers the success branch: when the
 // user has a valid encrypted GitHub access token in the database, the route
@@ -70,14 +21,14 @@ func seedGitRouteKeyring(t *testing.T) {
 // it as application/json.
 func TestRetrieveRepositoriesHappyPath(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	resetMockKeyringGit(t)
-	seedGitRouteKeyring(t)
+	resetMockKeyring(t)
+	seedAuthSystem(t)
 
-	db := newGitRouteDB(t)
+	db := newRouteTestDB(t)
 	user := models.User{
 		UUID: uuid.NewString(),
 		Git: models.Git{
-			Token: mustEncGit(t, "real-access-token"),
+			Token: mustEncrypt(t, "real-access-token"),
 		},
 	}
 	if err := db.Create(&user).Error; err != nil {
@@ -122,10 +73,10 @@ func TestRetrieveRepositoriesHappyPath(t *testing.T) {
 // respond 500 with "Failed to decrypt Git token".
 func TestRetrieveRepositoriesDecryptError(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	resetMockKeyringGit(t)
-	seedGitRouteKeyring(t)
+	resetMockKeyring(t)
+	seedAuthSystem(t)
 
-	db := newGitRouteDB(t)
+	db := newRouteTestDB(t)
 	user := models.User{
 		UUID: uuid.NewString(),
 		Git:  models.Git{Token: "garbage-not-encrypted"},
@@ -156,13 +107,13 @@ func TestRetrieveRepositoriesDecryptError(t *testing.T) {
 // with "Failed to list repositories".
 func TestRetrieveRepositoriesGitHubError(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	resetMockKeyringGit(t)
-	seedGitRouteKeyring(t)
+	resetMockKeyring(t)
+	seedAuthSystem(t)
 
-	db := newGitRouteDB(t)
+	db := newRouteTestDB(t)
 	user := models.User{
 		UUID: uuid.NewString(),
-		Git:  models.Git{Token: mustEncGit(t, "real-access-token")},
+		Git:  models.Git{Token: mustEncrypt(t, "real-access-token")},
 	}
 	if err := db.Create(&user).Error; err != nil {
 		t.Fatalf("seed user: %v", err)
@@ -198,10 +149,10 @@ func TestRetrieveRepositoriesGitHubError(t *testing.T) {
 // credentials and return the success HTML.
 func TestHandleCallbackHappyPath(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	resetMockKeyringGit(t)
-	seedGitRouteKeyring(t)
+	resetMockKeyring(t)
+	seedAuthSystem(t)
 
-	db := newGitRouteDB(t)
+	db := newRouteTestDB(t)
 	cidEnc, _ := lib.EncryptSecret("cid")
 	csecEnc, _ := lib.EncryptSecret("csec")
 	if err := db.Create(&models.GitSecret{ClientID: cidEnc, ClientSecret: csecEnc}).Error; err != nil {
@@ -278,9 +229,9 @@ func TestHandleCallbackHappyPath(t *testing.T) {
 // respond 400 immediately, before any DB call.
 func TestHandleCallbackInvalidState(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	resetMockKeyringGit(t)
-	seedGitRouteKeyring(t)
-	newGitRouteDB(t)
+	resetMockKeyring(t)
+	seedAuthSystem(t)
+	newRouteTestDB(t)
 
 	cases := []struct {
 		name  string
@@ -314,9 +265,9 @@ func TestHandleCallbackInvalidState(t *testing.T) {
 // The route must respond 401.
 func TestHandleCallbackUnknownUser(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	resetMockKeyringGit(t)
-	seedGitRouteKeyring(t)
-	newGitRouteDB(t)
+	resetMockKeyring(t)
+	seedAuthSystem(t)
+	newRouteTestDB(t)
 
 	user := models.User{UUID: "real-user", Email: "u@example.com"}
 	pasetoTok, err := lib.GenerateToken(user)
@@ -345,13 +296,13 @@ func TestHandleCallbackUnknownUser(t *testing.T) {
 // is also absent, ValidateLink must respond 400 with "Missing OpenAI API key".
 func TestValidateLinkMissingProvider(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	resetMockKeyringGit(t)
-	seedGitRouteKeyring(t)
+	resetMockKeyring(t)
+	seedAuthSystem(t)
 
 	// Stub the outbound validators so we don't hit AWS/OpenAI/Portfolio.
 	stubValidatorsForGit(t)
 
-	db := newGitRouteDB(t)
+	db := newRouteTestDB(t)
 	user := models.User{
 		UUID:     uuid.NewString(),
 		Email:    "vp@example.com",
@@ -390,12 +341,12 @@ func TestValidateLinkMissingProvider(t *testing.T) {
 // return 200.
 func TestValidateLinkHappyPath(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	resetMockKeyringGit(t)
-	seedGitRouteKeyring(t)
+	resetMockKeyring(t)
+	seedAuthSystem(t)
 
 	gotOpenAIKey := stubValidatorsForGit(t)
 
-	db := newGitRouteDB(t)
+	db := newRouteTestDB(t)
 	user := models.User{
 		UUID:     uuid.NewString(),
 		Email:    "vlh@example.com",
@@ -448,16 +399,6 @@ func TestValidateLinkHappyPath(t *testing.T) {
 	if reloaded.LLMConfig.Provider != "openai" {
 		t.Errorf("Provider = %q, want openai", reloaded.LLMConfig.Provider)
 	}
-}
-
-// mustEncGit encrypts s with the test seed key and fails the test on error.
-func mustEncGit(t *testing.T, s string) string {
-	t.Helper()
-	out, err := lib.EncryptSecret(s)
-	if err != nil {
-		t.Fatalf("EncryptSecret(%q): %v", s, err)
-	}
-	return out
 }
 
 // stubValidatorsForGit replaces lib.ValidateAWSCredentials, lib.ValidateOpenAICredentials,

@@ -1,80 +1,19 @@
 package routes
 
 import (
-	"encoding/base64"
 	"net/http"
 	"net/http/httptest"
-	"sync/atomic"
+	"strconv"
+	"strings"
 	"testing"
 
 	"byteport/lib"
 	"byteport/models"
 
 	"github.com/gin-gonic/gin"
-	"github.com/glebarez/sqlite"
 	"github.com/google/uuid"
-	"github.com/zalando/go-keyring"
 	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
 )
-
-// miscDBSeq hands every test its own in-memory database.
-var miscDBSeq int64
-
-// newMiscDB swaps models.DB for an in-memory SQLite holding the tables these
-// tests touch (users, projects, instances).
-func newMiscDB(t *testing.T) *gorm.DB {
-	t.Helper()
-
-	dsn := "file:misc" + itoa64(atomic.AddInt64(&miscDBSeq, 1)) + "?mode=memory&cache=shared"
-	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Silent),
-	})
-	if err != nil {
-		t.Fatalf("open sqlite: %v", err)
-	}
-	if err := db.AutoMigrate(&models.User{}, &models.Project{}, &models.Instance{}, &models.GitSecret{}); err != nil {
-		t.Fatalf("migrate: %v", err)
-	}
-
-	prev := models.DB
-	models.DB = db
-	t.Cleanup(func() { models.DB = prev })
-	return db
-}
-
-// itoa64 formats an int64 without dragging strconv into the imports list.
-func itoa64(n int64) string {
-	if n == 0 {
-		return "0"
-	}
-	var b [20]byte
-	i := len(b)
-	for n > 0 {
-		i--
-		b[i] = byte('0' + n%10)
-		n /= 10
-	}
-	return string(b[i:])
-}
-
-// resetMockKeyringMisc installs a fresh in-memory keyring backend for the
-// test; needed because AuthMiddleware reads the token key from the keyring.
-func resetMockKeyringMisc(t *testing.T) {
-	t.Helper()
-	keyring.MockInit()
-	t.Cleanup(func() { keyring.MockInit() })
-}
-
-// seedMiscAuth initializes the auth system and the encryption env var so
-// session-token-protected routes can run end-to-end.
-func seedMiscAuth(t *testing.T) {
-	t.Helper()
-	t.Setenv("ENCRYPTION_KEY", base64.StdEncoding.EncodeToString([]byte("0123456789abcdef0123456789abcdef")))
-	if err := lib.InitAuthSystem(); err != nil {
-		t.Fatalf("InitAuthSystem: %v", err)
-	}
-}
 
 // seedUser creates and persists a fresh user; returned UUID is the
 // authenticated identity for downstream routes.
@@ -131,10 +70,10 @@ func TestRepositoryIDReturnsEmptyWhenAbsent(t *testing.T) {
 // no projects must get back an empty (or null) list, NOT a 500.
 func TestGetProjectsEmpty(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	resetMockKeyringMisc(t)
-	seedMiscAuth(t)
+	resetMockKeyring(t)
+	seedAuthSystem(t)
 
-	db := newMiscDB(t)
+	db := newRouteTestDB(t)
 	user := seedUser(t, db)
 
 	r := gin.New()
@@ -152,10 +91,10 @@ func TestGetProjectsEmpty(t *testing.T) {
 // with no instances must get back an empty list.
 func TestGetInstancesEmpty(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	resetMockKeyringMisc(t)
-	seedMiscAuth(t)
+	resetMockKeyring(t)
+	seedAuthSystem(t)
 
-	db := newMiscDB(t)
+	db := newRouteTestDB(t)
 	user := seedUser(t, db)
 
 	// Wire AuthMiddleware with a real token; reuse lib's test key.
@@ -182,10 +121,10 @@ func TestGetInstancesEmpty(t *testing.T) {
 // user with two instances must get them both back, scoped to that owner.
 func TestGetInstancesHappyPath(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	resetMockKeyringMisc(t)
-	seedMiscAuth(t)
+	resetMockKeyring(t)
+	seedAuthSystem(t)
 
-	db := newMiscDB(t)
+	db := newRouteTestDB(t)
 	user := seedUser(t, db)
 	other := models.User{
 		UUID: uuid.NewString(), Email: "other@example.com", Name: "Other", Password: "x",
@@ -229,10 +168,10 @@ func TestGetInstancesHappyPath(t *testing.T) {
 		t.Fatalf("status = %d, want 200 (body %s)", w.Code, w.Body.String())
 	}
 	body := w.Body.String()
-	if !contains(body, "mine-1") || !contains(body, "mine-2") {
+	if !strings.Contains(body, "mine-1") || !strings.Contains(body, "mine-2") {
 		t.Errorf("body did not include owned instances: %s", body)
 	}
-	if contains(body, "theirs") {
+	if strings.Contains(body, "theirs") {
 		t.Errorf("body leaked another user's instance: %s", body)
 	}
 }
@@ -241,10 +180,10 @@ func TestGetInstancesHappyPath(t *testing.T) {
 // user with two projects must get them back.
 func TestGetProjectsHappyPath(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	resetMockKeyringMisc(t)
-	seedMiscAuth(t)
+	resetMockKeyring(t)
+	seedAuthSystem(t)
 
-	db := newMiscDB(t)
+	db := newRouteTestDB(t)
 	user := seedUser(t, db)
 	other := models.User{
 		UUID: uuid.NewString(), Email: "other@example.com", Name: "Other", Password: "x",
@@ -259,7 +198,7 @@ func TestGetProjectsHappyPath(t *testing.T) {
 			UUID:  uuid.NewString(),
 			ID:    uuid.NewString(),
 			Owner: owner,
-			Name:  "p-" + itoa64(int64(i)),
+			Name:  "p-" + strconv.FormatInt(int64(i), 10),
 		}
 		if err := db.Create(&p).Error; err != nil {
 			t.Fatalf("seed project: %v", err)
@@ -285,21 +224,11 @@ func TestGetProjectsHappyPath(t *testing.T) {
 	body := w.Body.String()
 	// The owned projects must be present; the other user's must not.
 	for _, name := range []string{"p-0", "p-1"} {
-		if !contains(body, name) {
+		if !strings.Contains(body, name) {
 			t.Errorf("body did not include owned project %q: %s", name, body)
 		}
 	}
-	if contains(body, "p-2") {
+	if strings.Contains(body, "p-2") {
 		t.Errorf("body leaked another user's project: %s", body)
 	}
-}
-
-// contains is a tiny strings.Contains wrapper to keep imports tight.
-func contains(haystack, needle string) bool {
-	for i := 0; i+len(needle) <= len(haystack); i++ {
-		if haystack[i:i+len(needle)] == needle {
-			return true
-		}
-	}
-	return false
 }

@@ -1,93 +1,28 @@
 package routes
 
 import (
-	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
-	"sync/atomic"
 	"testing"
-	"time"
 
 	"byteport/lib"
 	"byteport/models"
 
 	"github.com/gin-gonic/gin"
-	"github.com/glebarez/sqlite"
 	"github.com/google/uuid"
-	"github.com/zalando/go-keyring"
-	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
 )
-
-// happyDBSeq hands every test its own in-memory database; sharing one DSN
-// across subtests makes the second collide with the first because the
-// connection pool sees both.
-var happyDBSeq int64
-
-// newHappyDB swaps models.DB for an in-memory SQLite holding every table
-// auth flows touch (users, projects, git_secrets) and restores the prior
-// value on cleanup.
-func newHappyDB(t *testing.T) *gorm.DB {
-	t.Helper()
-
-	dsn := fmt.Sprintf("file:happy%d?mode=memory&cache=shared", atomic.AddInt64(&happyDBSeq, 1))
-	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Silent),
-	})
-	if err != nil {
-		t.Fatalf("open sqlite: %v", err)
-	}
-	if err := db.AutoMigrate(&models.User{}, &models.Project{}, &models.Instance{}, &models.GitSecret{}); err != nil {
-		t.Fatalf("migrate: %v", err)
-	}
-
-	prev := models.DB
-	models.DB = db
-	t.Cleanup(func() { models.DB = prev })
-	return db
-}
-
-// resetMockKeyringHappy installs a fresh in-memory keyring backend for the
-// test; see auth_test.go for the rationale.
-func resetMockKeyringHappy(t *testing.T) {
-	t.Helper()
-	keyring.MockInit()
-	t.Cleanup(func() { keyring.MockInit() })
-}
-
-// happyTestEncryptionKeyBytes returns a deterministic 32-byte (AES-256) key.
-// It is built programmatically rather than written as a string literal so that
-// secret scanners do not flag the fixture as a leaked credential.
-func happyTestEncryptionKeyBytes() []byte {
-	k := make([]byte, 32)
-	for i := range k {
-		k[i] = byte(i)
-	}
-	return k
-}
-
-// seedHappyKeyring initializes the auth system (3 keys in the mock keyring)
-// and seeds the encryption env var.
-func seedHappyKeyring(t *testing.T) {
-	t.Helper()
-	t.Setenv("ENCRYPTION_KEY", base64.StdEncoding.EncodeToString(happyTestEncryptionKeyBytes()))
-	if err := lib.InitAuthSystem(); err != nil {
-		t.Fatalf("InitAuthSystem: %v", err)
-	}
-}
 
 // TestLoginHappyPath covers the success branch: a known user with the right
 // password gets back a 200, the authToken cookie is set, and the response
 // body lists the user with the password field cleared.
 func TestLoginHappyPath(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	resetMockKeyringHappy(t)
-	seedHappyKeyring(t)
+	resetMockKeyring(t)
+	seedAuthSystem(t)
 
-	db := newHappyDB(t)
+	db := newRouteTestDB(t)
 	hashed := lib.EncryptPass("hunter2")
 	user := models.User{
 		UUID:     uuid.NewString(),
@@ -139,9 +74,9 @@ func TestLoginHappyPath(t *testing.T) {
 // when the query returned ErrRecordNotFound without a type assertion.
 func TestLoginUnknownEmail(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	resetMockKeyringHappy(t)
-	seedHappyKeyring(t)
-	newHappyDB(t)
+	resetMockKeyring(t)
+	seedAuthSystem(t)
+	newRouteTestDB(t)
 
 	r := gin.New()
 	r.POST("/login", Login)
@@ -160,10 +95,10 @@ func TestLoginUnknownEmail(t *testing.T) {
 // exists but the password does not match. Login must respond 401.
 func TestLoginWrongPassword(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	resetMockKeyringHappy(t)
-	seedHappyKeyring(t)
+	resetMockKeyring(t)
+	seedAuthSystem(t)
 
-	db := newHappyDB(t)
+	db := newRouteTestDB(t)
 	hashed := lib.EncryptPass("right")
 	user := models.User{
 		UUID:     uuid.NewString(),
@@ -196,10 +131,10 @@ func TestLoginWrongPassword(t *testing.T) {
 // receive an authToken cookie, and return 201.
 func TestSignupHappyPath(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	resetMockKeyringHappy(t)
-	seedHappyKeyring(t)
+	resetMockKeyring(t)
+	seedAuthSystem(t)
 
-	db := newHappyDB(t)
+	db := newRouteTestDB(t)
 
 	r := gin.New()
 	r.POST("/signup", Signup)
@@ -239,10 +174,10 @@ func TestSignupHappyPath(t *testing.T) {
 // with an email that already exists must produce 409 Conflict.
 func TestSignupDuplicateEmail(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	resetMockKeyringHappy(t)
-	seedHappyKeyring(t)
+	resetMockKeyring(t)
+	seedAuthSystem(t)
 
-	db := newHappyDB(t)
+	db := newRouteTestDB(t)
 	hashed := lib.EncryptPass("anything")
 	existing := models.User{
 		UUID:     uuid.NewString(),
@@ -284,10 +219,10 @@ func TestSignupDuplicateEmail(t *testing.T) {
 // respond 200 and put the user in the context.
 func TestAuthenticateHappyPath(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	resetMockKeyringHappy(t)
-	seedHappyKeyring(t)
+	resetMockKeyring(t)
+	seedAuthSystem(t)
 
-	db := newHappyDB(t)
+	db := newRouteTestDB(t)
 	user := models.User{
 		UUID:     uuid.NewString(),
 		Email:    "auth@example.com",
@@ -333,9 +268,9 @@ func TestAuthenticateHappyPath(t *testing.T) {
 // carrying a garbage token must surface 401.
 func TestAuthenticateInvalidToken(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	resetMockKeyringHappy(t)
-	seedHappyKeyring(t)
-	newHappyDB(t)
+	resetMockKeyring(t)
+	seedAuthSystem(t)
+	newRouteTestDB(t)
 
 	r := gin.New()
 	r.GET("/authenticate", Authenticate)
@@ -353,9 +288,9 @@ func TestAuthenticateInvalidToken(t *testing.T) {
 // the token is valid but the user-id claim does not resolve to a row.
 func TestAuthenticateTokenForMissingUser(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	resetMockKeyringHappy(t)
-	seedHappyKeyring(t)
-	newHappyDB(t) // empty DB
+	resetMockKeyring(t)
+	seedAuthSystem(t)
+	newRouteTestDB(t) // empty DB
 
 	user := models.User{UUID: "ghost", Email: "ghost@example.com"}
 	tok, err := lib.GenerateToken(user)
@@ -379,10 +314,10 @@ func TestAuthenticateTokenForMissingUser(t *testing.T) {
 // name) must persist the change and return 200 with the updated user.
 func TestUpdateUserHappyPath(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	resetMockKeyringHappy(t)
-	seedHappyKeyring(t)
+	resetMockKeyring(t)
+	seedAuthSystem(t)
 
-	db := newHappyDB(t)
+	db := newRouteTestDB(t)
 	user := models.User{
 		UUID:     uuid.NewString(),
 		Email:    "upd@example.com",
@@ -424,9 +359,9 @@ func TestUpdateUserHappyPath(t *testing.T) {
 // JSON must produce 400.
 func TestUpdateUserRejectsBadJSON(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	resetMockKeyringHappy(t)
-	seedHappyKeyring(t)
-	newHappyDB(t)
+	resetMockKeyring(t)
+	seedAuthSystem(t)
+	newRouteTestDB(t)
 
 	user := models.User{UUID: uuid.NewString(), Email: "u@example.com"}
 
@@ -450,10 +385,10 @@ func TestUpdateUserRejectsBadJSON(t *testing.T) {
 // emit a 302 to github.com/login/oauth/authorize.
 func TestLinkHandlerRedirectsToGitHub(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	resetMockKeyringHappy(t)
-	seedHappyKeyring(t)
+	resetMockKeyring(t)
+	seedAuthSystem(t)
 
-	db := newHappyDB(t)
+	db := newRouteTestDB(t)
 	clientIDPlain := "client-id-123"
 	encrypted, err := lib.EncryptSecret(clientIDPlain)
 	if err != nil {
@@ -491,10 +426,10 @@ func TestLinkHandlerRedirectsToGitHub(t *testing.T) {
 // no provider entry in LLMConfig.Providers.
 func TestUpdateLinkLocalProviderNoDecrypt(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	resetMockKeyringHappy(t)
-	seedHappyKeyring(t)
+	resetMockKeyring(t)
+	seedAuthSystem(t)
 
-	db := newHappyDB(t)
+	db := newRouteTestDB(t)
 	user := models.User{
 		UUID:     uuid.NewString(),
 		Email:    "local@example.com",
@@ -505,12 +440,12 @@ func TestUpdateLinkLocalProviderNoDecrypt(t *testing.T) {
 		},
 		// Pre-encrypt the AWS + Portfolio fields so the decrypt succeeds.
 		AwsCreds: models.AwsCreds{
-			AccessKeyID:     mustEnc(t, "AKIA-test"),
-			SecretAccessKey: mustEnc(t, "secret-test"),
+			AccessKeyID:     mustEncrypt(t, "AKIA-test"),
+			SecretAccessKey: mustEncrypt(t, "secret-test"),
 		},
 		Portfolio: models.Portfolio{
-			RootEndpoint: mustEnc(t, "https://portfolio.example.com"),
-			APIKey:       mustEnc(t, "portfolio-key"),
+			RootEndpoint: mustEncrypt(t, "https://portfolio.example.com"),
+			APIKey:       mustEncrypt(t, "portfolio-key"),
 		},
 	}
 	if err := db.Create(&user).Error; err != nil {
@@ -543,10 +478,10 @@ func TestUpdateLinkLocalProviderNoDecrypt(t *testing.T) {
 // respond 500 with "Failed to decrypt AWS Access".
 func TestUpdateLinkDecryptError(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	resetMockKeyringHappy(t)
-	seedHappyKeyring(t)
+	resetMockKeyring(t)
+	seedAuthSystem(t)
 
-	db := newHappyDB(t)
+	db := newRouteTestDB(t)
 	user := models.User{
 		UUID:     uuid.NewString(),
 		Email:    "broken@example.com",
@@ -555,7 +490,7 @@ func TestUpdateLinkDecryptError(t *testing.T) {
 		LLMConfig: models.LLM{
 			Provider: "openai",
 			Providers: map[string]models.AIProvider{
-				"openai": {Modal: "gpt-4o", APIKey: mustEnc(t, "sk-test")},
+				"openai": {Modal: "gpt-4o", APIKey: mustEncrypt(t, "sk-test")},
 			},
 		},
 		AwsCreds: models.AwsCreds{
@@ -582,17 +517,3 @@ func TestUpdateLinkDecryptError(t *testing.T) {
 		t.Errorf("body = %q, want it to mention Failed to decrypt AWS", w.Body.String())
 	}
 }
-
-// mustEnc encrypts s with the test seed key and fails the test on error;
-// small helper so happy-path setup is one line per field.
-func mustEnc(t *testing.T, s string) string {
-	t.Helper()
-	out, err := lib.EncryptSecret(s)
-	if err != nil {
-		t.Fatalf("EncryptSecret(%q): %v", s, err)
-	}
-	return out
-}
-
-// keep time imported for future use (e.g. an expiry-based test).
-var _ = time.Now

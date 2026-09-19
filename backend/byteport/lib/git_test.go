@@ -1,10 +1,8 @@
 package lib
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -17,38 +15,8 @@ import (
 	"byteport/models"
 
 	"github.com/gin-gonic/gin"
-	"github.com/glebarez/sqlite"
 	"github.com/google/uuid"
-	"github.com/zalando/go-keyring"
-	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
 )
-
-// gitTestDBSeq hands every subtest its own in-memory database; see
-// newAuthTestDB for the rationale.
-var gitTestDBSeq int64
-
-// newGitTestDB swaps models.DB for an in-memory SQLite holding the tables
-// git flows touch (users, git_secrets).
-func newGitTestDB(t *testing.T) *gorm.DB {
-	t.Helper()
-
-	dsn := fmt.Sprintf("file:gittest%d?mode=memory&cache=shared", atomic.AddInt64(&gitTestDBSeq, 1))
-	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Silent),
-	})
-	if err != nil {
-		t.Fatalf("open sqlite: %v", err)
-	}
-	if err := db.AutoMigrate(&models.User{}, &models.Project{}, &models.Instance{}, &models.GitSecret{}); err != nil {
-		t.Fatalf("migrate: %v", err)
-	}
-
-	prev := models.DB
-	models.DB = db
-	t.Cleanup(func() { models.DB = prev })
-	return db
-}
 
 // stubGitHubDoer replaces httpGitHubDoer for the duration of a test. The
 // returned restore function should be deferred. Tests use this to inject
@@ -71,35 +39,6 @@ func jsonResponse(status int, body string) *http.Response {
 		Body:       io.NopCloser(strings.NewReader(body)),
 		Header:     h,
 	}
-}
-
-// resetMockKeyringForGit is a per-file alias for the helper used in
-// auth_test.go; we re-declare it here so the helper isn't cross-file
-// dependent.
-func resetMockKeyringForGit(t *testing.T) {
-	t.Helper()
-	keyring.MockInit()
-	t.Cleanup(func() { keyring.MockInit() })
-}
-
-// seedEncryptionKey plants ENCRYPTION_KEY so DecryptSecret/EncryptSecret
-// don't log.Fatal. The raw key is 32 bytes; the env var carries the
-// base64-encoded form, matching link_test.go.
-func seedEncryptionKey(t *testing.T) {
-	t.Helper()
-	const raw = "0123456789abcdef0123456789abcdef"
-	t.Setenv("ENCRYPTION_KEY", base64.StdEncoding.EncodeToString([]byte(raw)))
-}
-
-// mustEncrypt encrypts s with the test seed key and fails the test on
-// error; tiny convenience so happy-path tests can seed encrypted fixtures.
-func mustEncrypt(t *testing.T, s string) string {
-	t.Helper()
-	out, err := EncryptSecret(s)
-	if err != nil {
-		t.Fatalf("EncryptSecret(%q): %v", s, err)
-	}
-	return out
 }
 
 // TestListRepositoriesHappyPath covers the success branch: a 200 with a JSON
@@ -169,7 +108,7 @@ func TestListRepositoriesReportsTransportError(t *testing.T) {
 // NotBefore timestamps at nanosecond resolution, so the ciphertexts will
 // differ even though the wrapping key, audience, and structure are identical.
 func TestGenerateGitPasetoDelegatesToGenerateToken(t *testing.T) {
-	resetMockKeyringForGit(t)
+	resetMockKeyring(t)
 	if err := InitAuthSystem(); err != nil {
 		t.Fatalf("InitAuthSystem: %v", err)
 	}
@@ -203,13 +142,13 @@ func TestGenerateGitPasetoDelegatesToGenerateToken(t *testing.T) {
 // LinkWithGithub must redirect to GitHub's authorize endpoint with the
 // decrypted client_id and a state token of the form "<paseto><BYTEPORT><uuid>".
 func TestLinkWithGithubRedirectsToAuthorize(t *testing.T) {
-	resetMockKeyringForGit(t)
+	resetMockKeyring(t)
 	if err := InitAuthSystem(); err != nil {
 		t.Fatalf("InitAuthSystem: %v", err)
 	}
 	seedEncryptionKey(t)
 
-	db := newGitTestDB(t)
+	db := newLibTestDB(t)
 	clientIDPlain := "my-client-id"
 	encrypted, err := EncryptSecret(clientIDPlain)
 	if err != nil {
@@ -241,13 +180,13 @@ func TestLinkWithGithubRedirectsToAuthorize(t *testing.T) {
 // TestLinkWithGithubReportsDecryptError covers the failure branch: when
 // DecryptSecret fails, the handler must return 500.
 func TestLinkWithGithubReportsDecryptError(t *testing.T) {
-	resetMockKeyringForGit(t)
+	resetMockKeyring(t)
 	if err := InitAuthSystem(); err != nil {
 		t.Fatalf("InitAuthSystem: %v", err)
 	}
 	seedEncryptionKey(t)
 
-	db := newGitTestDB(t)
+	db := newLibTestDB(t)
 	if err := db.Create(&models.GitSecret{ClientID: "not-base64-or-valid-ciphertext"}).Error; err != nil {
 		t.Fatalf("seed GitSecret: %v", err)
 	}
@@ -268,13 +207,13 @@ func TestLinkWithGithubReportsDecryptError(t *testing.T) {
 // valid access_token + refresh_token response must be parsed into a
 // models.Git with the expected expiry windows.
 func TestGetUserAccessTokenHappyPath(t *testing.T) {
-	resetMockKeyringForGit(t)
+	resetMockKeyring(t)
 	if err := InitAuthSystem(); err != nil {
 		t.Fatalf("InitAuthSystem: %v", err)
 	}
 	seedEncryptionKey(t)
 
-	db := newGitTestDB(t)
+	db := newLibTestDB(t)
 	clientIDPlain := "cid"
 	clientSecretPlain := "csec"
 	cidEnc, _ := EncryptSecret(clientIDPlain)
@@ -330,12 +269,12 @@ func TestGetUserAccessTokenHappyPath(t *testing.T) {
 // TestGetUserAccessTokenRejectsInvalidPaseto covers the early-exit branch:
 // a malformed pasetoToken must surface an error without hitting GitHub.
 func TestGetUserAccessTokenRejectsInvalidPaseto(t *testing.T) {
-	resetMockKeyringForGit(t)
+	resetMockKeyring(t)
 	if err := InitAuthSystem(); err != nil {
 		t.Fatalf("InitAuthSystem: %v", err)
 	}
 	seedEncryptionKey(t)
-	newGitTestDB(t)
+	newLibTestDB(t)
 
 	hits := 0
 	restore := stubGitHubDoer(t, func(req *http.Request) (*http.Response, error) {
@@ -358,13 +297,13 @@ func TestGetUserAccessTokenRejectsInvalidPaseto(t *testing.T) {
 // GitHub payload must contain the decrypted refresh token under the
 // refresh_token grant_type.
 func TestRefreshTokenHappyPath(t *testing.T) {
-	resetMockKeyringForGit(t)
+	resetMockKeyring(t)
 	if err := InitAuthSystem(); err != nil {
 		t.Fatalf("InitAuthSystem: %v", err)
 	}
 	seedEncryptionKey(t)
 
-	db := newGitTestDB(t)
+	db := newLibTestDB(t)
 	cidEnc, _ := EncryptSecret("cid")
 	csecEnc, _ := EncryptSecret("csec")
 	if err := db.Create(&models.GitSecret{ClientID: cidEnc, ClientSecret: csecEnc}).Error; err != nil {
@@ -409,13 +348,13 @@ func TestRefreshTokenHappyPath(t *testing.T) {
 // when GitHub returns a 4xx, refreshToken must surface it as an error
 // carrying the status code.
 func TestRefreshTokenReportsGitHubError(t *testing.T) {
-	resetMockKeyringForGit(t)
+	resetMockKeyring(t)
 	if err := InitAuthSystem(); err != nil {
 		t.Fatalf("InitAuthSystem: %v", err)
 	}
 	seedEncryptionKey(t)
 
-	db := newGitTestDB(t)
+	db := newLibTestDB(t)
 	cidEnc, _ := EncryptSecret("cid")
 	csecEnc, _ := EncryptSecret("csec")
 	if err := db.Create(&models.GitSecret{ClientID: cidEnc, ClientSecret: csecEnc}).Error; err != nil {
@@ -446,13 +385,13 @@ func TestRefreshTokenReportsGitHubError(t *testing.T) {
 // refreshTokens must call refreshToken for every user whose access token
 // is expired and update the user row with the new credentials.
 func TestRefreshTokensIteratesExpiredUsers(t *testing.T) {
-	resetMockKeyringForGit(t)
+	resetMockKeyring(t)
 	if err := InitAuthSystem(); err != nil {
 		t.Fatalf("InitAuthSystem: %v", err)
 	}
 	seedEncryptionKey(t)
 
-	db := newGitTestDB(t)
+	db := newLibTestDB(t)
 
 	// refreshToken → models.DB.First(&secrets) → DecryptSecret(secrets.ClientID);
 	// if no GitSecret row exists, First returns a zero-value struct and the
@@ -534,13 +473,13 @@ func TestRefreshTokensIteratesExpiredUsers(t *testing.T) {
 // before the ticker starts. StartTokenRefreshJob blocks forever, so we
 // run it in a goroutine and exit once we see the first refresh hit.
 func TestStartTokenRefreshJobInvokesRefreshTokens(t *testing.T) {
-	resetMockKeyringForGit(t)
+	resetMockKeyring(t)
 	if err := InitAuthSystem(); err != nil {
 		t.Fatalf("InitAuthSystem: %v", err)
 	}
 	seedEncryptionKey(t)
 
-	db := newGitTestDB(t)
+	db := newLibTestDB(t)
 	if err := db.Create(&models.User{
 		UUID: "u-1", Email: "u@example.com",
 		Git: models.Git{

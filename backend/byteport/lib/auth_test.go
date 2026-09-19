@@ -1,66 +1,19 @@
 package lib
 
 import (
-	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
-	"sync/atomic"
 	"testing"
 
 	"byteport/models"
 
 	"aidanwoods.dev/go-paseto"
 	"github.com/gin-gonic/gin"
-	"github.com/glebarez/sqlite"
 	"github.com/google/uuid"
 	"github.com/zalando/go-keyring"
-	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
 )
-
-// authTestDBSeq hands every subtest its own in-memory database; sharing one
-// DSN across subtests makes the second one collide with the first one's
-// seeded rows because the same connection pool sees both.
-var authTestDBSeq int64
-
-// newAuthTestDB swaps models.DB for an in-memory SQLite database holding the
-// tables auth flows touch (users, projects, git_secrets) and restores the
-// previous value on cleanup. Mirrors newLinkTestDB in routes/link_test.go so
-// the routes layer and the lib layer share the same fixture shape.
-func newAuthTestDB(t *testing.T) *gorm.DB {
-	t.Helper()
-
-	dsn := fmt.Sprintf("file:authtest%d?mode=memory&cache=shared", atomic.AddInt64(&authTestDBSeq, 1))
-	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Silent),
-	})
-	if err != nil {
-		t.Fatalf("open sqlite: %v", err)
-	}
-	if err := db.AutoMigrate(&models.User{}, &models.Project{}, &models.Instance{}, &models.GitSecret{}); err != nil {
-		t.Fatalf("migrate: %v", err)
-	}
-
-	prev := models.DB
-	models.DB = db
-	t.Cleanup(func() { models.DB = prev })
-	return db
-}
-
-// resetMockKeyring installs a fresh in-memory keyring backend for the test.
-// zalando/go-keyring's mock backend is a package-global singleton, so we
-// must reset between tests to avoid bleed-through.
-//
-// Production reads from the OS keyring via keyring.Get/Set; with MockInit
-// active those calls hit an internal map. InitAuthSystem and the token
-// helpers exercise both the empty (must-create) and populated (must-reuse)
-// paths.
-func resetMockKeyring(t *testing.T) {
-	t.Helper()
-	keyring.MockInit()
-	t.Cleanup(func() { keyring.MockInit() })
-}
 
 // seedTokenKey plants a symmetric PASETO key under (tokenKeyService,
 // keyringUser) so GenerateToken/ValidateToken can round-trip without going
@@ -192,7 +145,7 @@ func TestEnsureKeyExistsServiceKeyAlsoSetsEnv(t *testing.T) {
 		t.Fatalf("ensureKeyExists: %v", err)
 	}
 
-	envVal := osGetenv("SERVICE_KEY")
+	envVal := os.Getenv("SERVICE_KEY")
 	if envVal == "" {
 		t.Fatal("SERVICE_KEY env var was not set by ensureKeyExists")
 	}
@@ -227,7 +180,7 @@ func TestInitAuthSystemCreatesAllThreeKeys(t *testing.T) {
 		}
 	}
 
-	if osGetenv("SERVICE_KEY") == "" {
+	if os.Getenv("SERVICE_KEY") == "" {
 		t.Fatal("InitAuthSystem did not set SERVICE_KEY env var")
 	}
 }
@@ -412,7 +365,7 @@ func TestAuthenticateRequestReturnsUserFromDB(t *testing.T) {
 	if err := InitAuthSystem(); err != nil {
 		t.Fatalf("InitAuthSystem: %v", err)
 	}
-	db := newAuthTestDB(t)
+	db := newLibTestDB(t)
 
 	user := models.User{
 		UUID:     uuid.NewString(),
@@ -450,7 +403,7 @@ func TestAuthenticateRequestRejectsInvalidToken(t *testing.T) {
 	if err := InitAuthSystem(); err != nil {
 		t.Fatalf("InitAuthSystem: %v", err)
 	}
-	newAuthTestDB(t) // empty DB
+	newLibTestDB(t) // empty DB
 
 	_, err := AuthenticateRequest("not-a-token")
 	if err == nil {
@@ -523,7 +476,7 @@ func TestAuthMiddlewareStripsBearerPrefix(t *testing.T) {
 	if err := InitAuthSystem(); err != nil {
 		t.Fatalf("InitAuthSystem: %v", err)
 	}
-	db := newAuthTestDB(t)
+	db := newLibTestDB(t)
 
 	user := models.User{
 		UUID:     uuid.NewString(),
@@ -570,7 +523,7 @@ func TestAuthMiddlewareRejectsTokenForMissingUser(t *testing.T) {
 	if err := InitAuthSystem(); err != nil {
 		t.Fatalf("InitAuthSystem: %v", err)
 	}
-	newAuthTestDB(t) // empty DB
+	newLibTestDB(t) // empty DB
 
 	user := models.User{UUID: "ghost", Email: "ghost@example.com"}
 	tok, err := GenerateToken(user)
@@ -607,7 +560,7 @@ func TestAuthMiddlewareSetsUserOnHappyPath(t *testing.T) {
 	if err := InitAuthSystem(); err != nil {
 		t.Fatalf("InitAuthSystem: %v", err)
 	}
-	db := newAuthTestDB(t)
+	db := newLibTestDB(t)
 
 	user := models.User{
 		UUID:     uuid.NewString(),
