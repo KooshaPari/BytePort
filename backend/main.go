@@ -13,10 +13,19 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// defaultPort is the canonical BytePort API port. Every consumer of this
-// server (SvelteKit frontend, Tauri shell + its CSP, .air.toml, the Windows
-// setup script) targets 8081, so the default must match. Override with PORT.
-const defaultPort = "8081"
+// defaultPort is deliberately NOT 8081.
+//
+// 8081 belongs to the canonical backend, backend/byteport, which is what the
+// desktop app fetches (frontend/web/src/lib/api.ts) and what the Dockerfile
+// builds. With PORT unset this module previously also bound 8081, so starting
+// it instead of the canonical server produced a listener that answered
+// /authenticate, /health and /projects with 404 while /api/v1/health returned
+// 200 - a healthy-looking process serving the wrong API. That is exactly the
+// misleading signal that caused a wrong-backend test in this repo.
+//
+// This module is not reachable by the app; see backend/README.md. Override with
+// PORT when running it deliberately.
+const defaultPort = "8090"
 
 func main() {
 	// Load orchestrator port before .env overrides

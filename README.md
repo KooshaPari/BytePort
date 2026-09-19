@@ -132,8 +132,8 @@ The app will open automatically in Tauri dev mode.
 
 ```
 BytePort/
-├── backend/             # Go backend (Gin server, persistence, orchestration)
-│   ├── byteport/       # Main Go module (api, handlers, services)
+├── backend/             # Go backend - TWO modules, see backend/README.md
+│   ├── byteport/       # CANONICAL Go module: what the app talks to, port 8081
 │   └── bytebridge/     # Legacy bridge components
 ├── crates/             # Rust workspace crates
 │   ├── byteport-cli/   # CLI bindings
@@ -149,6 +149,12 @@ BytePort/
 ├── rust-toolchain.toml # Rust stable + components
 └── go.mod              # Go 1.25.0 module
 ```
+
+> **Backend has two Go modules.** `backend/byteport/` is canonical - it is what
+> the desktop app talks to and what the Dockerfile builds. `backend/` is a
+> separate, unreachable `/api/v1` module (WorkOS AuthKit rewrite) that nothing
+> calls. See [`backend/README.md`](backend/README.md).
+
 
 ---
 

@@ -1,10 +1,18 @@
 project_name: byteport-api
 
 builds:
-  - id: byteport-api
-    main: ./backend
-    dir: .
+  # The canonical backend is backend/byteport (module `byteport`): it is what the
+  # Dockerfile builds and what the desktop app talks to. This used to build
+  # ./backend, the unreachable /api/v1 module, so release archives and container
+  # images shipped two different servers.
+  - id: byteport-server
+    dir: backend/byteport
+    main: .
+    binary: byteport-server
     env:
+      # Safe now: the SQLite driver is pure Go (github.com/glebarez/sqlite), so
+      # cross-compiling without cgo produces a working binary. Previously this
+      # shipped a stub that failed with "go-sqlite3 requires cgo to work".
       - CGO_ENABLED=0
     goos:
       - linux
