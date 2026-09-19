@@ -5,6 +5,8 @@
 //! upload, and UI. It serves as both a developer tool and a reference
 //! consumer for the transport layer.
 
+mod tracing_setup;
+
 use byteport_transport::ports::codec::{Codec, WireCodecAdapter};
 use byteport_transport::ports::terminal_ui::TerminalUiAdapter;
 use byteport_transport::ports::transport::{Transport, WireTransportAdapter};
@@ -102,6 +104,8 @@ enum UiAction {
 }
 
 fn main() {
+    let _shutdown = tracing_setup::ShutdownBanner;
+    tracing_setup::log_startup_banner();
     let cli = Cli::parse();
     match cli.command {
         Command::Codec { action } => run_codec(action),

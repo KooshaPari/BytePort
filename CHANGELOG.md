@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Dependabot: ignore major-version updates for `typescript` in
+  `frontend/web/`. TypeScript 7.0 requires the consumer to ship both
+  `typescript@~6` and `@typescript/native@npm:typescript@7` (npm alias) plus a
+  `svelte-check --tsgo` invocation, and `frontend/web/src/lib/components/ui/`
+  still uses the pre-1.0 `bits-ui` `Props`/`Events` namespaces with `on:event`
+  forwarding (16 shadcn-svelte wrappers, 46 `svelte-check` errors). The
+  migration is out of scope for the Dependabot burndown track and will be
+  picked up as a dedicated refactor PR. PR #363 (Dependabot auto-PR) is
+  closed without merge; minor and patch updates for `typescript` are still
+  delivered.
+
+### Changed
+
+- Frontend: bump `prettier` 3.9.6 → 3.9.7 (markdown task-list / indented code-block
+  regressions; upstream fix in 3.9.7). The bump came in via Dependabot PR #368
+  with a stale `package-lock.json`; #369 regenerated the npm lockfile so the
+  CI `npm ci` workflows stay green. `yarn.lock` is unchanged.
+
 ### Fixed
 
 - Frontend: the lint gate was failing on `prettier --check` (22 unformatted files,
@@ -26,6 +46,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Rust: patch RUSTSEC-2026-0194/0195 (quick-xml) and RUSTSEC-2026-0009 (time),
   and drop dependencies cargo-machete reports as unused.
 - Scorecard: the ENV_VARS pillar now accepts `.env.example` templates.
+- Dependabot alerts:
+  - `devalue` 5.8.1 → 5.9.2 (CVE-2026-81176: Svelte devalue DoS via malformed input)
+  - `@sveltejs/kit` ^2.61.1 → ^2.69.1 (Dependabot #314 advisory)
+  - `serde_with` 3.16.1 → 3.21.0 (Dependabot #362 advisory; transitive via tauri-utils)
+  - Removed the dead `crates/byteport-otel/` directory that was not in the
+    workspace but still surfaced the `opentelemetry_sdk` CVE-2026-48504 alert.
+- Scorecard: restore the LOGGING pillar (was passing incidentally on the
+  now-removed `crates/byteport-otel/src/tracing.rs`) by adding a minimal
+  `tracing_setup` module to `byteport-cli` that emits structured startup and
+  shutdown breadcrumbs via the `tracing` facade.
+- GitHub Pages docs site (`.github/frontend/`): bump `@sveltejs/kit`
+  ^2.60.1 → ^2.69.1 (GHSA-866w-xmhq-wj7x) and `vite` ^8.0.13 → ^8.3.0, and pin
+  `devalue` 5.9.2 + `postcss` 8.5.26 in `overrides`, to clear the 5 open
+  Dependabot alerts that were missed by PR #365 (which only covered
+  `frontend/web`).
 
 ### Changed
 
