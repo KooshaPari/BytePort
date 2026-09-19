@@ -36,6 +36,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   now-removed `crates/byteport-otel/src/tracing.rs`) by adding a minimal
   `tracing_setup` module to `byteport-cli` that emits structured startup and
   shutdown breadcrumbs via the `tracing` facade.
+- GitHub Pages docs site (`.github/frontend/`): bump `@sveltejs/kit`
+  ^2.60.1 → ^2.69.1 (GHSA-866w-xmhq-wj7x) and `vite` ^8.0.13 → ^8.3.0, and pin
+  `devalue` 5.9.2 + `postcss` 8.5.26 in `overrides`, to clear the 5 open
+  Dependabot alerts that were missed by PR #365 (which only covered
+  `frontend/web`).
 
 ### Changed
 
