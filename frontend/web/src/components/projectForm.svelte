@@ -56,11 +56,11 @@
 	error: string
 )}
 	<fieldset class="flex flex-col gap-1.5">
-		<legend class="text-[12px] font-medium tracking-wide text-dark-onSurfaceVariant">
+		<legend class="text-dark-onSurfaceVariant text-[12px] font-medium tracking-wide">
 			{legend}
 		</legend>
 		<div
-			class="flex w-full flex-wrap gap-1 rounded-md border bg-dark-surfaceContainerLowest p-1
+			class="bg-dark-surfaceContainerLowest flex w-full flex-wrap gap-1 rounded-md border p-1
 				{error ? 'border-dark-error' : 'border-border'}"
 			role="radiogroup"
 			aria-label={legend}
@@ -84,7 +84,7 @@
 			{/each}
 		</div>
 		{#if error}
-			<p class="text-[12px] text-dark-error">{error}</p>
+			<p class="text-dark-error text-[12px]">{error}</p>
 		{/if}
 	</fieldset>
 {/snippet}
@@ -113,7 +113,8 @@
 	<div class="flex flex-col gap-1.5">
 		<label
 			for="{formId}-description"
-			class="text-[12px] font-medium tracking-wide text-dark-onSurfaceVariant">Description</label
+			class="text-dark-onSurfaceVariant text-[12px] font-medium tracking-wide"
+			>Description</label
 		>
 		<textarea
 			id="{formId}-description"
@@ -122,13 +123,12 @@
 			placeholder="What this project deploys"
 			bind:value={description}
 			aria-invalid={Boolean(errors.description)}
-			class="w-full resize-none rounded-md border bg-dark-surfaceContainerLowest px-3 py-2 text-sm
-				text-dark-onSurface placeholder:text-dark-onSurfaceVariant/60 transition-colors
-				focus:border-dark-primary focus:ring-2 focus:ring-ring/60 focus:outline-none
-				{errors.description ? 'border-dark-error' : 'border-border'}"
-		></textarea>
+			class="bg-dark-surfaceContainerLowest text-dark-onSurface placeholder:text-dark-onSurfaceVariant/60 focus:border-dark-primary focus:ring-ring/60 w-full resize-none rounded-md
+				border px-3 py-2
+				text-sm transition-colors focus:ring-2 focus:outline-none
+				{errors.description ? 'border-dark-error' : 'border-border'}"></textarea>
 		{#if errors.description}
-			<p class="text-[12px] text-dark-error">{errors.description}</p>
+			<p class="text-dark-error text-[12px]">{errors.description}</p>
 		{/if}
 	</div>
 

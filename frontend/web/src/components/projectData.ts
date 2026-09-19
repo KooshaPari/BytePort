@@ -279,7 +279,8 @@ export function normalizeInstance(raw: unknown, fallbackProject: string = ''): I
 		status,
 		statusTone: statusTone(status),
 		os: str(pick(raw, 'OS', 'os', 'platform', 'Platform')) || 'unknown',
-		projectUuid: str(pick(raw, 'RootProjectUUID', 'root_project_uuid', 'ResUUID')) || fallbackProject,
+		projectUuid:
+			str(pick(raw, 'RootProjectUUID', 'root_project_uuid', 'ResUUID')) || fallbackProject,
 		resources,
 		lastUpdated,
 		lastUpdatedLabel: formatRelative(lastUpdated),
@@ -293,7 +294,10 @@ export function normalizeInstance(raw: unknown, fallbackProject: string = ''): I
  * A project has no status column of its own; "is it up" is entirely a function
  * of what it deployed, so the summary is derived rather than invented.
  */
-function summarize(instances: InstanceRow[]): Pick<ProjectRow, 'status' | 'statusTone' | 'statusKey'> & {
+function summarize(instances: InstanceRow[]): Pick<
+	ProjectRow,
+	'status' | 'statusTone' | 'statusKey'
+> & {
 	running: number;
 	failed: number;
 	pending: number;

@@ -34,61 +34,63 @@
 </script>
 
 <Card padding="none">
-	<dl class="divide-y divide-border">
+	<dl class="divide-border divide-y">
 		<div class="flex items-start gap-3 px-3 py-2.5">
 			<dt
-				class="w-24 shrink-0 pt-0.5 text-[11px] font-medium tracking-wide text-dark-onSurfaceVariant uppercase"
+				class="text-dark-onSurfaceVariant w-24 shrink-0 pt-0.5 text-[11px] font-medium tracking-wide uppercase"
 			>
 				Repository
 			</dt>
 			<dd class="flex min-w-0 items-center gap-2">
 				{#if repository}
-					<span class="truncate text-[13px] text-dark-onSurface">{repository.full_name}</span>
+					<span class="text-dark-onSurface truncate text-[13px]"
+						>{repository.full_name}</span
+					>
 					{#if repository.private}
 						<Badge tone="neutral">Private</Badge>
 					{/if}
 				{:else}
-					<span class="text-[13px] text-dark-onSurfaceVariant">Not selected</span>
+					<span class="text-dark-onSurfaceVariant text-[13px]">Not selected</span>
 				{/if}
 			</dd>
 		</div>
 
 		<div class="flex items-start gap-3 px-3 py-2.5">
 			<dt
-				class="w-24 shrink-0 pt-0.5 text-[11px] font-medium tracking-wide text-dark-onSurfaceVariant uppercase"
+				class="text-dark-onSurfaceVariant w-24 shrink-0 pt-0.5 text-[11px] font-medium tracking-wide uppercase"
 			>
 				Name
 			</dt>
-			<dd class="min-w-0 truncate text-[13px] text-dark-onSurface">{name || 'Untitled'}</dd>
+			<dd class="text-dark-onSurface min-w-0 truncate text-[13px]">{name || 'Untitled'}</dd>
 		</div>
 
 		<div class="flex items-start gap-3 px-3 py-2.5">
 			<dt
-				class="w-24 shrink-0 pt-0.5 text-[11px] font-medium tracking-wide text-dark-onSurfaceVariant uppercase"
+				class="text-dark-onSurfaceVariant w-24 shrink-0 pt-0.5 text-[11px] font-medium tracking-wide uppercase"
 			>
 				Description
 			</dt>
-			<dd class="min-w-0 text-[13px] leading-snug text-dark-onSurface">
+			<dd class="text-dark-onSurface min-w-0 text-[13px] leading-snug">
 				{description || 'No description'}
 			</dd>
 		</div>
 
 		<div class="flex items-start gap-3 px-3 py-2.5">
 			<dt
-				class="w-24 shrink-0 pt-0.5 text-[11px] font-medium tracking-wide text-dark-onSurfaceVariant uppercase"
+				class="text-dark-onSurfaceVariant w-24 shrink-0 pt-0.5 text-[11px] font-medium tracking-wide uppercase"
 			>
 				Platform
 			</dt>
-			<dd class="text-[13px] text-dark-onSurface">{humanise(platform)}</dd>
+			<dd class="text-dark-onSurface text-[13px]">{humanise(platform)}</dd>
 		</div>
 
 		<div class="flex items-start gap-3 px-3 py-2.5">
 			<dt
-				class="w-24 shrink-0 pt-0.5 text-[11px] font-medium tracking-wide text-dark-onSurfaceVariant uppercase"
+				class="text-dark-onSurfaceVariant w-24 shrink-0 pt-0.5 text-[11px] font-medium tracking-wide uppercase"
 			>
 				Type
 			</dt>
-			<dd class="text-[13px] text-dark-onSurface">{humanise(type)}</dd>
+			<dd class="text-dark-onSurface text-[13px]">{humanise(type)}</dd>
 		</div>
 	</dl>
 </Card>

@@ -37,19 +37,21 @@
 </script>
 
 <div
-	class="rounded-lg border border-border bg-dark-surfaceContainer {paddings[padding]}
+	class="border-border bg-dark-surfaceContainer rounded-lg border {paddings[padding]}
 		{interactive
-		? 'transition-colors hover:border-dark-outline hover:bg-dark-surfaceContainerHigh'
+		? 'hover:border-dark-outline hover:bg-dark-surfaceContainerHigh transition-colors'
 		: ''} {klass}"
 >
 	{#if hasHeader}
 		<div class="mb-3 flex items-start justify-between gap-3">
 			<div class="min-w-0">
 				{#if title}
-					<h3 class="truncate text-sm font-semibold text-dark-onSurface">{title}</h3>
+					<h3 class="text-dark-onSurface truncate text-sm font-semibold">{title}</h3>
 				{/if}
 				{#if description}
-					<p class="mt-0.5 text-[13px] leading-snug text-dark-onSurfaceVariant">{description}</p>
+					<p class="text-dark-onSurfaceVariant mt-0.5 text-[13px] leading-snug">
+						{description}
+					</p>
 				{/if}
 			</div>
 			{#if actions}

@@ -48,7 +48,10 @@
 		phase = 'loading';
 		errorMessage = '';
 		try {
-			const [nextProjects, nextInstances] = await Promise.all([fetchProjects(), fetchInstances()]);
+			const [nextProjects, nextInstances] = await Promise.all([
+				fetchProjects(),
+				fetchInstances()
+			]);
 			projects = nextProjects;
 			instances = nextInstances;
 			phase = 'ready';
@@ -63,7 +66,9 @@
 
 	onMount(() => watchAuth(goto, () => void load()));
 
-	const running = $derived(instances.filter((instance) => instance.statusTone === 'primary').length);
+	const running = $derived(
+		instances.filter((instance) => instance.statusTone === 'primary').length
+	);
 	const attention = $derived(
 		instances.filter((instance) => instance.statusTone === 'danger').length
 	);
@@ -82,11 +87,11 @@
 </script>
 
 {#snippet panel(title: string, count: string, action: Snippet | undefined, body: Snippet)}
-	<section class="overflow-hidden rounded-lg border border-border bg-dark-surfaceContainer">
-		<header class="flex h-12 items-center justify-between gap-3 border-b border-border px-4">
+	<section class="border-border bg-dark-surfaceContainer overflow-hidden rounded-lg border">
+		<header class="border-border flex h-12 items-center justify-between gap-3 border-b px-4">
 			<div class="flex items-baseline gap-2">
-				<h2 class="text-[13px] font-semibold text-dark-onSurface">{title}</h2>
-				<span class="text-[11px] text-dark-onSurfaceVariant">{count}</span>
+				<h2 class="text-dark-onSurface text-[13px] font-semibold">{title}</h2>
+				<span class="text-dark-onSurfaceVariant text-[11px]">{count}</span>
 			</div>
 			{#if action}{@render action()}{/if}
 		</header>
@@ -97,10 +102,11 @@
 {#snippet skeletonRows(count: number)}
 	<div class="flex flex-col" aria-busy="true" aria-label="Loading">
 		{#each Array(count) as _, index (index)}
-			<div class="flex h-11 items-center gap-3 border-b border-border px-4 last:border-b-0">
-				<span class="h-3.5 w-40 animate-pulse rounded bg-dark-surfaceContainerHigh"></span>
-				<span class="h-3.5 w-16 animate-pulse rounded bg-dark-surfaceContainerHigh"></span>
-				<span class="ms-auto h-3.5 w-24 animate-pulse rounded bg-dark-surfaceContainerHigh"></span>
+			<div class="border-border flex h-11 items-center gap-3 border-b px-4 last:border-b-0">
+				<span class="bg-dark-surfaceContainerHigh h-3.5 w-40 animate-pulse rounded"></span>
+				<span class="bg-dark-surfaceContainerHigh h-3.5 w-16 animate-pulse rounded"></span>
+				<span class="bg-dark-surfaceContainerHigh ms-auto h-3.5 w-24 animate-pulse rounded"
+				></span>
 			</div>
 		{/each}
 	</div>
@@ -110,18 +116,22 @@
 	<dl class="grid grid-cols-2 gap-3 lg:grid-cols-4">
 		{#each stats as stat (stat.label)}
 			{@const StatIcon = stat.icon}
-			<div class="flex items-center gap-3 rounded-lg border border-border bg-dark-surfaceContainer px-4 py-3">
+			<div
+				class="border-border bg-dark-surfaceContainer flex items-center gap-3 rounded-lg border px-4 py-3"
+			>
 				<span
-					class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-dark-surfaceContainerHigh text-dark-onSurfaceVariant"
+					class="bg-dark-surfaceContainerHigh text-dark-onSurfaceVariant flex h-8 w-8 shrink-0 items-center justify-center rounded-md"
 					aria-hidden="true"
 				>
 					<StatIcon size={16} strokeWidth={1.75} />
 				</span>
 				<div class="flex min-w-0 flex-col">
-					<dt class="text-[11px] font-medium tracking-wide text-dark-onSurfaceVariant uppercase">
+					<dt
+						class="text-dark-onSurfaceVariant text-[11px] font-medium tracking-wide uppercase"
+					>
 						{stat.label}
 					</dt>
-					<dd class="text-[15px] leading-tight font-semibold text-dark-onSurface">
+					<dd class="text-dark-onSurface text-[15px] leading-tight font-semibold">
 						{phase === 'ready' ? stat.value : '—'}
 					</dd>
 				</div>
@@ -130,13 +140,21 @@
 	</dl>
 
 	{#if phase === 'error'}
-		<div class="flex items-start gap-3 rounded-lg border border-border bg-dark-surfaceContainer p-4" role="alert">
-			<CircleAlert size={16} strokeWidth={1.75} class="mt-0.5 shrink-0 text-dark-error" aria-hidden="true" />
+		<div
+			class="border-border bg-dark-surfaceContainer flex items-start gap-3 rounded-lg border p-4"
+			role="alert"
+		>
+			<CircleAlert
+				size={16}
+				strokeWidth={1.75}
+				class="text-dark-error mt-0.5 shrink-0"
+				aria-hidden="true"
+			/>
 			<div class="flex min-w-0 flex-1 flex-col gap-2">
-				<p class="text-[13px] font-medium text-dark-onSurface">
+				<p class="text-dark-onSurface text-[13px] font-medium">
 					Projects and instances could not be loaded
 				</p>
-				<p class="text-[12px] break-words text-dark-onSurfaceVariant">{errorMessage}</p>
+				<p class="text-dark-onSurfaceVariant text-[12px] break-words">{errorMessage}</p>
 			</div>
 			<Button variant="secondary" size="sm" onclick={load}>
 				<RefreshCw size={13} strokeWidth={1.75} aria-hidden="true" />
@@ -186,30 +204,36 @@
 			{/snippet}
 		</EmptyState>
 	{:else}
-		<ul class="divide-y divide-border">
+		<ul class="divide-border divide-y">
 			{#each projects as project (project.uuid || project.name)}
 				<li>
 					<button
 						type="button"
 						onclick={() => openDetail(project)}
-						class="flex h-11 w-full items-center gap-3 px-4 text-left transition-colors hover:bg-dark-surfaceContainerHigh"
+						class="hover:bg-dark-surfaceContainerHigh flex h-11 w-full items-center gap-3 px-4 text-left transition-colors"
 					>
 						<span class="flex min-w-0 flex-1 flex-col">
-							<span class="truncate text-[13px] leading-tight font-medium text-dark-onSurface">
+							<span
+								class="text-dark-onSurface truncate text-[13px] leading-tight font-medium"
+							>
 								{project.name}
 							</span>
-							<span class="truncate text-[11px] leading-tight text-dark-onSurfaceVariant">
+							<span
+								class="text-dark-onSurfaceVariant truncate text-[11px] leading-tight"
+							>
 								{project.target}
 							</span>
 						</span>
-						<span class="hidden shrink-0 text-[12px] text-dark-onSurfaceVariant md:block">
+						<span
+							class="text-dark-onSurfaceVariant hidden shrink-0 text-[12px] md:block"
+						>
 							{project.lastDeployLabel}
 						</span>
 						<Badge tone={project.statusTone} dot>{project.status}</Badge>
 						<ChevronRight
 							size={14}
 							strokeWidth={1.75}
-							class="shrink-0 text-dark-onSurfaceVariant"
+							class="text-dark-onSurfaceVariant shrink-0"
 							aria-hidden="true"
 						/>
 					</button>
@@ -244,18 +268,20 @@
 			{/snippet}
 		</EmptyState>
 	{:else}
-		<ul class="divide-y divide-border">
+		<ul class="divide-border divide-y">
 			{#each instances as instance (instance.uuid || instance.name)}
 				<li class="flex h-11 items-center gap-3 px-4">
 					<span class="flex min-w-0 flex-1 flex-col">
-						<span class="truncate text-[13px] leading-tight font-medium text-dark-onSurface">
+						<span
+							class="text-dark-onSurface truncate text-[13px] leading-tight font-medium"
+						>
 							{instance.name}
 						</span>
-						<span class="truncate text-[11px] leading-tight text-dark-onSurfaceVariant">
+						<span class="text-dark-onSurfaceVariant truncate text-[11px] leading-tight">
 							{instance.os}
 						</span>
 					</span>
-					<span class="hidden shrink-0 text-[12px] text-dark-onSurfaceVariant md:block">
+					<span class="text-dark-onSurfaceVariant hidden shrink-0 text-[12px] md:block">
 						{instance.resources.length}
 						{instance.resources.length === 1 ? 'resource' : 'resources'}
 					</span>

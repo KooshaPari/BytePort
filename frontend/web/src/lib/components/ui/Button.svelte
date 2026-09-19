@@ -55,7 +55,7 @@
 </script>
 
 <button
-	type={type}
+	{type}
 	class="{base} {variants[variant]} {sizes[size]} {klass}"
 	disabled={disabled || loading}
 	aria-busy={loading}
