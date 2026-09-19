@@ -13,7 +13,21 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func ListRepositories(accessToken string) (string, error) {
+// httpGitHubDoer performs outbound GitHub API requests for the helpers in
+// this file. Declared as a function value (not a func) so tests can
+// substitute a stub: the real implementation performs an outbound HTTP
+// request, which a unit test must not make. Production code calls it
+// exactly as before.
+var httpGitHubDoer = func(req *http.Request) (*http.Response, error) {
+	client := &http.Client{Timeout: 30 * time.Second}
+	return client.Do(req)
+}
+
+// ListRepositories performs the GitHub /user/repos lookup. Declared as a
+// function value (not a func) so tests can substitute a stub: the real
+// implementation performs an outbound HTTP request, which a unit test must
+// not make. Production code calls it exactly as before.
+var ListRepositories = func(accessToken string) (string, error) {
 	const apiURL = "https://api.github.com"
 
 	url := fmt.Sprintf("%s/user/repos", apiURL)
@@ -24,8 +38,7 @@ func ListRepositories(accessToken string) (string, error) {
 	req.Header.Set("Authorization", "Bearer "+accessToken)
 	req.Header.Set("Accept", "application/vnd.github+json")
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := httpGitHubDoer(req)
 	if err != nil {
 		return "", fmt.Errorf("failed to connect to GitHub API: %v", err)
 	}
@@ -76,7 +89,7 @@ func GenerateGitPaseto(user models.User) (string, error) {
 	return token, nil
 }
 
-func GetUserAccessToken(pasetoToken, code string) (models.Git, error) {
+var GetUserAccessToken = func(pasetoToken, code string) (models.Git, error) {
 	const apiURL = "https://github.com/login/oauth/access_token"
 	valid, _, err := ValidateToken(pasetoToken)
 	if err != nil || !valid {
@@ -111,8 +124,7 @@ func GetUserAccessToken(pasetoToken, code string) (models.Git, error) {
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := httpGitHubDoer(req)
 	if err != nil {
 
 		return models.Git{}, fmt.Errorf("failed to connect to GitHub API: %v", err)
@@ -145,6 +157,7 @@ func GetUserAccessToken(pasetoToken, code string) (models.Git, error) {
 
 	return response, nil
 }
+
 func refreshToken(user models.User, pasetoToken string) (models.Git, error) {
 	const apiURL = "https://github.com/login/oauth/access_token"
 	var secrets models.GitSecret
@@ -188,9 +201,8 @@ func refreshToken(user models.User, pasetoToken string) (models.Git, error) {
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{}
 	log.Println("Refreshing Token - Send")
-	resp, err := client.Do(req)
+	resp, err := httpGitHubDoer(req)
 	if err != nil {
 
 		return models.Git{}, fmt.Errorf("failed to connect to GitHub API: %v", err)

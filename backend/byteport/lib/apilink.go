@@ -226,7 +226,11 @@ func isLocalhostName(host string) bool {
 }
 
 // ValidateGit validates the GitHub app connection and fetches repositories for a user.
-func ValidateGit(user models.User) error {
+//
+// Declared as a function value (not a func) so tests can substitute a stub:
+// the real implementation performs an outbound HTTP request, which a unit
+// test must not make. Production code calls it exactly as before.
+var ValidateGit = func(user models.User) error {
 	// Fetch Git secrets from the database linked to the user
 	var gitSecrets models.GitSecret
 	result := models.DB.First(&gitSecrets)

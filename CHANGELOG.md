@@ -9,6 +9,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- test(go): add 50+ new tests across `byteport/lib` and `byteport/routes`,
+  raising Go framework coverage from 35.0% to 70.3% — basically doubling it
+  (PR #379, wave 2/3/4 of the #377 test-density uplift plan):
+
+  | Package | Before | After | Δ |
+  |---|---|---|---|
+  | byteport/models | 64.0% | 64.0% | (unchanged) |
+  | byteport/routes | 40.7% | 62.5% | +21.8pp |
+  | byteport/lib | 27.6% | 69.4% | +41.8pp |
+  | byteport (cmd) | 0.0% | 0.0% | (unchanged) |
+  | **Total weighted** | **35.0%** | **70.3%** | **+35.3pp** |
+
+  Wave 2 (`lib/auth.go`, 12 zero-coverage funcs → 78-100%): covered the entire
+  PASETO token-mint / validate / AuthMiddleware surface by mocking the OS
+  keyring via `keyring.MockInit()`. Tests cover `keyringGet/Set` (with
+  not-found branch), `getSymmetricKey`, `ensureKeyExists` (creation + reuse +
+  service-key env propagation), `InitAuthSystem` (3-key bootstrap +
+  idempotency), `generateSymmetricKey` (length + entropy), `GenerateToken` /
+  `ValidateToken` round-trip (incl. garbage rejection), `GenerateNVMSToken` /
+  `ValidateServiceToken` round-trip + cross-audience rejection,
+  `AuthenticateRequest` (happy path + invalid token), and `AuthMiddleware`
+  (missing cookie, invalid bearer, Bearer prefix stripping, missing user,
+  happy path).
+
+  **Bug found and fixed**: `ValidateServiceToken` was reading
+  `getSymmetricKey()` (the *session* token key) instead of the service key,
+  so `GenerateNVMSToken` and `ValidateServiceToken` could never agree on a
+  MAC. The bug was latent because no production code currently calls either
+  function, but the round-trip test now exercises the corrected code path.
+
+  Wave 3 (`lib/git.go`, 8 zero-coverage funcs → 66-88%): refactored the
+  outbound HTTP calls behind two function values (`httpGitHubDoer` for
+  transport, plus converting `ListRepositories` and `GetUserAccessToken` to
+  function values matching the codebase's existing pattern for
+  `ValidateOpenAICredentials` etc.) so tests can inject canned responses
+  without making real HTTP requests. Tests cover `ListRepositories` (happy
+  path with auth header verification, 4xx, transport error), `LinkWithGithub`
+  (redirect URL with decrypted client_id and `<BYTEPORT>` state, decrypt
+  error → 500), `GenerateGitPaseto` (delegates to `GenerateToken`),
+  `GetUserAccessToken` (happy path with payload + expiry assertions, invalid
+  paseto early-exit before GitHub is hit), `refreshToken` (happy path with
+  grant_type assertion, 4xx), `refreshTokens` (iterates only expired
+  users), `StartTokenRefreshJob` (synchronous first-call before ticker
+  loop).
+
+  Wave 4 (`routes/auth.go`, `routes/git.go`, `routes/projects.go`,
+  `routes/instances.go`): added happy-path DB-bound tests for `Login`,
+  `Signup`, `Authenticate`, `UpdateUser`, `UpdateLink`, `LinkHandler`,
+  `RetrieveRepositories`, `HandleCallback`, `ValidateLink`, `GetProjects`,
+  `GetInstances` plus the three `repositoryID()` branches in
+  `routes/deployment.go`. Each test uses an in-memory SQLite via
+  `glebarez/sqlite` and a base64-encoded `ENCRYPTION_KEY` so the encrypted
+  credential fields round-trip end-to-end.
+
+  Issue #377 is now substantially addressed; the remaining gap is
+  `byteport` (cmd binary) which has no testable surface from the framework
+  alone.
+
+- CI: Tier-2 Coverage Gate Go threshold raised from 33% to 65% (PR #379) to
+  act as a regression guard against losing the +35.3pp uplift. The
+  threshold is set slightly below the current achievable 70.3% (with the
+  pre-existing flaky `TestDeploy*` / `TestTerminate*` Windows-TempDir-cleanup
+  tests contributing extra coverage on Linux CI), leaving a small buffer
+  for natural coverage drift. The summary table retains the 70%
+  aspirational target.
+
 - test(go): add 21 new tests across `byteport/models`, `byteport/routes`, and
   `byteport/lib`, raising Go framework coverage from 30.9% to 35.0%:
 
