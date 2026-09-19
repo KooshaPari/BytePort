@@ -205,11 +205,18 @@ func TestAESDecryptedTamperedCiphertext(t *testing.T) {
 		t.Fatalf("EncryptSecret returned error: %v", err)
 	}
 
-	// Tamper with the ciphertext by flipping a character
+	// Tamper with the ciphertext by flipping one character. The replacement must
+	// actually differ from the byte already there, otherwise the "tampered" input
+	// is identical to the original and the assertion below fails spuriously.
 	tamperedBytes := []byte(encrypted)
-	if len(tamperedBytes) > 10 {
-		tamperedBytes[10] = 'A'
+	if len(tamperedBytes) <= 10 {
+		t.Fatalf("ciphertext too short to tamper with: %d bytes", len(tamperedBytes))
 	}
+	replacement := byte('A')
+	if tamperedBytes[10] == replacement {
+		replacement = 'B'
+	}
+	tamperedBytes[10] = replacement
 	tampered := string(tamperedBytes)
 
 	decrypted, err := lib.DecryptSecret(tampered)
