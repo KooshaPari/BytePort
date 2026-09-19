@@ -215,7 +215,14 @@ func ValidateToken(encryptedToken string) (bool, *paseto.Token, error) {
 }
 func ValidateServiceToken(encryptedToken string) (bool, *paseto.Token, error) {
 
-	keyHex, err := getSymmetricKey()
+	// Service tokens are encrypted with the (serviceKeyService, keyringUser)
+	// key, NOT the session token key. Previously this read getSymmetricKey()
+	// which returns the session token key, so GenerateNVMSToken and
+	// ValidateServiceToken could never agree on a MAC: every "validate"
+	// attempt returned "bad message authentication code". GenerateNVMSToken is
+	// not currently called from production, so the bug was latent; fix the
+	// symmetry so the round-trip works if/when the NVMS integration ships.
+	keyHex, err := keyringGet(serviceKeyService, keyringUser)
 	if err != nil {
 		return false, nil, err
 	}

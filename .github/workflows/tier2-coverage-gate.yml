@@ -2,7 +2,7 @@
 #
 # Enforces code coverage thresholds across BytePort's three tiers:
 #   - Rust lib (crates/byteport-transport):  ≥71%
-#   - Go framework (backend/byteport):        ≥33% (regression guard; aspirational 70%)
+#   - Go framework (backend/byteport):        ≥65% (regression guard; aspirational 70%)
 #   - Service/E2E (frontend/web integration): ≥60%
 #
 # Trigger: every PR to main/master + push to main/master.
@@ -79,10 +79,10 @@ jobs:
 
   # ─────────────────────────────────────────────────────────────────────
   # Go framework coverage — backend/byteport
-  # Threshold: ≥33% (regression guard; current achievable ~35%, aspirational 70%)
+  # Threshold: ≥65% (current achievable ~70.3%, aspirational 70%)
   # ─────────────────────────────────────────────────────────────────────
   go-framework-coverage:
-    name: Go framework coverage (≥33%)
+    name: Go framework coverage (≥65%)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -104,15 +104,16 @@ jobs:
         run: |
           go test -coverprofile=coverage.out -covermode=atomic ./...
 
-      - name: Check coverage threshold (≥33%)
+      - name: Check coverage threshold (≥65%)
         run: |
           COVERAGE=$(go tool cover -func=coverage.out | grep "total:" | awk '{print $3}' | sed 's/%//')
           echo "Go framework coverage: ${COVERAGE}%"
-          # Threshold is set slightly below the current achievable level (35% as of
-          # #378) to act as a regression guard, not as the goal. Aspirational
-          # target is 70%; see issue #377 for the test-density uplift plan that
-          # will gradually raise this threshold.
-          THRESHOLD=33.0
+          # Threshold is set slightly below the current achievable level
+          # (70.3% as of #379) to act as a regression guard, not as the
+          # goal. Aspirational target is 70%; see issue #377 for the
+          # test-density uplift plan that will gradually raise this
+          # threshold.
+          THRESHOLD=65.0
           if (( $(echo "$COVERAGE < $THRESHOLD" | bc -l) )); then
             echo "❌ Go framework coverage ${COVERAGE}% is below threshold ${THRESHOLD}%"
             go tool cover -func=coverage.out
@@ -252,7 +253,7 @@ jobs:
               '| Tier | Threshold | Status |',
               '|------|-----------|--------|',
               `| Rust lib (byteport-transport) | ≥71% | ${{ needs.rust-lib-coverage.result == 'success' && '✅ Pass' || '❌ Fail' }} |`,
-              `| Go framework (backend/byteport) | ≥33% | ${{ needs.go-framework-coverage.result == 'success' && '✅ Pass' || '❌ Fail' }} |`,
+              `| Go framework (backend/byteport) | ≥65% | ${{ needs.go-framework-coverage.result == 'success' && '✅ Pass' || '❌ Fail' }} |`,
               `| Service/E2E (frontend/web) | ≥60% | ${{ needs.service-coverage.result == 'success' && '✅ Pass' || '❌ Fail' }} |`,
             ].join('\n');
 
