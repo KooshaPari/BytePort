@@ -78,21 +78,13 @@ func TestGetDeploymentUseCase_Execute_NotFound(t *testing.T) {
 
 	resp, err := useCase.Execute(ctx, "nonexistent-uuid", "user-123")
 
-	if err == nil {
-		t.Fatal("Expected not found error, got nil")
-	}
-
 	if resp != nil {
 		t.Errorf("Expected nil response, got: %+v", resp)
 	}
-
-	appErr, ok := err.(*ApplicationError)
-	if !ok {
-		t.Errorf("Expected ApplicationError, got: %T", err)
-	}
-
+	requireAppError(t, err)
 	// Note: The use case wraps repository errors as INTERNAL_ERROR
 	// In production, you'd want proper error handling to distinguish
+	appErr := extractAppError(err)
 	if appErr != nil && appErr.Code != "INTERNAL_ERROR" && appErr.Code != "NOT_FOUND" {
 		t.Errorf("Expected INTERNAL_ERROR or NOT_FOUND code, got: %s", appErr.Code)
 	}
@@ -109,22 +101,11 @@ func TestGetDeploymentUseCase_Execute_EmptyUUID(t *testing.T) {
 
 	resp, err := useCase.Execute(ctx, "", "user-123")
 
-	if err == nil {
-		t.Fatal("Expected validation error, got nil")
-	}
-
 	if resp != nil {
 		t.Errorf("Expected nil response, got: %+v", resp)
 	}
-
-	appErr, ok := err.(*ApplicationError)
-	if !ok {
-		t.Errorf("Expected ApplicationError, got: %T", err)
-	}
-
-	if appErr != nil && appErr.Code != "VALIDATION_ERROR" {
-		t.Errorf("Expected VALIDATION_ERROR code, got: %s", appErr.Code)
-	}
+	requireAppError(t, err)
+	assertErrCode(t, err, "VALIDATION_ERROR")
 }
 
 // TestGetDeploymentUseCase_Execute_EmptyUserUUID tests validation for empty user UUID
@@ -138,22 +119,11 @@ func TestGetDeploymentUseCase_Execute_EmptyUserUUID(t *testing.T) {
 
 	resp, err := useCase.Execute(ctx, "test-uuid", "")
 
-	if err == nil {
-		t.Fatal("Expected authorization error, got nil")
-	}
-
 	if resp != nil {
 		t.Errorf("Expected nil response, got: %+v", resp)
 	}
-
-	appErr, ok := err.(*ApplicationError)
-	if !ok {
-		t.Errorf("Expected ApplicationError, got: %T", err)
-	}
-
-	if appErr != nil && appErr.Code != "UNAUTHORIZED" {
-		t.Errorf("Expected UNAUTHORIZED code, got: %s", appErr.Code)
-	}
+	requireAppError(t, err)
+	assertErrCode(t, err, "UNAUTHORIZED")
 }
 
 // TestGetDeploymentUseCase_Execute_RepositoryReturnsNil tests when repository returns nil without error
@@ -172,22 +142,11 @@ func TestGetDeploymentUseCase_Execute_RepositoryReturnsNil(t *testing.T) {
 
 	resp, err := useCase.Execute(ctx, "test-uuid", "user-123")
 
-	if err == nil {
-		t.Fatal("Expected not found error, got nil")
-	}
-
 	if resp != nil {
 		t.Errorf("Expected nil response, got: %+v", resp)
 	}
-
-	appErr, ok := err.(*ApplicationError)
-	if !ok {
-		t.Errorf("Expected ApplicationError, got: %T", err)
-	}
-
-	if appErr != nil && appErr.Code != "NOT_FOUND" {
-		t.Errorf("Expected NOT_FOUND code, got: %s", appErr.Code)
-	}
+	requireAppError(t, err)
+	assertErrCode(t, err, "NOT_FOUND")
 }
 
 // TestGetDeploymentUseCase_Execute_PermissionCheckError tests permission check error
@@ -212,22 +171,11 @@ func TestGetDeploymentUseCase_Execute_PermissionCheckError(t *testing.T) {
 
 	resp, err := useCase.Execute(ctx, dep.UUID(), "user-123")
 
-	if err == nil {
-		t.Fatal("Expected permission check error, got nil")
-	}
-
 	if resp != nil {
 		t.Errorf("Expected nil response, got: %+v", resp)
 	}
-
-	appErr, ok := err.(*ApplicationError)
-	if !ok {
-		t.Errorf("Expected ApplicationError, got: %T", err)
-	}
-
-	if appErr != nil && appErr.Code != "INTERNAL_ERROR" {
-		t.Errorf("Expected INTERNAL_ERROR code, got: %s", appErr.Code)
-	}
+	requireAppError(t, err)
+	assertErrCode(t, err, "INTERNAL_ERROR")
 }
 
 // TestGetDeploymentUseCase_Execute_AccessDenied tests access denied scenario
@@ -252,22 +200,11 @@ func TestGetDeploymentUseCase_Execute_AccessDenied(t *testing.T) {
 
 	resp, err := useCase.Execute(ctx, dep.UUID(), "user-456")
 
-	if err == nil {
-		t.Fatal("Expected forbidden error, got nil")
-	}
-
 	if resp != nil {
 		t.Errorf("Expected nil response, got: %+v", resp)
 	}
-
-	appErr, ok := err.(*ApplicationError)
-	if !ok {
-		t.Errorf("Expected ApplicationError, got: %T", err)
-	}
-
-	if appErr != nil && appErr.Code != "FORBIDDEN" {
-		t.Errorf("Expected FORBIDDEN code, got: %s", appErr.Code)
-	}
+	requireAppError(t, err)
+	assertErrCode(t, err, "FORBIDDEN")
 }
 
 // TestGetDeploymentUseCase_Execute_WithCostInfoAndServices tests mapping with cost info and services
@@ -774,22 +711,11 @@ func TestListDeploymentsUseCase_Execute_FilterByInvalidStatus(t *testing.T) {
 
 	resp, err := useCase.Execute(ctx, req)
 
-	if err == nil {
-		t.Fatal("Expected validation error for invalid status, got nil")
-	}
-
 	if resp != nil {
 		t.Errorf("Expected nil response, got: %+v", resp)
 	}
-
-	appErr, ok := err.(*ApplicationError)
-	if !ok {
-		t.Errorf("Expected ApplicationError, got: %T", err)
-	}
-
-	if appErr != nil && appErr.Code != "VALIDATION_ERROR" {
-		t.Errorf("Expected VALIDATION_ERROR code, got: %s", appErr.Code)
-	}
+	requireAppError(t, err)
+	assertErrCode(t, err, "VALIDATION_ERROR")
 }
 
 // TestListDeploymentsUseCase_Execute_CountByOwnerError tests when CountByOwner fails
@@ -856,20 +782,9 @@ func TestListDeploymentsUseCase_Execute_RepositoryError(t *testing.T) {
 
 	resp, err := useCase.Execute(ctx, req)
 
-	if err == nil {
-		t.Fatal("Expected repository error, got nil")
-	}
-
 	if resp != nil {
 		t.Errorf("Expected nil response, got: %+v", resp)
 	}
-
-	appErr, ok := err.(*ApplicationError)
-	if !ok {
-		t.Errorf("Expected ApplicationError, got: %T", err)
-	}
-
-	if appErr != nil && appErr.Code != "INTERNAL_ERROR" {
-		t.Errorf("Expected INTERNAL_ERROR code, got: %s", appErr.Code)
-	}
+	requireAppError(t, err)
+	assertErrCode(t, err, "INTERNAL_ERROR")
 }

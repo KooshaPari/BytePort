@@ -67,9 +67,10 @@ func TestApplicationError_Unwrap(t *testing.T) {
 // assertApplicationErrorMatch performs the structural assertions for a
 // constructed ApplicationError. Splitting this out keeps the table loop
 // body below the cognitive-complexity threshold (SonarCloud go:S3776).
-// The body is split into per-claim helpers because SonarCloud counts each
-// `if`/`else`/`for` branch as +1 to cognitive complexity; inlining all the
-// assertions in the loop body pushed the parent function past 15.
+// The per-claim helpers (assertErrCode, assertErrStatus, assertErrMessage,
+// assertErrWraps, assertErrCodeUnique) live in helpers_test.go and are
+// shared with create_deployment_test.go, get_list_test.go, and
+// terminate_update_test.go.
 func assertApplicationErrorMatch(t *testing.T, tc newErrorCase, err *ApplicationError) {
 	t.Helper()
 	if err == nil {
@@ -79,51 +80,6 @@ func assertApplicationErrorMatch(t *testing.T, tc newErrorCase, err *Application
 	assertErrStatus(t, err, tc.wantStatus)
 	assertErrMessage(t, err, tc.wantMsg, tc.wantContains)
 	assertErrWraps(t, err, tc.wantWrapped)
-}
-
-func assertErrCode(t *testing.T, err *ApplicationError, want string) {
-	t.Helper()
-	if err.Code != want {
-		t.Errorf("Code = %q, want %q", err.Code, want)
-	}
-}
-
-func assertErrStatus(t *testing.T, err *ApplicationError, want int) {
-	t.Helper()
-	if err.StatusCode != want {
-		t.Errorf("StatusCode = %d, want %d", err.StatusCode, want)
-	}
-}
-
-func assertErrMessage(t *testing.T, err *ApplicationError, want string, contains bool) {
-	t.Helper()
-	if contains {
-		if !strings.Contains(err.Message, want) {
-			t.Errorf("Message = %q, want it to contain %q", err.Message, want)
-		}
-		return
-	}
-	if err.Message != want {
-		t.Errorf("Message = %q, want %q", err.Message, want)
-	}
-}
-
-func assertErrWraps(t *testing.T, err *ApplicationError, wantWrapped error) {
-	t.Helper()
-	if wantWrapped == nil {
-		return
-	}
-	if err.Err != wantWrapped {
-		t.Errorf("wrapped error = %v, want %v", err.Err, wantWrapped)
-	}
-}
-
-func assertErrCodeUnique(t *testing.T, seen map[string]bool, code string) {
-	t.Helper()
-	if seen[code] {
-		t.Errorf("duplicate error code %q across constructors", code)
-	}
-	seen[code] = true
 }
 
 type newErrorCase struct {

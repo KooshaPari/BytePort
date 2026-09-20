@@ -87,26 +87,12 @@ func TestCreateDeploymentUseCase_Execute_MissingName(t *testing.T) {
 
 	resp, err := useCase.Execute(ctx, req)
 
-	if err == nil {
-		t.Fatal("Expected validation error, got nil")
-	}
-
 	if resp != nil {
 		t.Errorf("Expected nil response, got: %+v", resp)
 	}
-
-	appErr, ok := err.(*ApplicationError)
-	if !ok {
-		t.Errorf("Expected ApplicationError, got: %T", err)
-	}
-
-	if appErr != nil && appErr.Message != "deployment name is required" {
-		t.Errorf("Expected specific message, got: %s", appErr.Message)
-	}
-
-	if appErr != nil && appErr.Code != "VALIDATION_ERROR" {
-		t.Errorf("Expected VALIDATION_ERROR code, got: %s", appErr.Code)
-	}
+	requireAppError(t, err)
+	assertErrCode(t, err, "VALIDATION_ERROR")
+	assertErrMessage(t, err, "deployment name is required", false)
 }
 
 // TestCreateDeploymentUseCase_Execute_MissingOwner tests validation error for missing owner
@@ -125,26 +111,12 @@ func TestCreateDeploymentUseCase_Execute_MissingOwner(t *testing.T) {
 
 	resp, err := useCase.Execute(ctx, req)
 
-	if err == nil {
-		t.Fatal("Expected validation error, got nil")
-	}
-
 	if resp != nil {
 		t.Errorf("Expected nil response, got: %+v", resp)
 	}
-
-	appErr, ok := err.(*ApplicationError)
-	if !ok {
-		t.Errorf("Expected ApplicationError, got: %T", err)
-	}
-
-	if appErr != nil && appErr.Message != "owner is required" {
-		t.Errorf("Expected specific message, got: %s", appErr.Message)
-	}
-
-	if appErr != nil && appErr.Code != "VALIDATION_ERROR" {
-		t.Errorf("Expected VALIDATION_ERROR code, got: %s", appErr.Code)
-	}
+	requireAppError(t, err)
+	assertErrCode(t, err, "VALIDATION_ERROR")
+	assertErrMessage(t, err, "owner is required", false)
 }
 
 // TestCreateDeploymentUseCase_Execute_ValidationError tests domain validation failure
@@ -172,26 +144,12 @@ func TestCreateDeploymentUseCase_Execute_ValidationError(t *testing.T) {
 
 	resp, err := useCase.Execute(ctx, req)
 
-	if err == nil {
-		t.Fatal("Expected conflict error, got nil")
-	}
-
 	if resp != nil {
 		t.Errorf("Expected nil response, got: %+v", resp)
 	}
-
-	appErr, ok := err.(*ApplicationError)
-	if !ok {
-		t.Errorf("Expected ApplicationError, got: %T", err)
-	}
-
-	if appErr != nil && appErr.Message != "invalid deployment configuration" {
-		t.Errorf("Expected specific message, got: %s", appErr.Message)
-	}
-
-	if appErr != nil && appErr.Code != "CONFLICT" {
-		t.Errorf("Expected CONFLICT code, got: %s", appErr.Code)
-	}
+	requireAppError(t, err)
+	assertErrCode(t, err, "CONFLICT")
+	assertErrMessage(t, err, "invalid deployment configuration", false)
 }
 
 // TestCreateDeploymentUseCase_Execute_RepositoryError tests repository failure
@@ -222,26 +180,12 @@ func TestCreateDeploymentUseCase_Execute_RepositoryError(t *testing.T) {
 
 	resp, err := useCase.Execute(ctx, req)
 
-	if err == nil {
-		t.Fatal("Expected internal error, got nil")
-	}
-
 	if resp != nil {
 		t.Errorf("Expected nil response, got: %+v", resp)
 	}
-
-	appErr, ok := err.(*ApplicationError)
-	if !ok {
-		t.Errorf("Expected ApplicationError, got: %T", err)
-	}
-
-	if appErr != nil && appErr.Message != "failed to create deployment" {
-		t.Errorf("Expected specific message, got: %s", appErr.Message)
-	}
-
-	if appErr != nil && appErr.Code != "INTERNAL_ERROR" {
-		t.Errorf("Expected INTERNAL_ERROR code, got: %s", appErr.Code)
-	}
+	requireAppError(t, err)
+	assertErrCode(t, err, "INTERNAL_ERROR")
+	assertErrMessage(t, err, "failed to create deployment", false)
 }
 
 // TestCreateDeploymentUseCase_Execute_WithEnvVars tests deployment with environment variables

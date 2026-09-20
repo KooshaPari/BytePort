@@ -67,17 +67,7 @@ func TestTerminateDeployment_EmptyUUID(t *testing.T) {
 	uc := NewTerminateDeploymentUseCase(repo, service)
 
 	_, err := uc.Execute(context.Background(), "", "owner-123")
-	if err == nil {
-		t.Error("Expected validation error for empty UUID, got nil")
-	}
-
-	var appErr *ApplicationError
-	if !errors.As(err, &appErr) {
-		t.Fatalf("Expected ApplicationError, got: %T", err)
-	}
-	if appErr.StatusCode != StatusBadRequest {
-		t.Errorf("Expected status code %d, got %d", StatusBadRequest, appErr.StatusCode)
-	}
+	assertAppErrStatus(t, err, StatusBadRequest)
 }
 
 func TestTerminateDeployment_EmptyUserUUID(t *testing.T) {
@@ -86,17 +76,7 @@ func TestTerminateDeployment_EmptyUserUUID(t *testing.T) {
 	uc := NewTerminateDeploymentUseCase(repo, service)
 
 	_, err := uc.Execute(context.Background(), "deploy-uuid", "")
-	if err == nil {
-		t.Error("Expected unauthorized error for empty user UUID, got nil")
-	}
-
-	var appErr *ApplicationError
-	if !errors.As(err, &appErr) {
-		t.Fatalf("Expected ApplicationError, got: %T", err)
-	}
-	if appErr.StatusCode != StatusUnauthorized {
-		t.Errorf("Expected status code %d, got %d", StatusUnauthorized, appErr.StatusCode)
-	}
+	assertAppErrStatus(t, err, StatusUnauthorized)
 }
 
 func TestTerminateDeployment_NotFound(t *testing.T) {
@@ -109,17 +89,7 @@ func TestTerminateDeployment_NotFound(t *testing.T) {
 	uc := NewTerminateDeploymentUseCase(repo, service)
 
 	_, err := uc.Execute(context.Background(), "nonexistent-uuid", "owner-123")
-	if err == nil {
-		t.Error("Expected not found error, got nil")
-	}
-
-	var appErr *ApplicationError
-	if !errors.As(err, &appErr) {
-		t.Fatalf("Expected ApplicationError, got: %T", err)
-	}
-	if appErr.StatusCode != StatusNotFound {
-		t.Errorf("Expected status code %d, got %d", StatusNotFound, appErr.StatusCode)
-	}
+	assertAppErrStatus(t, err, StatusNotFound)
 }
 
 func TestTerminateDeployment_RepositoryError(t *testing.T) {
@@ -132,17 +102,7 @@ func TestTerminateDeployment_RepositoryError(t *testing.T) {
 	uc := NewTerminateDeploymentUseCase(repo, service)
 
 	_, err := uc.Execute(context.Background(), "deploy-uuid", "owner-123")
-	if err == nil {
-		t.Error("Expected internal error, got nil")
-	}
-
-	var appErr *ApplicationError
-	if !errors.As(err, &appErr) {
-		t.Fatalf("Expected ApplicationError, got: %T", err)
-	}
-	if appErr.StatusCode != StatusInternalServerError {
-		t.Errorf("Expected status code %d, got %d", StatusInternalServerError, appErr.StatusCode)
-	}
+	assertAppErrStatus(t, err, StatusInternalServerError)
 }
 
 func TestTerminateDeployment_PermissionCheckError(t *testing.T) {
@@ -161,9 +121,7 @@ func TestTerminateDeployment_PermissionCheckError(t *testing.T) {
 	uc := NewTerminateDeploymentUseCase(repo, service)
 
 	_, err := uc.Execute(context.Background(), dep.UUID(), "owner-123")
-	if err == nil {
-		t.Error("Expected internal error, got nil")
-	}
+	assertAppErrStatus(t, err, StatusInternalServerError)
 }
 
 func TestTerminateDeployment_Forbidden(t *testing.T) {
@@ -182,17 +140,7 @@ func TestTerminateDeployment_Forbidden(t *testing.T) {
 	uc := NewTerminateDeploymentUseCase(repo, service)
 
 	_, err := uc.Execute(context.Background(), dep.UUID(), "other-user")
-	if err == nil {
-		t.Error("Expected forbidden error, got nil")
-	}
-
-	var appErr *ApplicationError
-	if !errors.As(err, &appErr) {
-		t.Fatalf("Expected ApplicationError, got: %T", err)
-	}
-	if appErr.StatusCode != StatusForbidden {
-		t.Errorf("Expected status code %d, got %d", StatusForbidden, appErr.StatusCode)
-	}
+	assertAppErrStatus(t, err, StatusForbidden)
 }
 
 func TestTerminateDeployment_AlreadyTerminated(t *testing.T) {
@@ -212,17 +160,7 @@ func TestTerminateDeployment_AlreadyTerminated(t *testing.T) {
 	uc := NewTerminateDeploymentUseCase(repo, service)
 
 	_, err := uc.Execute(context.Background(), dep.UUID(), "owner-123")
-	if err == nil {
-		t.Error("Expected conflict error, got nil")
-	}
-
-	var appErr *ApplicationError
-	if !errors.As(err, &appErr) {
-		t.Fatalf("Expected ApplicationError, got: %T", err)
-	}
-	if appErr.StatusCode != StatusConflict {
-		t.Errorf("Expected status code %d, got %d", StatusConflict, appErr.StatusCode)
-	}
+	assertAppErrStatus(t, err, StatusConflict)
 }
 
 func TestTerminateDeployment_UpdateError(t *testing.T) {
@@ -244,17 +182,7 @@ func TestTerminateDeployment_UpdateError(t *testing.T) {
 	uc := NewTerminateDeploymentUseCase(repo, service)
 
 	_, err := uc.Execute(context.Background(), dep.UUID(), "owner-123")
-	if err == nil {
-		t.Error("Expected internal error, got nil")
-	}
-
-	var appErr *ApplicationError
-	if !errors.As(err, &appErr) {
-		t.Fatalf("Expected ApplicationError, got: %T", err)
-	}
-	if appErr.StatusCode != StatusInternalServerError {
-		t.Errorf("Expected status code %d, got %d", StatusInternalServerError, appErr.StatusCode)
-	}
+	assertAppErrStatus(t, err, StatusInternalServerError)
 }
 
 // ==================== Update Status Tests ====================
@@ -302,17 +230,7 @@ func TestUpdateStatus_EmptyUUID(t *testing.T) {
 
 	req := UpdateStatusRequest{Status: "detecting"}
 	err := uc.Execute(context.Background(), "", req, "owner-123")
-	if err == nil {
-		t.Error("Expected validation error for empty UUID, got nil")
-	}
-
-	var appErr *ApplicationError
-	if !errors.As(err, &appErr) {
-		t.Fatalf("Expected ApplicationError, got: %T", err)
-	}
-	if appErr.StatusCode != StatusBadRequest {
-		t.Errorf("Expected status code %d, got %d", StatusBadRequest, appErr.StatusCode)
-	}
+	assertAppErrStatus(t, err, StatusBadRequest)
 }
 
 func TestUpdateStatus_EmptyStatus(t *testing.T) {
@@ -322,17 +240,7 @@ func TestUpdateStatus_EmptyStatus(t *testing.T) {
 
 	req := UpdateStatusRequest{Status: ""}
 	err := uc.Execute(context.Background(), "deploy-uuid", req, "owner-123")
-	if err == nil {
-		t.Error("Expected validation error for empty status, got nil")
-	}
-
-	var appErr *ApplicationError
-	if !errors.As(err, &appErr) {
-		t.Fatalf("Expected ApplicationError, got: %T", err)
-	}
-	if appErr.StatusCode != StatusBadRequest {
-		t.Errorf("Expected status code %d, got %d", StatusBadRequest, appErr.StatusCode)
-	}
+	assertAppErrStatus(t, err, StatusBadRequest)
 }
 
 func TestUpdateStatus_EmptyUserUUID(t *testing.T) {
@@ -342,17 +250,7 @@ func TestUpdateStatus_EmptyUserUUID(t *testing.T) {
 
 	req := UpdateStatusRequest{Status: "detecting"}
 	err := uc.Execute(context.Background(), "deploy-uuid", req, "")
-	if err == nil {
-		t.Error("Expected unauthorized error for empty user UUID, got nil")
-	}
-
-	var appErr *ApplicationError
-	if !errors.As(err, &appErr) {
-		t.Fatalf("Expected ApplicationError, got: %T", err)
-	}
-	if appErr.StatusCode != StatusUnauthorized {
-		t.Errorf("Expected status code %d, got %d", StatusUnauthorized, appErr.StatusCode)
-	}
+	assertAppErrStatus(t, err, StatusUnauthorized)
 }
 
 func TestUpdateStatus_InvalidStatus(t *testing.T) {
@@ -362,17 +260,7 @@ func TestUpdateStatus_InvalidStatus(t *testing.T) {
 
 	req := UpdateStatusRequest{Status: "invalid-status"}
 	err := uc.Execute(context.Background(), "deploy-uuid", req, "owner-123")
-	if err == nil {
-		t.Error("Expected validation error for invalid status, got nil")
-	}
-
-	var appErr *ApplicationError
-	if !errors.As(err, &appErr) {
-		t.Fatalf("Expected ApplicationError, got: %T", err)
-	}
-	if appErr.StatusCode != StatusBadRequest {
-		t.Errorf("Expected status code %d, got %d", StatusBadRequest, appErr.StatusCode)
-	}
+	assertAppErrStatus(t, err, StatusBadRequest)
 }
 
 func TestUpdateStatus_DeploymentNotFound(t *testing.T) {
@@ -386,17 +274,7 @@ func TestUpdateStatus_DeploymentNotFound(t *testing.T) {
 
 	req := UpdateStatusRequest{Status: "detecting"}
 	err := uc.Execute(context.Background(), "nonexistent-uuid", req, "owner-123")
-	if err == nil {
-		t.Error("Expected not found error, got nil")
-	}
-
-	var appErr *ApplicationError
-	if !errors.As(err, &appErr) {
-		t.Fatalf("Expected ApplicationError, got: %T", err)
-	}
-	if appErr.StatusCode != StatusNotFound {
-		t.Errorf("Expected status code %d, got %d", StatusNotFound, appErr.StatusCode)
-	}
+	assertAppErrStatus(t, err, StatusNotFound)
 }
 
 func TestUpdateStatus_RepositoryError(t *testing.T) {
@@ -410,17 +288,7 @@ func TestUpdateStatus_RepositoryError(t *testing.T) {
 
 	req := UpdateStatusRequest{Status: "detecting"}
 	err := uc.Execute(context.Background(), "deploy-uuid", req, "owner-123")
-	if err == nil {
-		t.Error("Expected internal error, got nil")
-	}
-
-	var appErr *ApplicationError
-	if !errors.As(err, &appErr) {
-		t.Fatalf("Expected ApplicationError, got: %T", err)
-	}
-	if appErr.StatusCode != StatusInternalServerError {
-		t.Errorf("Expected status code %d, got %d", StatusInternalServerError, appErr.StatusCode)
-	}
+	assertAppErrStatus(t, err, StatusInternalServerError)
 }
 
 func TestUpdateStatus_PermissionCheckError(t *testing.T) {
@@ -440,9 +308,7 @@ func TestUpdateStatus_PermissionCheckError(t *testing.T) {
 
 	req := UpdateStatusRequest{Status: "detecting"}
 	err := uc.Execute(context.Background(), dep.UUID(), req, "owner-123")
-	if err == nil {
-		t.Error("Expected internal error, got nil")
-	}
+	assertAppErrStatus(t, err, StatusInternalServerError)
 }
 
 func TestUpdateStatus_Forbidden(t *testing.T) {
@@ -462,17 +328,7 @@ func TestUpdateStatus_Forbidden(t *testing.T) {
 
 	req := UpdateStatusRequest{Status: "detecting"}
 	err := uc.Execute(context.Background(), dep.UUID(), req, "other-user")
-	if err == nil {
-		t.Error("Expected forbidden error, got nil")
-	}
-
-	var appErr *ApplicationError
-	if !errors.As(err, &appErr) {
-		t.Fatalf("Expected ApplicationError, got: %T", err)
-	}
-	if appErr.StatusCode != StatusForbidden {
-		t.Errorf("Expected status code %d, got %d", StatusForbidden, appErr.StatusCode)
-	}
+	assertAppErrStatus(t, err, StatusForbidden)
 }
 
 func TestUpdateStatus_InvalidTransition(t *testing.T) {
@@ -493,17 +349,7 @@ func TestUpdateStatus_InvalidTransition(t *testing.T) {
 	// Try invalid transition: pending -> deployed (should go through detecting, provisioning, deploying first)
 	req := UpdateStatusRequest{Status: "deployed"}
 	err := uc.Execute(context.Background(), dep.UUID(), req, "owner-123")
-	if err == nil {
-		t.Error("Expected conflict error for invalid transition, got nil")
-	}
-
-	var appErr *ApplicationError
-	if !errors.As(err, &appErr) {
-		t.Fatalf("Expected ApplicationError, got: %T", err)
-	}
-	if appErr.StatusCode != StatusConflict {
-		t.Errorf("Expected status code %d, got %d", StatusConflict, appErr.StatusCode)
-	}
+	assertAppErrStatus(t, err, StatusConflict)
 }
 
 func TestUpdateStatus_UpdateError(t *testing.T) {
@@ -526,17 +372,7 @@ func TestUpdateStatus_UpdateError(t *testing.T) {
 
 	req := UpdateStatusRequest{Status: "detecting"}
 	err := uc.Execute(context.Background(), dep.UUID(), req, "owner-123")
-	if err == nil {
-		t.Error("Expected internal error, got nil")
-	}
-
-	var appErr *ApplicationError
-	if !errors.As(err, &appErr) {
-		t.Fatalf("Expected ApplicationError, got: %T", err)
-	}
-	if appErr.StatusCode != StatusInternalServerError {
-		t.Errorf("Expected status code %d, got %d", StatusInternalServerError, appErr.StatusCode)
-	}
+	assertAppErrStatus(t, err, StatusInternalServerError)
 }
 
 // TestTerminateDeployment_SetStatusError tests SetStatus domain error
