@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- test(go): dedupe `backend/byteport/internal/routes/routes_test.go` (449 →
+  295 lines) by extracting shared helpers into a new
+  `backend/byteport/internal/routes/helpers_test.go` (106 lines):
+
+  | Helper | Replaces | Sites |
+  |---|---|---|
+  | `perform(t, method, path, handler, opts...)` | `router := setupRouter() + req := ... + w := ... + ServeHTTP(...)` 4-line preamble | 9 |
+  | `performWithMiddleware(t, method, path, handler, mw, opts...)` | same preamble + `router.Use(mw)` | 4 |
+  | `withJSONBody(body)`, `withCookie(name, value)` | inline `r.Body = ...` / `r.AddCookie(...)` | 4 |
+  | `assertStatus(t, w, want)` | `if w.Code != want { t.Errorf(...) }` | 13 |
+  | `assertBodyContains(t, w, want)` | `if !strings.Contains(w.Body.String(), want) { ... }` | 7 |
+  | `assertBodyLacks(t, w, forbidden)` | inverse body check | 1 |
+  | `assertHeaderContains(t, w, header, want)` | `if !strings.Contains(w.Header().Get(...), ...) { ... }` | 2 |
+
+  Tests collapsed: `TestGetInstancesRequiresUser` + `TestGetProjectsRequiresUser` →
+  one table-driven `TestProtectedHandlersRequireUser` (2 cases); same for the
+  `InvalidUserContext` pair; `TestAuthMiddlewareBlocks{Missing,Empty,Invalid}*` →
+  one table-driven `TestAuthMiddlewareBlocksUnauthenticated` (3 cases); the four
+  `Test{Login,Signup}ReturnsBadRequest*` → one table-driven
+  `TestAuthEndpointsReturnBadRequestForInvalidJSON` (4 cases).
+
+  Test inventory: 18 `func Test` → 11 `func Test` with 11 named subtests
+  covering the same scenarios. All 14 top-level tests + 11 subtests pass;
+  `go test ./internal/routes/...` → 0.152s. `go vet`, `gofmt`, full
+  `go test ./...` all clean.
+
 - chore(deps): align `frontend/web` package manager with CI. The project
   declared `packageManager: yarn@1.22.21+sha1.*` but every CI workflow
   that touches `frontend/web` runs `npm ci --legacy-peer-deps`, which
