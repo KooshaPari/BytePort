@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- test(deployment): extract shared test assertion helpers
+  (`requireAppError`, `assertErrCode`, `assertErrStatus`,
+  `assertErrMessage`, `assertErrWraps`, `assertErrCodeUnique`,
+  `assertAppError`, `assertAppErrStatus`, `extractAppError`) into a new
+  `backend/internal/application/deployment/helpers_test.go` and apply them
+  across `errors_test.go`, `terminate_update_test.go`,
+  `create_deployment_test.go`, and `get_list_test.go`. The 5-line
+  `errors.As → assert status → assert code → assert message` boilerplate
+  repeated in 16+ test functions collapses to 1-3 line helper calls. Net
+  −197 lines across the 4 test files (50 insertions, 399 deletions) plus
+  +152 lines for the shared helpers. Targets the new-code duplication gap
+  on SonarCloud (currently 4.7% on `main`; target ≤ 3%). Tests still pass:
+  `go test ./internal/application/deployment/... -count=1` → ok 0.574s.
+
 ### Fixed
 
 - chore(deps): align `frontend/web` package manager with CI. The project
