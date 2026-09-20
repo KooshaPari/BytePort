@@ -9,6 +9,7 @@ import (
 	"byteport/models"
 
 	"github.com/glebarez/sqlite"
+	"github.com/google/uuid"
 	"github.com/zalando/go-keyring"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -77,4 +78,34 @@ func mustEncrypt(t *testing.T, s string) string {
 		t.Fatalf("EncryptSecret(%q): %v", s, err)
 	}
 	return out
+}
+
+// seedUserWithToken prepares the keyring and auth system, then returns a fresh
+// DB holding one persisted user plus a valid token for it. Every test that needs
+// "an authenticated identity backed by a real row" starts here, so the setup
+// lives in one place.
+func seedUserWithToken(t *testing.T, email, name, password string) (*gorm.DB, models.User, string) {
+	t.Helper()
+
+	resetMockKeyring(t)
+	if err := InitAuthSystem(); err != nil {
+		t.Fatalf("InitAuthSystem: %v", err)
+	}
+	db := newLibTestDB(t)
+
+	user := models.User{
+		UUID:     uuid.NewString(),
+		Email:    email,
+		Name:     name,
+		Password: password,
+	}
+	if err := db.Create(&user).Error; err != nil {
+		t.Fatalf("seed user: %v", err)
+	}
+
+	tok, err := GenerateToken(user)
+	if err != nil {
+		t.Fatalf("GenerateToken: %v", err)
+	}
+	return db, user, tok
 }

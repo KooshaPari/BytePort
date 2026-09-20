@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- test(go): extract the repeated authenticated-setup block in
+  `byteport/lib/auth_test.go`. Three tests carried the same 20-line preamble
+  (reset the mock keyring, `InitAuthSystem`, open a DB, persist a user, mint a
+  token), differing only in the user's email/name/password. SonarCloud reported
+  it as two overlapping duplicate blocks (62 duplicated lines). Now a single
+  `seedUserWithToken(t, email, name, password)` in `lib/testfixtures_test.go`.
+  `auth_test.go` goes 603 → 546 lines with the test inventory unchanged at 21
+  test functions, verified by comparing the `func Test` set against `HEAD`.
+
 - CI: the `go-vet`, `go-build`, and `go-test` jobs in `ci.yml` now cover the
   `backend` module (module `github.com/byteport/api`) as well as
   `backend/byteport`. Previously the matrix listed only `backend/byteport` and
