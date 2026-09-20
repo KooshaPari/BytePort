@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- test(go): dedupe `backend/internal/domain/deployment/deployment_test.go`
+  (579 → 381 lines) by extracting four helpers into a new
+  `backend/internal/domain/deployment/helpers_test.go` (75 lines):
+
+  | Helper | Replaces | Sites |
+  |---|---|---|
+  | `newTestDeployment(t)` | `dep, _ := NewDeployment("test", "owner", nil)` | 11 |
+  | `reconstructForValidate(uuid, name, owner, status)` | 9-arg `ReconstructDeployment` calls varying only those four fields | 6 |
+  | `transitionTo(dep, target)` | if/else if chain of `SetStatus` calls to reach the from-status | 8 |
+  | `assertErr(t, err, wantErr)` | `if wantErr { if err == nil } else { if err != nil }` blocks | 3 |
+
+  All 13 test functions and 23 subtests pass with coverage unchanged at 100.0%
+  on the `deployment` package. (`go test ./internal/domain/deployment/...`
+  → 0.571s.) This is the next-biggest test-side dup target on the SonarCloud
+  burndown (`deployment_test.go` carried 66 duplicated lines pre-refactor).
+
 - chore(deps): align `frontend/web` package manager with CI. The project
   declared `packageManager: yarn@1.22.21+sha1.*` but every CI workflow
   that touches `frontend/web` runs `npm ci --legacy-peer-deps`, which
