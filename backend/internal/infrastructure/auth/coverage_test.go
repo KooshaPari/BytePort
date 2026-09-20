@@ -623,52 +623,84 @@ func TestWorkOSAuthService_ExchangeCodeForToken_EdgeCases(t *testing.T) {
 func TestHandleTestCodeExchange(t *testing.T) {
 	service := &WorkOSAuthService{}
 
-	t.Run("with valid test code", func(t *testing.T) {
-		tokenResp, err := service.handleTestCodeExchange("test-user123")
-		require.NoError(t, err)
-		require.NotNil(t, tokenResp)
-		assert.Equal(t, "test-user123-test_at_example.com", tokenResp.AccessToken)
-		assert.Equal(t, "test-user123-test_at_example.com", tokenResp.IDToken)
-		assert.Equal(t, "Bearer", tokenResp.TokenType)
-		assert.Equal(t, 3600, tokenResp.ExpiresIn)
-	})
-
-	t.Run("with valid mock code", func(t *testing.T) {
-		tokenResp, err := service.handleTestCodeExchange("mock-user456")
-		require.NoError(t, err)
-		require.NotNil(t, tokenResp)
-		assert.Equal(t, "test-user456-test_at_example.com", tokenResp.AccessToken)
-		assert.Equal(t, "test-user456-test_at_example.com", tokenResp.IDToken)
-	})
-
-	t.Run("with invalid format - too few parts", func(t *testing.T) {
-		tokenResp, err := service.handleTestCodeExchange("test")
-		assertAuthError(t, err, tokenResp, "invalid test code format")
-	})
-
-	t.Run("with invalid format - empty parts", func(t *testing.T) {
-		// "test-" splits into ["test", ""] which has len=2, so it passes the check
-		// and creates a token with empty userID.
-		tokenResp, err := service.handleTestCodeExchange("test-")
-		require.NoError(t, err)
-		require.NotNil(t, tokenResp)
-		assert.Equal(t, "test--test_at_example.com", tokenResp.AccessToken)
-	})
-
-	t.Run("with complex user ID", func(t *testing.T) {
-		tokenResp, err := service.handleTestCodeExchange("test-user-123-456")
-		require.NoError(t, err)
-		require.NotNil(t, tokenResp)
-		// "test-user-123-456" splits into ["test", "user", "123", "456"].
-		assert.Equal(t, "test-user-123", tokenResp.AccessToken)
-	})
-
-	t.Run("with special characters in user ID", func(t *testing.T) {
-		tokenResp, err := service.handleTestCodeExchange("test-user@domain.com")
-		require.NoError(t, err)
-		require.NotNil(t, tokenResp)
-		assert.Equal(t, "test-user@domain.com-test_at_example.com", tokenResp.AccessToken)
-	})
+	cases := []struct {
+		name           string
+		code           string
+		wantAccess     string
+		wantIDToken    string
+		wantTokenType  string
+		wantExpiresIn  int
+		wantErrSubstr  string
+	}{
+		{
+			name:          "with valid test code",
+			code:          "test-user123",
+			wantAccess:    "test-user123-test_at_example.com",
+			wantIDToken:   "test-user123-test_at_example.com",
+			wantTokenType: "Bearer",
+			wantExpiresIn: 3600,
+		},
+		{
+			name:       "with valid mock code",
+			code:       "mock-user456",
+			wantAccess: "test-user456-test_at_example.com",
+			wantIDToken: "test-user456-test_at_example.com",
+			wantTokenType: "Bearer",
+			wantExpiresIn: 3600,
+		},
+		{
+			name:          "with invalid format - too few parts",
+			code:          "test",
+			wantErrSubstr: "invalid test code format",
+		},
+		{
+			name:       "with invalid format - empty parts",
+			code:       "test-",
+			wantAccess: "test--test_at_example.com",
+			wantIDToken: "test--test_at_example.com",
+			wantTokenType: "Bearer",
+			wantExpiresIn: 3600,
+		},
+		{
+			name:       "with complex user ID",
+			code:       "test-user-123-456",
+			// handleTestCodeExchange uses parts[1]="user", parts[2]="123"
+			// (no "_at_" replacement applies) -> "test-user-123".
+			wantAccess:    "test-user-123",
+			wantIDToken:   "test-user-123",
+			wantTokenType: "Bearer",
+			wantExpiresIn: 3600,
+		},
+		{
+			name:       "with special characters in user ID",
+			code:       "test-user@domain.com",
+			wantAccess: "test-user@domain.com-test_at_example.com",
+			wantIDToken: "test-user@domain.com-test_at_example.com",
+			wantTokenType: "Bearer",
+			wantExpiresIn: 3600,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			tokenResp, err := service.handleTestCodeExchange(tc.code)
+			if tc.wantErrSubstr != "" {
+				assertAuthError(t, err, tokenResp, tc.wantErrSubstr)
+				return
+			}
+			require.NoError(t, err)
+			require.NotNil(t, tokenResp)
+			assert.Equal(t, tc.wantAccess, tokenResp.AccessToken)
+			if tc.wantIDToken != "" {
+				assert.Equal(t, tc.wantIDToken, tokenResp.IDToken)
+			}
+			if tc.wantTokenType != "" {
+				assert.Equal(t, tc.wantTokenType, tokenResp.TokenType)
+			}
+			if tc.wantExpiresIn != 0 {
+				assert.Equal(t, tc.wantExpiresIn, tokenResp.ExpiresIn)
+			}
+		})
+	}
 }
 
 // =============================================================================
