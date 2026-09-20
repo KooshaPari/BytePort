@@ -7,17 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-
-- CI: Tier-2 Coverage Gate Go threshold raised from 71% to 73%
-  (regression guard; current achievable 74.1% as of #381). The five places
-  where the threshold is named in the workflow (job name, step name,
-  threshold constant, markdown summary table, GitHub-script comment) all
-  used inconsistent values (71% constant, 75% summary table, 71% comment).
-  They now all read `≥73%` so the PR summary comment matches the actual
-  gate. Aspirational target stays at 75%; see #377 for the test-density
-  uplift plan.
-
 ### Fixed
 
 - test(go): extract the repeated authenticated-setup block in
@@ -207,22 +196,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- CI: the Tier-2 Coverage Gate Go threshold moves 71% → 73% to track the
+  achievable 74.1% measured against the locked-in `byteport/cmd` test
+  surface from PR #381. The previous threshold constant, the summary
+  table, and the inline github-script comment now all agree on ≥73%
+  (was drift: 71% const, 75% summary table, 71% comment). Threshold
+  history: #378 → 35%, #379 → 70.3%, #381 → 74.1%, this PR → 73%.
+  See #383.
+
+### Changed
+
 - test(go): consolidate the three redundant
-  `backend/internal/infrastructure/auth/workos_*_test.go` files (1,134
-  lines of duplicate coverage, pairwise 81-86% line similarity per
-  SonarCloud) into a single 896-line `coverage_test.go`. The replacement
-  preserves every real assertion across `NewWorkOSAuthService`,
-  `Initialize`, `ValidateToken`, `validateJWTToken` (8 edge-case paths
-  plus a real-shape JWT round-trip via `makeJWT` which composes the
-  three-part pattern at runtime so Gitleaks' default `jwt` rule does not
-  fire on the source file), `handleTestCodeExchange`, `GetAuthURL`,
-  `ExchangeCodeForToken`, `getWorkOSPublicKey` and `exchangeWithWorkOS`
-  (both exercised through mocked `httpGet` / `httpClientFactory`), plus
-  the `Middleware` and `OptionalMiddleware` Gin handlers. The
-  `mockSecretsManager` and `mockTransport` types in the third file were
-  dead code (defined but never referenced) and are dropped.
-  `TestHandleTestCodeExchange` preserves the only direct exercise of the
-  private `handleTestCodeExchange`. Net: -238 lines. See #383.
+  `backend/models/*_100_percent_test.go` files (1,491 lines of duplicate
+  coverage) into a single 360-line `coverage_test.go`. The replacement
+  exercises the same code paths as the predecessors (UUID whitespace
+  variants, nil GORM DB, deployments shape variants incl. JSON special
+  chars and unicode, 10000-entry deployments, very long project names,
+  nil and closed sqlite handles, 4 user-shape variants, existing
+  user-by-WorkOSID and by-email paths). `TestConnectDatabase` was
+  renamed to `TestConnectDatabaseReferenceForCoverage` to avoid
+  colliding with the symbol already declared in
+  `models_comprehensive_test.go`. `t.Cleanup()` replaces the manual
+  `defer func() { DB = orig }()` blocks. Net: -1,131 lines. See #383.
 
 ### Changed
 
