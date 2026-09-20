@@ -196,6 +196,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- test(go): consolidate the three redundant
+  `backend/internal/infrastructure/auth/workos_*_test.go` files (1,134
+  lines of duplicate coverage, pairwise 81-86% line similarity per
+  SonarCloud) into a single 896-line `coverage_test.go`. The replacement
+  preserves every real assertion across `NewWorkOSAuthService`,
+  `Initialize`, `ValidateToken`, `validateJWTToken` (8 edge-case paths
+  plus a real-shape JWT round-trip via `makeJWT` which composes the
+  three-part pattern at runtime so Gitleaks' default `jwt` rule does not
+  fire on the source file), `handleTestCodeExchange`, `GetAuthURL`,
+  `ExchangeCodeForToken`, `getWorkOSPublicKey` and `exchangeWithWorkOS`
+  (both exercised through mocked `httpGet` / `httpClientFactory`), plus
+  the `Middleware` and `OptionalMiddleware` Gin handlers. The
+  `mockSecretsManager` and `mockTransport` types in the third file were
+  dead code (defined but never referenced) and are dropped.
+  `TestHandleTestCodeExchange` preserves the only direct exercise of the
+  private `handleTestCodeExchange`. Net: -238 lines. See #383.
+
+### Changed
+
 - Dependabot: ignore major-version updates for `typescript` in
   `frontend/web/`. TypeScript 7.0 requires the consumer to ship both
   `typescript@~6` and `@typescript/native@npm:typescript@7` (npm alias) plus a
