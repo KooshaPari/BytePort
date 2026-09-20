@@ -101,28 +101,49 @@ func generateTestRSAPublicKey() *rsa.PublicKey {
 	return &key.PublicKey
 }
 
+// newInitializedService returns the canonical service-under-test and
+// context used by every Token / JWT / GetAuthURL / ExchangeCodeForToken
+// subtest. Centralising the 4-line setup dance keeps the per-test body
+// focused on the assertion alone and stops SonarCloud's duplication
+// detector from flagging 17 near-identical setup blocks across the
+// file.
+func newInitializedService(t *testing.T) (*WorkOSAuthService, context.Context) {
+	t.Helper()
+	service := NewWorkOSAuthService(setupMockSecretsManager())
+	ctx := context.Background()
+	require.NoError(t, service.Initialize(ctx))
+	return service, ctx
+}
+
+// newUninitializedService is the same builder without the Initialize
+// call. Use it when a subtest wants to assert the not-yet-initialized
+// state, or when the test itself drives Initialize with deliberate
+// failure paths.
+func newUninitializedService(t *testing.T) (*WorkOSAuthService, context.Context) {
+	t.Helper()
+	service := NewWorkOSAuthService(setupMockSecretsManager())
+	return service, context.Background()
+}
+
 // =============================================================================
 // Constructor / Initialize
 // =============================================================================
 
 func TestNewWorkOSAuthService(t *testing.T) {
 	t.Run("creates new service successfully", func(t *testing.T) {
-		manager := setupMockSecretsManager()
-		service := NewWorkOSAuthService(manager)
+		service, _ := newUninitializedService(t)
 
 		assert.NotNil(t, service)
-		assert.Equal(t, manager, service.secretsManager)
+		assert.Equal(t, setupMockSecretsManager(), service.secretsManager)
 		assert.Nil(t, service.client) // Not initialized yet
 	})
 }
 
 func TestWorkOSAuthService_Initialize(t *testing.T) {
 	t.Run("initializes successfully with valid config", func(t *testing.T) {
-		manager := setupMockSecretsManager()
-		service := NewWorkOSAuthService(manager)
-		ctx := context.Background()
+		service, _ := newUninitializedService(t)
 
-		err := service.Initialize(ctx)
+		err := service.Initialize(context.Background())
 		require.NoError(t, err)
 		assert.NotNil(t, service.client)
 		assert.Equal(t, "https://api.workos.com", service.client.Endpoint)
@@ -148,9 +169,7 @@ func TestWorkOSAuthService_Initialize(t *testing.T) {
 // =============================================================================
 
 func TestWorkOSAuthService_ValidateToken(t *testing.T) {
-	manager := setupMockSecretsManager()
-	service := NewWorkOSAuthService(manager)
-	ctx := context.Background()
+	service, ctx := newUninitializedService(t)
 
 	t.Run("fails when client not initialized", func(t *testing.T) {
 		userInfo, err := service.ValidateToken(ctx, "test-token")
@@ -182,10 +201,7 @@ func TestWorkOSAuthService_ValidateToken(t *testing.T) {
 }
 
 func TestWorkOSAuthService_ValidateJWTToken(t *testing.T) {
-	manager := setupMockSecretsManager()
-	service := NewWorkOSAuthService(manager)
-	ctx := context.Background()
-	require.NoError(t, service.Initialize(ctx))
+	service, ctx := newInitializedService(t)
 
 	t.Run("returns placeholder user info", func(t *testing.T) {
 		userInfo, err := service.validateJWTToken(ctx, "test-token")
@@ -197,10 +213,7 @@ func TestWorkOSAuthService_ValidateJWTToken(t *testing.T) {
 }
 
 func TestWorkOSAuthService_ValidateJWTToken_EdgeCases(t *testing.T) {
-	manager := setupMockSecretsManager()
-	service := NewWorkOSAuthService(manager)
-	ctx := context.Background()
-	require.NoError(t, service.Initialize(ctx))
+	service, ctx := newInitializedService(t)
 
 	t.Run("handles empty token", func(t *testing.T) {
 		userInfo, err := service.ValidateToken(ctx, "")
@@ -284,10 +297,7 @@ const (
 )
 
 func TestWorkOSAuthService_ValidateJWTToken_RealJWT(t *testing.T) {
-	manager := setupMockSecretsManager()
-	service := NewWorkOSAuthService(manager)
-	ctx := context.Background()
-	require.NoError(t, service.Initialize(ctx))
+	service, ctx := newInitializedService(t)
 
 	t.Run("handles JWT with missing kid", func(t *testing.T) {
 		// JWT without kid in header.
@@ -315,9 +325,7 @@ func TestWorkOSAuthService_ValidateJWTToken_RealJWT(t *testing.T) {
 // =============================================================================
 
 func TestWorkOSAuthService_GetWorkOSPublicKey(t *testing.T) {
-	manager := setupMockSecretsManager()
-	service := NewWorkOSAuthService(manager)
-	ctx := context.Background()
+	service, ctx := newUninitializedService(t)
 
 	t.Run("handles successful JWKS fetch", func(t *testing.T) {
 		// Save and restore the package-level httpGet var.
@@ -365,9 +373,7 @@ func TestWorkOSAuthService_GetWorkOSPublicKey(t *testing.T) {
 }
 
 func TestWorkOSAuthService_ExchangeWithWorkOS(t *testing.T) {
-	manager := setupMockSecretsManager()
-	service := NewWorkOSAuthService(manager)
-	ctx := context.Background()
+	service, ctx := newUninitializedService(t)
 
 	t.Run("handles successful token exchange", func(t *testing.T) {
 		originalFactory := httpClientFactory
@@ -423,9 +429,7 @@ func TestWorkOSAuthService_ExchangeWithWorkOS(t *testing.T) {
 // =============================================================================
 
 func TestWorkOSAuthService_GetAuthURL(t *testing.T) {
-	manager := setupMockSecretsManager()
-	service := NewWorkOSAuthService(manager)
-	ctx := context.Background()
+	service, ctx := newUninitializedService(t)
 
 	t.Run("fails when client not initialized", func(t *testing.T) {
 		authURL, err := service.GetAuthURL(ctx, "test-state")
@@ -470,9 +474,7 @@ func TestWorkOSAuthService_GetAuthURL(t *testing.T) {
 }
 
 func TestWorkOSAuthService_GetAuthURL_EdgeCases(t *testing.T) {
-	manager := setupMockSecretsManager()
-	service := NewWorkOSAuthService(manager)
-	ctx := context.Background()
+	service, ctx := newUninitializedService(t)
 
 	t.Run("handles uninitialized service", func(t *testing.T) {
 		url, err := service.GetAuthURL(ctx, "test-state")
@@ -506,9 +508,7 @@ func TestWorkOSAuthService_GetAuthURL_EdgeCases(t *testing.T) {
 // =============================================================================
 
 func TestWorkOSAuthService_ExchangeCodeForToken(t *testing.T) {
-	manager := setupMockSecretsManager()
-	service := NewWorkOSAuthService(manager)
-	ctx := context.Background()
+	service, ctx := newUninitializedService(t)
 
 	t.Run("fails when client not initialized", func(t *testing.T) {
 		tokenResp, err := service.ExchangeCodeForToken(ctx, "test-code")
@@ -531,10 +531,7 @@ func TestWorkOSAuthService_ExchangeCodeForToken(t *testing.T) {
 }
 
 func TestWorkOSAuthService_ExchangeCodeForToken_EdgeCases(t *testing.T) {
-	manager := setupMockSecretsManager()
-	service := NewWorkOSAuthService(manager)
-	ctx := context.Background()
-	require.NoError(t, service.Initialize(ctx))
+	service, ctx := newInitializedService(t)
 
 	t.Run("handles empty code", func(t *testing.T) {
 		tokenResp, err := service.ExchangeCodeForToken(ctx, "")
@@ -551,7 +548,7 @@ func TestWorkOSAuthService_ExchangeCodeForToken_EdgeCases(t *testing.T) {
 	})
 
 	t.Run("handles uninitialized service", func(t *testing.T) {
-		uninitializedService := NewWorkOSAuthService(manager)
+		uninitializedService, _ := newUninitializedService(t)
 		tokenResp, err := uninitializedService.ExchangeCodeForToken(ctx, "test-code")
 		assert.Error(t, err)
 		assert.Nil(t, tokenResp)
@@ -619,10 +616,7 @@ func TestHandleTestCodeExchange(t *testing.T) {
 // =============================================================================
 
 func TestWorkOSAuthService_Middleware(t *testing.T) {
-	manager := setupMockSecretsManager()
-	service := NewWorkOSAuthService(manager)
-	ctx := context.Background()
-	require.NoError(t, service.Initialize(ctx))
+	service, _ := newInitializedService(t)
 
 	// Setup Gin for testing.
 	gin.SetMode(gin.TestMode)
@@ -687,10 +681,7 @@ func TestWorkOSAuthService_Middleware(t *testing.T) {
 }
 
 func TestWorkOSAuthService_Middleware_EdgeCases(t *testing.T) {
-	manager := setupMockSecretsManager()
-	service := NewWorkOSAuthService(manager)
-	ctx := context.Background()
-	require.NoError(t, service.Initialize(ctx))
+	service, _ := newInitializedService(t)
 
 	gin.SetMode(gin.TestMode)
 
@@ -738,10 +729,7 @@ func TestWorkOSAuthService_Middleware_EdgeCases(t *testing.T) {
 }
 
 func TestWorkOSAuthService_OptionalMiddleware(t *testing.T) {
-	manager := setupMockSecretsManager()
-	service := NewWorkOSAuthService(manager)
-	ctx := context.Background()
-	require.NoError(t, service.Initialize(ctx))
+	service, _ := newInitializedService(t)
 
 	// Setup Gin for testing.
 	gin.SetMode(gin.TestMode)
@@ -817,10 +805,7 @@ func TestWorkOSAuthService_OptionalMiddleware(t *testing.T) {
 }
 
 func TestWorkOSAuthService_OptionalMiddleware_EdgeCases(t *testing.T) {
-	manager := setupMockSecretsManager()
-	service := NewWorkOSAuthService(manager)
-	ctx := context.Background()
-	require.NoError(t, service.Initialize(ctx))
+	service, _ := newInitializedService(t)
 
 	gin.SetMode(gin.TestMode)
 
