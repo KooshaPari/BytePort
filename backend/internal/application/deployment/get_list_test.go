@@ -330,39 +330,68 @@ func TestGetDeploymentUseCase_Execute_WithCostInfoAndServices(t *testing.T) {
 		t.Fatal("Expected response, got nil")
 	}
 
-	// Verify services mapping
+	// Verify services mapping — split into helpers so the parent function
+	// stays below the SonarCloud go:S3776 cognitive-complexity threshold
+	// (each per-field if inside an `if len > 0` was +1 to complexity).
 	if len(resp.Services) != 2 {
 		t.Errorf("Expected 2 services, got %d", len(resp.Services))
 	}
-
 	if len(resp.Services) > 0 {
-		if resp.Services[0].Name != "web-service" {
-			t.Errorf("Expected service name 'web-service', got %s", resp.Services[0].Name)
-		}
-		if resp.Services[0].Type != "web" {
-			t.Errorf("Expected service type 'web', got %s", resp.Services[0].Type)
-		}
-		if resp.Services[0].Provider != "aws" {
-			t.Errorf("Expected service provider 'aws', got %s", resp.Services[0].Provider)
-		}
-		if resp.Services[0].Status != "running" {
-			t.Errorf("Expected service status 'running', got %s", resp.Services[0].Status)
-		}
-		if resp.Services[0].URL != "https://example.com" {
-			t.Errorf("Expected service URL 'https://example.com', got %s", resp.Services[0].URL)
-		}
+		assertServiceMatches(t, resp.Services[0], webServiceExpected())
 	}
 
 	// Verify cost info mapping
 	if resp.CostInfo == nil {
 		t.Error("Expected cost info to be present")
-	} else {
-		if resp.CostInfo.Monthly <= 0 {
-			t.Errorf("Expected positive monthly cost, got %f", resp.CostInfo.Monthly)
-		}
-		if len(resp.CostInfo.Breakdown) == 0 {
-			t.Error("Expected non-empty cost breakdown")
-		}
+		return
+	}
+	assertCostInfoPopulated(t, resp.CostInfo)
+}
+
+// expectedServiceFields captures the deployment-service fields the test
+// pins, so the assertion helpers don't have to count per-field ifs
+// toward cognitive complexity in the parent function.
+type expectedServiceFields struct {
+	Name     string
+	Type     string
+	Provider string
+	Status   string
+	URL      string
+}
+
+func webServiceExpected() expectedServiceFields {
+	return expectedServiceFields{
+		Name: "web-service", Type: "web", Provider: "aws",
+		Status: "running", URL: "https://example.com",
+	}
+}
+
+func assertServiceMatches(t *testing.T, got ServiceDTO, want expectedServiceFields) {
+	t.Helper()
+	if got.Name != want.Name {
+		t.Errorf("Expected service name %q, got %q", want.Name, got.Name)
+	}
+	if got.Type != want.Type {
+		t.Errorf("Expected service type %q, got %q", want.Type, got.Type)
+	}
+	if got.Provider != want.Provider {
+		t.Errorf("Expected service provider %q, got %q", want.Provider, got.Provider)
+	}
+	if got.Status != want.Status {
+		t.Errorf("Expected service status %q, got %q", want.Status, got.Status)
+	}
+	if got.URL != want.URL {
+		t.Errorf("Expected service URL %q, got %q", want.URL, got.URL)
+	}
+}
+
+func assertCostInfoPopulated(t *testing.T, got *CostInfoDTO) {
+	t.Helper()
+	if got.Monthly <= 0 {
+		t.Errorf("Expected positive monthly cost, got %f", got.Monthly)
+	}
+	if len(got.Breakdown) == 0 {
+		t.Error("Expected non-empty cost breakdown")
 	}
 }
 
