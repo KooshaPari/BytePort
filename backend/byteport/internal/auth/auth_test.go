@@ -31,66 +31,89 @@ func TestClaimsExtractionFromValidToken(t *testing.T) {
 		t.Fatalf("ParseV4Local returned error: %v", err)
 	}
 
-	// Verify audience
-	audience, err := decrypted.GetAudience()
+	// Per-claim assertions are split into helpers to keep the test body
+	// below SonarCloud's go:S3776 cognitive-complexity threshold (each
+	// err-checked extraction was +1 to complexity).
+	assertStringAudienceClaim(t, decrypted, "user@example.com")
+	assertStringSubjectClaim(t, decrypted, "session")
+	assertStringIssuerClaim(t, decrypted, "BytePort")
+	assertIssuedAtWithinWindow(t, decrypted, now, time.Second)
+	assertExpirationInFuture(t, decrypted, now)
+	assertStringCustomClaim(t, decrypted, "user-id", "uuid-abc-123")
+	assertStringCustomClaim(t, decrypted, "project-id", "proj-456")
+}
+
+// helperGetString fetches a string claim, fatalling the test on parse error.
+// Used by the per-claim assertion helpers below.
+func helperGetString(t *testing.T, decrypted *paseto.Token, claim string) string {
+	t.Helper()
+	s, err := decrypted.GetString(claim)
+	if err != nil {
+		t.Fatalf("GetString(%q) returned error: %v", claim, err)
+	}
+	return s
+}
+
+func assertStringAudienceClaim(t *testing.T, decrypted *paseto.Token, want string) {
+	t.Helper()
+	got, err := decrypted.GetAudience()
 	if err != nil {
 		t.Fatalf("GetAudience returned error: %v", err)
 	}
-	if audience != "user@example.com" {
-		t.Errorf("audience = %q, want %q", audience, "user@example.com")
+	if got != want {
+		t.Errorf("audience = %q, want %q", got, want)
 	}
+}
 
-	// Verify subject
-	subject, err := decrypted.GetSubject()
+func assertStringSubjectClaim(t *testing.T, decrypted *paseto.Token, want string) {
+	t.Helper()
+	got, err := decrypted.GetSubject()
 	if err != nil {
 		t.Fatalf("GetSubject returned error: %v", err)
 	}
-	if subject != "session" {
-		t.Errorf("subject = %q, want %q", subject, "session")
+	if got != want {
+		t.Errorf("subject = %q, want %q", got, want)
 	}
+}
 
-	// Verify issuer
-	issuer, err := decrypted.GetIssuer()
+func assertStringIssuerClaim(t *testing.T, decrypted *paseto.Token, want string) {
+	t.Helper()
+	got, err := decrypted.GetIssuer()
 	if err != nil {
 		t.Fatalf("GetIssuer returned error: %v", err)
 	}
-	if issuer != "BytePort" {
-		t.Errorf("issuer = %q, want %q", issuer, "BytePort")
+	if got != want {
+		t.Errorf("issuer = %q, want %q", got, want)
 	}
+}
 
-	// Verify issued-at is within a reasonable window
-	iat, err := decrypted.GetIssuedAt()
+func assertIssuedAtWithinWindow(t *testing.T, decrypted *paseto.Token, now time.Time, window time.Duration) {
+	t.Helper()
+	got, err := decrypted.GetIssuedAt()
 	if err != nil {
 		t.Fatalf("GetIssuedAt returned error: %v", err)
 	}
-	if iat.Before(now.Add(-time.Second)) || iat.After(now.Add(time.Second)) {
-		t.Errorf("issued-at = %v, want within 1s of %v", iat, now)
+	if got.Before(now.Add(-window)) || got.After(now.Add(window)) {
+		t.Errorf("issued-at = %v, want within %v of %v", got, window, now)
 	}
+}
 
-	// Verify expiration is in the future
-	exp, err := decrypted.GetExpiration()
+func assertExpirationInFuture(t *testing.T, decrypted *paseto.Token, now time.Time) {
+	t.Helper()
+	got, err := decrypted.GetExpiration()
 	if err != nil {
 		t.Fatalf("GetExpiration returned error: %v", err)
 	}
-	if exp.Before(now) {
-		t.Errorf("expiration = %v, should be in the future", exp)
+	if got.Before(now) {
+		t.Errorf("expiration = %v, should be in the future", got)
 	}
+}
 
-	// Verify custom claims
-	userID, err := decrypted.GetString("user-id")
-	if err != nil {
-		t.Fatalf("GetString(user-id) returned error: %v", err)
-	}
-	if userID != "uuid-abc-123" {
-		t.Errorf("user-id = %q, want %q", userID, "uuid-abc-123")
-	}
-
-	projectID, err := decrypted.GetString("project-id")
-	if err != nil {
-		t.Fatalf("GetString(project-id) returned error: %v", err)
-	}
-	if projectID != "proj-456" {
-		t.Errorf("project-id = %q, want %q", projectID, "proj-456")
+func assertStringCustomClaim(t *testing.T, decrypted *paseto.Token, claim string, want string) {
+	t.Helper()
+	got := helperGetString(t, decrypted, claim)
+	if got != want {
+		t.Errorf("%s = %q, want %q", claim, got, want)
 	}
 }
 

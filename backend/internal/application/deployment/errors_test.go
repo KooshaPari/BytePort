@@ -64,18 +64,82 @@ func TestApplicationError_Unwrap(t *testing.T) {
 // NewXxxError constructors (table-driven)
 // =============================================================================
 
+// assertApplicationErrorMatch performs the structural assertions for a
+// constructed ApplicationError. Splitting this out keeps the table loop
+// body below the cognitive-complexity threshold (SonarCloud go:S3776).
+// The body is split into per-claim helpers because SonarCloud counts each
+// `if`/`else`/`for` branch as +1 to cognitive complexity; inlining all the
+// assertions in the loop body pushed the parent function past 15.
+func assertApplicationErrorMatch(t *testing.T, tc newErrorCase, err *ApplicationError) {
+	t.Helper()
+	if err == nil {
+		t.Fatal("constructor returned nil")
+	}
+	assertErrCode(t, err, tc.wantCode)
+	assertErrStatus(t, err, tc.wantStatus)
+	assertErrMessage(t, err, tc.wantMsg, tc.wantContains)
+	assertErrWraps(t, err, tc.wantWrapped)
+}
+
+func assertErrCode(t *testing.T, err *ApplicationError, want string) {
+	t.Helper()
+	if err.Code != want {
+		t.Errorf("Code = %q, want %q", err.Code, want)
+	}
+}
+
+func assertErrStatus(t *testing.T, err *ApplicationError, want int) {
+	t.Helper()
+	if err.StatusCode != want {
+		t.Errorf("StatusCode = %d, want %d", err.StatusCode, want)
+	}
+}
+
+func assertErrMessage(t *testing.T, err *ApplicationError, want string, contains bool) {
+	t.Helper()
+	if contains {
+		if !strings.Contains(err.Message, want) {
+			t.Errorf("Message = %q, want it to contain %q", err.Message, want)
+		}
+		return
+	}
+	if err.Message != want {
+		t.Errorf("Message = %q, want %q", err.Message, want)
+	}
+}
+
+func assertErrWraps(t *testing.T, err *ApplicationError, wantWrapped error) {
+	t.Helper()
+	if wantWrapped == nil {
+		return
+	}
+	if err.Err != wantWrapped {
+		t.Errorf("wrapped error = %v, want %v", err.Err, wantWrapped)
+	}
+}
+
+func assertErrCodeUnique(t *testing.T, seen map[string]bool, code string) {
+	t.Helper()
+	if seen[code] {
+		t.Errorf("duplicate error code %q across constructors", code)
+	}
+	seen[code] = true
+}
+
+type newErrorCase struct {
+	name         string
+	build        func() *ApplicationError
+	wantCode     string
+	wantStatus   int
+	wantMsg      string
+	wantContains bool // if true, only check message contains (not equality)
+	wantWrapped  error
+}
+
 func TestNewErrorConstructors(t *testing.T) {
 	innerErr := errors.New("database connection failed")
 
-	cases := []struct {
-		name         string
-		build        func() *ApplicationError
-		wantCode     string
-		wantStatus   int
-		wantMsg      string
-		wantContains bool // if true, only check message contains (not equality)
-		wantWrapped  error
-	}{
+	cases := []newErrorCase{
 		{
 			name:       "Validation",
 			build:      func() *ApplicationError { return NewValidationError("invalid input") },
@@ -125,30 +189,8 @@ func TestNewErrorConstructors(t *testing.T) {
 	seenCodes := make(map[string]bool)
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := tc.build()
-			if err == nil {
-				t.Fatal("constructor returned nil")
-			}
-			if err.Code != tc.wantCode {
-				t.Errorf("Code = %q, want %q", err.Code, tc.wantCode)
-			}
-			if err.StatusCode != tc.wantStatus {
-				t.Errorf("StatusCode = %d, want %d", err.StatusCode, tc.wantStatus)
-			}
-			if tc.wantContains {
-				if !strings.Contains(err.Message, tc.wantMsg) {
-					t.Errorf("Message = %q, want it to contain %q", err.Message, tc.wantMsg)
-				}
-			} else if err.Message != tc.wantMsg {
-				t.Errorf("Message = %q, want %q", err.Message, tc.wantMsg)
-			}
-			if tc.wantWrapped != nil && err.Err != tc.wantWrapped {
-				t.Errorf("wrapped error = %v, want %v", err.Err, tc.wantWrapped)
-			}
-			if seenCodes[err.Code] {
-				t.Errorf("duplicate error code %q across constructors", err.Code)
-			}
-			seenCodes[err.Code] = true
+			assertApplicationErrorMatch(t, tc, tc.build())
+			assertErrCodeUnique(t, seenCodes, tc.wantCode)
 		})
 	}
 }

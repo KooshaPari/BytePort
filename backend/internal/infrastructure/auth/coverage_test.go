@@ -564,37 +564,61 @@ func TestWorkOSAuthService_GetAuthURL(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			var svc *WorkOSAuthService
-			if tc.useMissingSecrets {
-				svc = newServiceWithSecrets(map[string]string{
-					secrets.SecretWorkOSAPIKey: "test-api-key",
-					// Missing client ID and secret.
-				})
-			} else {
-				svc, _ = newUninitializedService(t)
-			}
+			svc := getAuthURLService(t, ctx, tc.useMissingSecrets)
 			if tc.initialize {
-				err := svc.Initialize(ctx)
-				if tc.wantInitErrSubstr != "" {
-					assert.Error(t, err)
-					assert.Contains(t, err.Error(), tc.wantInitErrSubstr)
-				} else {
-					require.NoError(t, err)
-				}
+				assertInitializeResult(t, svc, ctx, tc.wantInitErrSubstr)
 			}
-			authURL, err := svc.GetAuthURL(ctx, tc.state)
-			if tc.wantGetURLErrSubstr != "" {
-				assert.Error(t, err)
-				assert.Empty(t, authURL)
-				assert.Contains(t, err.Error(), tc.wantGetURLErrSubstr)
-				return
-			}
-			require.NoError(t, err)
-			assert.NotEmpty(t, authURL)
-			for _, s := range tc.wantURLContain {
-				assert.Contains(t, authURL, s)
-			}
+			assertGetAuthURLResult(t, svc, ctx, tc.state, tc.wantGetURLErrSubstr, tc.wantURLContain)
 		})
+	}
+}
+
+// getAuthURLService returns a service built either from missing secrets
+// (to drive the secrets-not-configured branch) or from a fresh
+// uninitialized instance. Split out of the table body to keep
+// cognitive complexity below SonarCloud's threshold.
+func getAuthURLService(t *testing.T, ctx context.Context, useMissingSecrets bool) *WorkOSAuthService {
+	t.Helper()
+	if useMissingSecrets {
+		return newServiceWithSecrets(map[string]string{
+			secrets.SecretWorkOSAPIKey: "test-api-key",
+			// Missing client ID and secret.
+		})
+	}
+	svc, _ := newUninitializedService(t)
+	_ = ctx // ctx is used by callers, kept here for clarity
+	return svc
+}
+
+// assertInitializeResult asserts Initialize behavior when the test
+// expects an error substring (or no error).
+func assertInitializeResult(t *testing.T, svc *WorkOSAuthService, ctx context.Context, wantErrSubstr string) {
+	t.Helper()
+	err := svc.Initialize(ctx)
+	if wantErrSubstr != "" {
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), wantErrSubstr)
+		return
+	}
+	require.NoError(t, err)
+}
+
+// assertGetAuthURLResult drives the GetAuthURL call and asserts either
+// the expected error substring (and empty URL) or the expected URL
+// substrings.
+func assertGetAuthURLResult(t *testing.T, svc *WorkOSAuthService, ctx context.Context, state string, wantErrSubstr string, wantURLContain []string) {
+	t.Helper()
+	authURL, err := svc.GetAuthURL(ctx, state)
+	if wantErrSubstr != "" {
+		assert.Error(t, err)
+		assert.Empty(t, authURL)
+		assert.Contains(t, err.Error(), wantErrSubstr)
+		return
+	}
+	require.NoError(t, err)
+	assert.NotEmpty(t, authURL)
+	for _, s := range wantURLContain {
+		assert.Contains(t, authURL, s)
 	}
 }
 

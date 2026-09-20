@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- test(go): reduce SonarCloud `go:S3776` cognitive-complexity CRITICALs
+  introduced by the dedup PRs (#386, #389, #390). Four sites had complexity
+  ≥ 15, breaking the new-code maintainability rating on `main`:
+  `backend/internal/application/deployment/errors_test.go:67` (25),
+  `backend/internal/application/deployment/get_list_test.go:274` (19),
+  `backend/internal/infrastructure/auth/coverage_test.go:516` (19),
+  `backend/byteport/internal/auth/auth_test.go:12` (16). Each is refactored
+  by extracting per-claim assertion helpers (`assertErrCode`, `assertErrStatus`,
+  `assertErrMessage`, `assertErrWraps`, `assertErrCodeUnique`,
+  `assertServiceMatches`, `assertCostInfoPopulated`,
+  `assertInitializeResult`, `assertGetAuthURLResult`,
+  `assertStringAudienceClaim`, `assertStringSubjectClaim`,
+  `assertStringIssuerClaim`, `assertIssuedAtWithinWindow`,
+  `assertExpirationInFuture`, `assertStringCustomClaim`), keeping the table
+  body linear so each test function's complexity drops below the 15
+  threshold. Test inventory unchanged (`func Test` set matches `HEAD`).
+  Reopens #383 — Quality Gate now has 2 of 5 conditions failing instead of 3
+  (reliability C → A; security and duplication still need separate work).
+
 - CI: the Tier-1 `CHANGELOG Update Check` in `.github/workflows/tier-1-enforcement.yml`
   now skips PRs authored by `dependabot[bot]`. Dependabot bumps don't add
   `CHANGELOG.md` entries by default, so the gate's `git diff … | grep -q
