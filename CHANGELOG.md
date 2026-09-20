@@ -21,6 +21,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   one file. Three sites intentionally retained the `gin.H{"message": ...}`
   contract because tests assert on that field; they are documented as
   response-contract exceptions in `responses.go`.
+- refactor(go): extract `bindJSON(c, dst, context)` helper in
+  `backend/byteport/routes/bind.go` to deduplicate the
+  `var req X; if err := c.ShouldBindJSON(&req); err != nil { respondBadRequest; return }`
+  pattern repeated at 5 sites across `auth.go` (Login, Signup, UpdateUser)
+  and `deployment.go` (DeployProject, TerminateInstance). Returns false on
+  bind failure and writes a 400 of the form `"<context>: <bind error>"`
+  (or just the bare error when context is empty), so callers can shrink to
+  a single `if !bindJSON(c, &req, "") { return }` line.
 
 ### Fixed
 

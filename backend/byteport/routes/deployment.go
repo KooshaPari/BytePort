@@ -96,8 +96,7 @@ func DeployProject(c *gin.Context) {
 	}
 
 	var req deployRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		respondBadRequest(c, "Invalid deploy request: "+err.Error())
+	if !bindJSON(c, &req, "Invalid deploy request") {
 		return
 	}
 
@@ -215,8 +214,7 @@ func TerminateInstance(c *gin.Context) {
 	}
 
 	var req terminateRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		respondBadRequest(c, "Invalid terminate request: "+err.Error())
+	if !bindJSON(c, &req, "Invalid terminate request") {
 		return
 	}
 
