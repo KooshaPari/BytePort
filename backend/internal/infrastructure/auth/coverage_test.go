@@ -379,25 +379,32 @@ const (
 func TestWorkOSAuthService_ValidateJWTToken_RealJWT(t *testing.T) {
 	service, ctx := newInitializedService(t)
 
-	t.Run("handles JWT with missing kid", func(t *testing.T) {
-		// JWT without kid in header.
-		token := makeJWT(jwtHeaderNoKid, jwtTestPayload)
+	cases := []struct {
+		name       string
+		headerB64  string
+		commentary string
+	}{
+		{
+			name:       "handles JWT with missing kid",
+			headerB64:  jwtHeaderNoKid,
+			commentary: "Should fail at JWT parsing or public key fetching.",
+		},
+		{
+			name:       "handles JWT with invalid signature",
+			headerB64:  jwtHeaderWithKid,
+			commentary: "Should fail at JWT validation.",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			token := makeJWT(tc.headerB64, jwtTestPayload)
 
-		userInfo, err := service.ValidateToken(ctx, token)
-		assert.Error(t, err)
-		assert.Nil(t, userInfo)
-		// Should fail at JWT parsing or public key fetching.
-	})
-
-	t.Run("handles JWT with invalid signature", func(t *testing.T) {
-		// JWT with invalid signature.
-		token := makeJWT(jwtHeaderWithKid, jwtTestPayload)
-
-		userInfo, err := service.ValidateToken(ctx, token)
-		assert.Error(t, err)
-		assert.Nil(t, userInfo)
-		// Should fail at JWT validation.
-	})
+			userInfo, err := service.ValidateToken(ctx, token)
+			assert.Error(t, err)
+			assert.Nil(t, userInfo)
+			assert.NotEmpty(t, tc.commentary) // commentary is documentation only.
+		})
+	}
 }
 
 // =============================================================================
