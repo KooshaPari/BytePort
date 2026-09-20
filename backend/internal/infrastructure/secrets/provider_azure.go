@@ -10,8 +10,6 @@ import (
 	"net/url"
 	"os"
 	"strings"
-	"sync"
-	"time"
 )
 
 const (
@@ -25,9 +23,7 @@ type AzureKeyVaultProvider struct {
 	vaultURL      string
 	httpClient    httpClient
 	tokenProvider tokenProvider
-
-	mu    sync.Mutex
-	token accessToken
+	tokenCache    tokenCache
 }
 
 // NewAzureKeyVaultProvider constructs an Azure Key Vault provider using the supplied HTTP client
@@ -175,50 +171,7 @@ func (p *AzureKeyVaultProvider) ListSecrets(ctx context.Context) ([]string, erro
 }
 
 func (p *AzureKeyVaultProvider) doAzureRequest(ctx context.Context, method, endpoint string, body io.Reader) ([]byte, error) {
-	req, err := http.NewRequestWithContext(ctx, method, endpoint, body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-	if body != nil {
-		req.Header.Set("Content-Type", "application/json")
-	}
-
-	token, err := p.getToken(ctx)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Authorization", "Bearer "+token.Value)
-
-	resp, err := p.httpClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("azure request failed: %w", err)
-	}
-
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		respBody, readErr := readResponseBody(resp)
-		if readErr != nil {
-			return nil, fmt.Errorf("azure request failed with status %d and unreadable body: %w", resp.StatusCode, readErr)
-		}
-		return nil, fmt.Errorf("azure request failed with status %d: %s", resp.StatusCode, string(respBody))
-	}
-
-	return readResponseBody(resp)
-}
-
-func (p *AzureKeyVaultProvider) getToken(ctx context.Context) (accessToken, error) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	if p.token.Value != "" && time.Until(p.token.Expiry) > time.Minute {
-		return p.token, nil
-	}
-
-	token, err := p.tokenProvider.Token(ctx, azureScopeDefault)
-	if err != nil {
-		return accessToken{}, fmt.Errorf("failed to fetch Azure access token: %w", err)
-	}
-	p.token = token
-	return token, nil
+	return doCloudRequest(ctx, p.httpClient, &p.tokenCache, p.tokenProvider, azureScopeDefault, "azure", method, endpoint, body)
 }
 
 // azureClientCredentialsProvider implements token retrieval via the OAuth2 client credentials flow.
@@ -266,20 +219,5 @@ func (p *azureClientCredentialsProvider) Token(ctx context.Context, scope string
 		return accessToken{}, fmt.Errorf("azure token endpoint returned %d: %s", resp.StatusCode, string(body))
 	}
 
-	var tokenResp struct {
-		AccessToken string `json:"access_token"`
-		ExpiresIn   int64  `json:"expires_in"`
-	}
-	if err := json.Unmarshal(body, &tokenResp); err != nil {
-		return accessToken{}, fmt.Errorf("failed to decode Azure token response: %w", err)
-	}
-	if tokenResp.AccessToken == "" {
-		return accessToken{}, fmt.Errorf("azure token response missing access_token")
-	}
-
-	expiry := time.Now().Add(time.Duration(tokenResp.ExpiresIn) * time.Second)
-	return accessToken{
-		Value:  tokenResp.AccessToken,
-		Expiry: expiry,
-	}, nil
+	return decodeOAuthTokenResponse(body, "Azure token")
 }

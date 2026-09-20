@@ -16,7 +16,6 @@ import (
 	"net/url"
 	"os"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -35,9 +34,7 @@ type GoogleSecretManagerProvider struct {
 	baseURL       string
 	httpClient    httpClient
 	tokenProvider tokenProvider
-
-	mu    sync.Mutex
-	token accessToken
+	tokenCache    tokenCache
 }
 
 // NewGoogleSecretManagerProvider constructs a provider with the given HTTP client and token provider.
@@ -210,53 +207,7 @@ func (p *GoogleSecretManagerProvider) ensureSecretExists(ctx context.Context, ke
 }
 
 func (p *GoogleSecretManagerProvider) doGoogleRequest(ctx context.Context, method, endpoint string, body io.Reader) ([]byte, error) {
-	req, err := http.NewRequestWithContext(ctx, method, endpoint, body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-	if body != nil {
-		req.Header.Set("Content-Type", "application/json")
-	}
-
-	token, err := p.getToken(ctx)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Authorization", "Bearer "+token.Value)
-
-	resp, err := p.httpClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("gcp request failed: %w", err)
-	}
-
-	responseBody, err := readResponseBody(resp)
-	if err != nil {
-		return nil, err
-	}
-	if resp.StatusCode == http.StatusNotFound {
-		return nil, fmt.Errorf("not found: %s", string(responseBody))
-	}
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("gcp request failed with status %d: %s", resp.StatusCode, string(responseBody))
-	}
-
-	return responseBody, nil
-}
-
-func (p *GoogleSecretManagerProvider) getToken(ctx context.Context) (accessToken, error) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	if p.token.Value != "" && time.Until(p.token.Expiry) > time.Minute {
-		return p.token, nil
-	}
-
-	token, err := p.tokenProvider.Token(ctx, gcpDefaultScope)
-	if err != nil {
-		return accessToken{}, fmt.Errorf("failed to fetch Google access token: %w", err)
-	}
-	p.token = token
-	return token, nil
+	return doCloudRequest(ctx, p.httpClient, &p.tokenCache, p.tokenProvider, gcpDefaultScope, "gcp", method, endpoint, body)
 }
 
 // googleServiceAccountTokenProvider implements JWT bearer token flow for service accounts.
@@ -364,21 +315,7 @@ func (p *googleServiceAccountTokenProvider) Token(ctx context.Context, scope str
 		return accessToken{}, fmt.Errorf("service account token endpoint returned %d: %s", resp.StatusCode, string(body))
 	}
 
-	var tokenResp struct {
-		AccessToken string `json:"access_token"`
-		ExpiresIn   int64  `json:"expires_in"`
-	}
-	if err := json.Unmarshal(body, &tokenResp); err != nil {
-		return accessToken{}, fmt.Errorf("failed to decode service account token response: %w", err)
-	}
-	if tokenResp.AccessToken == "" {
-		return accessToken{}, fmt.Errorf("service account token response missing access_token")
-	}
-
-	return accessToken{
-		Value:  tokenResp.AccessToken,
-		Expiry: time.Now().Add(time.Duration(tokenResp.ExpiresIn) * time.Second),
-	}, nil
+	return decodeOAuthTokenResponse(body, "service account token")
 }
 
 func parsePrivateKey(der []byte) (*rsa.PrivateKey, error) {

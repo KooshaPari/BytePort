@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- refactor(go): extract shared `doCloudRequest`, `tokenCache`, and
+  `decodeOAuthTokenResponse` helpers from
+  `backend/internal/infrastructure/secrets/provider_azure.go` and
+  `provider_gcp.go` into `provider_utils.go`. Both providers' near-identical
+  `do{Provider}Request`, `getToken`, and OAuth token-decoding bodies were
+  the largest single source of cross-file duplication SonarCloud measured on
+  `main` (52 + 51 duplicated lines). After the refactor
+  `provider_azure.go` is 285 → 193 lines (-92), `provider_gcp.go` is 402 →
+  290 lines (-112), and `provider_utils.go` is 45 → 127 lines (+82) — net
+  -122 lines and the two `do{Provider}Request` bodies collapse to a single
+  shared implementation. The provider-specific wrappers stay in place so
+  the existing tests that call `provider.doAzureRequest(...)` /
+  `provider.doGoogleRequest(...)` continue to exercise the shared path
+  unchanged. Test coverage on the secrets package holds at 90.1%, and the
+  Azure `doAzureRequest` error-wording assertions (`"unreadable body"`,
+  `"failed with status"`) are preserved by surfacing both states from the
+  unified helper.
+
 ### Fixed
 
 - chore(deps): align `frontend/web` package manager with CI. The project
