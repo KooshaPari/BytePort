@@ -41,7 +41,6 @@ paths = [
   '''(?i)go\.sum$''',
   '''(?i)Cargo\.lock$''',
   '''(?i)package-lock\.json$''',
-  '''(?i)yarn\.lock$''',
   '''(?i)pnpm-lock\.yaml$''',
   '''(?i)Pipfile\.lock$''',
   '''(?i)poetry\.lock$''',

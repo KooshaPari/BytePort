@@ -298,15 +298,10 @@ tasks:
   # -- Convenience --------------------------------------------------------
 
   install:
-    desc: Install JS dependencies (frontend/web).
+    desc: Install JS dependencies (frontend/web). Uses the same flag as CI (npm ci --legacy-peer-deps) for parity.
     dir: '{{.FRONTEND_DIR}}'
     cmds:
-      - |
-        if command -v yarn >/dev/null 2>&1; then
-          yarn install --frozen-lockfile
-        else
-          npm ci
-        fi
+      - npm ci --legacy-peer-deps
 
   clean:
     desc: Clean build artifacts (target/, .svelte-kit/, build/, dist/).

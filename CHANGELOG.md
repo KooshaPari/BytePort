@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- chore(deps): align `frontend/web` package manager with CI. The project
+  declared `packageManager: yarn@1.22.21+sha1.*` but every CI workflow
+  that touches `frontend/web` runs `npm ci --legacy-peer-deps`, which
+  strictly reads `package-lock.json`. Dependabot's `npm` ecosystem
+  respects `packageManager` and was updating `yarn.lock` on every
+  frontend/web bump, leaving `package-lock.json` stale and every
+  frontend/web Dependabot PR (#354, #357, #362, #363, plus older
+  ones) unmergeable. Switch `packageManager` to `npm@11.3.0`, drop
+  the yarn-only `resolutions` block (npm `overrides` already duplicates
+  the same entries), delete `frontend/web/yarn.lock` (4099 lines,
+  verified no drift in `package-lock.json` after `npm install`), and
+  scrub the orphan references from `.dockerignore`, `.gitattributes`,
+  `.prettierignore`, `.pre-commit-config.yaml`, `Taskfile.yml`, and
+  `docs/CONTRIBUTING.md`. Closes #353, #370. (#394)
+
 - test(go): reduce SonarCloud `go:S3776` cognitive-complexity CRITICALs
   introduced by the dedup PRs (#386, #389, #390). Four sites had complexity
   ≥ 15, breaking the new-code maintainability rating on `main`:
