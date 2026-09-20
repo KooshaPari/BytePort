@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- test(http/middleware): extract shared test helpers behind
+  `runMiddlewareViaRouter`, `runMiddlewareDirect`, `assertJSONError`,
+  `newTestAuthService`, `newMockSecretsManager`, and `mockProvider` in
+  `backend/internal/infrastructure/http/middleware/helpers_test.go`. The
+  `auth_missing_coverage_test.go` file (4 test functions, 15 subtests)
+  collapses 16+ instances of the `httptest.NewRecorder → gin.CreateTestContext
+  → httptest.NewRequest → Authorization header → middleware call → assert
+  status/JSON` boilerplate into 1-3 line helper calls. Net −190 lines on
+  the test file plus +110 on the shared helpers. Drops redundant
+  `c.IsAborted()` checks since `w.Code == 401` already gates the abort path
+  (middleware sets status and aborts atomically via `c.JSON + c.Abort`).
+  Tests pass: `go test ./internal/infrastructure/http/middleware/... -count=1`
+  → ok 0.911s. Targets 53.1% `duplicated_lines_density` on
+  `auth_missing_coverage_test.go` (208 of 391 lines on main).
+
+- test(secrets): consolidate near-duplicate edge-case tests in
+  `secrets_edge_cases_test.go`. Four `TestXxxProviderFunctionSignatures`
+  tests merge into one table-driven `TestProviderFunctionSignatures`; the
+  three `TestProviderInterfaceCompliance` subtests become a single table;
+  `TestEdgeCases` and `TestContextHandling` reuse a new `newEmptyManager()`
+  helper to drop the repeated `providers: make(map[string]Provider)`
+  literal. Net −70 lines on a file that was 36.6% dup (108 of 244 lines on
+  main). Tests pass: `go test ./internal/infrastructure/secrets/... -count=1`
+  → ok 18.993s.
+
 ### Fixed
 
 - chore(deps): align `frontend/web` package manager with CI. The project
