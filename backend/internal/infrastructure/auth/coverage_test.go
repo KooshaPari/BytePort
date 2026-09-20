@@ -723,71 +723,53 @@ func TestWorkOSAuthService_Middleware_EdgeCases(t *testing.T) {
 func TestWorkOSAuthService_OptionalMiddleware(t *testing.T) {
 	service, _ := newInitializedService(t)
 
-	// Setup Gin for testing.
 	gin.SetMode(gin.TestMode)
 
-	t.Run("allows request without authorization header", func(t *testing.T) {
-		w := httptest.NewRecorder()
-		_, router := gin.CreateTestContext(w)
+	cases := []struct {
+		name       string
+		authHeader string
+		hasHeader  bool
+		hasUserCtx bool
+	}{
+		{"allows request without authorization header", "", false, false},
+		{"allows request with invalid authorization header", "Invalid", true, false},
+		{"sets user context with valid Bearer token", "Bearer test-valid-test_at_example.com", true, true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			_, router := gin.CreateTestContext(w)
 
-		router.Use(service.OptionalMiddleware())
-		router.GET("/test", func(c *gin.Context) {
-			_, exists := c.Get("user_id")
-			assert.False(t, exists)
-			c.JSON(200, gin.H{"status": "ok"})
+			router.Use(service.OptionalMiddleware())
+			router.GET("/test", func(c *gin.Context) {
+				if tc.hasUserCtx {
+					userID, exists := c.Get("user_id")
+					assert.True(t, exists)
+					assert.Equal(t, "valid", userID)
+
+					userEmail, exists := c.Get("user_email")
+					assert.True(t, exists)
+					assert.Equal(t, "test@example.com", userEmail)
+
+					userInfo, exists := c.Get("user_info")
+					assert.True(t, exists)
+					assert.IsType(t, &UserInfo{}, userInfo)
+				} else {
+					_, exists := c.Get("user_id")
+					assert.False(t, exists)
+				}
+				c.JSON(200, gin.H{"status": "ok"})
+			})
+
+			req := httptest.NewRequest("GET", "/test", nil)
+			if tc.hasHeader {
+				req.Header.Set("Authorization", tc.authHeader)
+			}
+			router.ServeHTTP(w, req)
+
+			assert.Equal(t, http.StatusOK, w.Code)
 		})
-
-		req := httptest.NewRequest("GET", "/test", nil)
-		router.ServeHTTP(w, req)
-
-		assert.Equal(t, http.StatusOK, w.Code)
-	})
-
-	t.Run("allows request with invalid authorization header", func(t *testing.T) {
-		w := httptest.NewRecorder()
-		_, router := gin.CreateTestContext(w)
-
-		router.Use(service.OptionalMiddleware())
-		router.GET("/test", func(c *gin.Context) {
-			_, exists := c.Get("user_id")
-			assert.False(t, exists)
-			c.JSON(200, gin.H{"status": "ok"})
-		})
-
-		req := httptest.NewRequest("GET", "/test", nil)
-		req.Header.Set("Authorization", "Invalid")
-		router.ServeHTTP(w, req)
-
-		assert.Equal(t, http.StatusOK, w.Code)
-	})
-
-	t.Run("sets user context with valid Bearer token", func(t *testing.T) {
-		w := httptest.NewRecorder()
-		_, router := gin.CreateTestContext(w)
-
-		router.Use(service.OptionalMiddleware())
-		router.GET("/test", func(c *gin.Context) {
-			userID, exists := c.Get("user_id")
-			assert.True(t, exists)
-			assert.Equal(t, "valid", userID)
-
-			userEmail, exists := c.Get("user_email")
-			assert.True(t, exists)
-			assert.Equal(t, "test@example.com", userEmail)
-
-			userInfo, exists := c.Get("user_info")
-			assert.True(t, exists)
-			assert.IsType(t, &UserInfo{}, userInfo)
-
-			c.JSON(200, gin.H{"status": "ok"})
-		})
-
-		req := httptest.NewRequest("GET", "/test", nil)
-		req.Header.Set("Authorization", "Bearer test-valid-test_at_example.com")
-		router.ServeHTTP(w, req)
-
-		assert.Equal(t, http.StatusOK, w.Code)
-	})
+	}
 }
 
 func TestWorkOSAuthService_OptionalMiddleware_EdgeCases(t *testing.T) {
