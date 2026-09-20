@@ -84,21 +84,7 @@ func TestLegacyOptionalAuthMiddleware(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			var capturedUUID string
-			var capturedExists bool
-			handler := func(c *gin.Context) {
-				if uuid, ok := c.Get("user_uuid"); ok {
-					capturedExists = true
-					capturedUUID = uuid.(string)
-				}
-				c.JSON(http.StatusOK, gin.H{"status": "ok"})
-			}
-			w := runMiddlewareViaRouter(t, LegacyOptionalAuthMiddleware(), handler, tc.authHeader)
-			assert.Equal(t, tc.wantStatus, w.Code)
-			if tc.wantUserExists {
-				assert.True(t, capturedExists)
-				assert.Equal(t, tc.wantUserUUID, capturedUUID)
-			}
+			runOptionalAuthSubtest(t, LegacyOptionalAuthMiddleware(), tc.authHeader, tc.wantStatus, tc.wantUserExists, tc.wantUserUUID)
 		})
 	}
 }
@@ -181,21 +167,7 @@ func TestOptionalAuthMiddleware_EdgeCases(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			var capturedUUID string
-			var capturedExists bool
-			handler := func(c *gin.Context) {
-				if uuid, ok := c.Get("user_uuid"); ok {
-					capturedExists = true
-					capturedUUID = uuid.(string)
-				}
-				c.JSON(http.StatusOK, gin.H{"status": "ok"})
-			}
-			w := runMiddlewareViaRouter(t, OptionalAuthMiddleware(nil), handler, tc.authHeader)
-			assert.Equal(t, tc.wantStatus, w.Code)
-			if tc.wantExists {
-				assert.True(t, capturedExists)
-				assert.Equal(t, tc.wantUserUUID, capturedUUID)
-			}
+			runOptionalAuthSubtest(t, OptionalAuthMiddleware(nil), tc.authHeader, tc.wantStatus, tc.wantExists, tc.wantUserUUID)
 		})
 	}
 }

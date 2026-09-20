@@ -118,41 +118,27 @@ func TestNewFunctions(t *testing.T) {
 
 // TestEdgeCases exercises Manager with empty providers and edge-case keys.
 func TestEdgeCases(t *testing.T) {
-	t.Run("Manager with nil provider", func(t *testing.T) {
-		manager := newEmptyManager()
+	keyTests := []struct {
+		name string
+		key  string
+	}{
+		{"Manager with nil provider", "nonexistent:key"},
+		{"Manager with empty key", ""},
+		{"Manager with invalid key format", "invalid-key"},
+	}
+	for _, tc := range keyTests {
+		t.Run(tc.name, func(t *testing.T) {
+			manager := newEmptyManager()
 
-		_, err := manager.GetSecret(context.Background(), "nonexistent:key")
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "not found in any provider")
+			_, err := manager.GetSecret(context.Background(), tc.key)
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "not found in any provider")
 
-		err = manager.SetSecret(context.Background(), "nonexistent:key", "value")
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "failed to store secret")
-	})
-
-	t.Run("Manager with empty key", func(t *testing.T) {
-		manager := newEmptyManager()
-
-		_, err := manager.GetSecret(context.Background(), "")
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "not found in any provider")
-
-		err = manager.SetSecret(context.Background(), "", "value")
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "failed to store secret")
-	})
-
-	t.Run("Manager with invalid key format", func(t *testing.T) {
-		manager := newEmptyManager()
-
-		_, err := manager.GetSecret(context.Background(), "invalid-key")
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "not found in any provider")
-
-		err = manager.SetSecret(context.Background(), "invalid-key", "value")
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "failed to store secret")
-	})
+			err = manager.SetSecret(context.Background(), tc.key, "value")
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "failed to store secret")
+		})
+	}
 
 	t.Run("Manager cache operations", func(t *testing.T) {
 		manager := &Manager{

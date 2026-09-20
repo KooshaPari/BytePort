@@ -89,6 +89,30 @@ func newMockSecretsManager() *secrets.Manager {
 	return manager
 }
 
+// runOptionalAuthSubtest executes an OptionalAuth-style middleware in a
+// fresh gin engine and asserts on the response status and any user_uuid
+// context value the handler observes. Used by both the Legacy and the
+// modern Optional auth test loops to avoid copy-paste of the capture-
+// handler-assertions block.
+func runOptionalAuthSubtest(t *testing.T, mw gin.HandlerFunc, authHeader string, wantStatus int, wantExists bool, wantUUID string) {
+	t.Helper()
+	var capturedUUID string
+	var capturedExists bool
+	handler := func(c *gin.Context) {
+		if uuid, ok := c.Get("user_uuid"); ok {
+			capturedExists = true
+			capturedUUID = uuid.(string)
+		}
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	}
+	w := runMiddlewareViaRouter(t, mw, handler, authHeader)
+	assert.Equal(t, wantStatus, w.Code)
+	if wantExists {
+		assert.True(t, capturedExists)
+		assert.Equal(t, wantUUID, capturedUUID)
+	}
+}
+
 // mockProvider implements the secrets.Provider interface for testing.
 type mockProvider struct {
 	secrets map[string]string
