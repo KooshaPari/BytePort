@@ -505,72 +505,88 @@ func TestWorkOSAuthService_ExchangeWithWorkOS(t *testing.T) {
 // =============================================================================
 
 func TestWorkOSAuthService_GetAuthURL(t *testing.T) {
-	service, ctx := newUninitializedService(t)
+	_, ctx := newUninitializedService(t)
 
-	t.Run("fails when client not initialized", func(t *testing.T) {
-		authURL, err := service.GetAuthURL(ctx, "test-state")
-		assert.Error(t, err)
-		assert.Empty(t, authURL)
-		assert.Contains(t, err.Error(), "WorkOS client not initialized")
-	})
-
-	t.Run("generates auth URL successfully", func(t *testing.T) {
-		require.NoError(t, service.Initialize(ctx))
-
-		authURL, err := service.GetAuthURL(ctx, "test-state-123")
-		require.NoError(t, err)
-		assert.NotEmpty(t, authURL)
-		assert.Contains(t, authURL, "test-client-id")
-		assert.Contains(t, authURL, "test-state-123")
-		assert.Contains(t, authURL, "api.workos.com/user_management/authorize")
-		assert.Contains(t, authURL, "response_type=code")
-	})
-
-	t.Run("fails when secrets config missing", func(t *testing.T) {
-		service := newServiceWithSecrets(map[string]string{
-			secrets.SecretWorkOSAPIKey: "test-api-key",
-			// Missing client ID and secret.
+	cases := []struct {
+		name                string
+		state               string
+		useMissingSecrets   bool
+		initialize          bool
+		wantInitErrSubstr   string
+		wantGetURLErrSubstr string
+		wantURLContain      []string
+	}{
+		{
+			name:                "fails when client not initialized",
+			state:               "test-state",
+			wantGetURLErrSubstr: "WorkOS client not initialized",
+		},
+		{
+			name:                "fails when secrets config missing",
+			state:               "test-state",
+			useMissingSecrets:   true,
+			initialize:          true,
+			wantInitErrSubstr:   "failed to get WorkOS configuration",
+			wantGetURLErrSubstr: "WorkOS client not initialized",
+		},
+		{
+			name:       "generates auth URL successfully",
+			state:      "test-state-123",
+			initialize: true,
+			wantURLContain: []string{
+				"test-client-id",
+				"test-state-123",
+				"api.workos.com/user_management/authorize",
+				"response_type=code",
+			},
+		},
+		{
+			name:           "handles empty state",
+			state:          "",
+			initialize:     true,
+			wantURLContain: []string{"state="},
+		},
+		{
+			name:           "handles special characters in state",
+			state:          "test-state-with-special-chars!@#$%^&*()",
+			initialize:     true,
+			wantURLContain: []string{"test-state-with-special-chars!@#$%^&*()"},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var svc *WorkOSAuthService
+			if tc.useMissingSecrets {
+				svc = newServiceWithSecrets(map[string]string{
+					secrets.SecretWorkOSAPIKey: "test-api-key",
+					// Missing client ID and secret.
+				})
+			} else {
+				svc, _ = newUninitializedService(t)
+			}
+			if tc.initialize {
+				err := svc.Initialize(ctx)
+				if tc.wantInitErrSubstr != "" {
+					assert.Error(t, err)
+					assert.Contains(t, err.Error(), tc.wantInitErrSubstr)
+				} else {
+					require.NoError(t, err)
+				}
+			}
+			authURL, err := svc.GetAuthURL(ctx, tc.state)
+			if tc.wantGetURLErrSubstr != "" {
+				assert.Error(t, err)
+				assert.Empty(t, authURL)
+				assert.Contains(t, err.Error(), tc.wantGetURLErrSubstr)
+				return
+			}
+			require.NoError(t, err)
+			assert.NotEmpty(t, authURL)
+			for _, s := range tc.wantURLContain {
+				assert.Contains(t, authURL, s)
+			}
 		})
-		err := service.Initialize(ctx)
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "failed to get WorkOS configuration")
-
-		// GetAuthURL should also fail since client is not initialized.
-		authURL, err := service.GetAuthURL(ctx, "test-state")
-		assert.Error(t, err)
-		assert.Empty(t, authURL)
-		assert.Contains(t, err.Error(), "WorkOS client not initialized")
-	})
-}
-
-func TestWorkOSAuthService_GetAuthURL_EdgeCases(t *testing.T) {
-	service, ctx := newUninitializedService(t)
-
-	t.Run("handles uninitialized service", func(t *testing.T) {
-		url, err := service.GetAuthURL(ctx, "test-state")
-		assert.Error(t, err)
-		assert.Empty(t, url)
-		assert.Contains(t, err.Error(), "WorkOS client not initialized")
-	})
-
-	t.Run("handles empty state", func(t *testing.T) {
-		require.NoError(t, service.Initialize(ctx))
-
-		url, err := service.GetAuthURL(ctx, "")
-		require.NoError(t, err)
-		assert.NotEmpty(t, url)
-		assert.Contains(t, url, "state=")
-	})
-
-	t.Run("handles special characters in state", func(t *testing.T) {
-		require.NoError(t, service.Initialize(ctx))
-
-		state := "test-state-with-special-chars!@#$%^&*()"
-		url, err := service.GetAuthURL(ctx, state)
-		require.NoError(t, err)
-		assert.NotEmpty(t, url)
-		assert.Contains(t, url, state)
-	})
+	}
 }
 
 // =============================================================================
@@ -580,42 +596,39 @@ func TestWorkOSAuthService_GetAuthURL_EdgeCases(t *testing.T) {
 func TestWorkOSAuthService_ExchangeCodeForToken(t *testing.T) {
 	service, ctx := newUninitializedService(t)
 
-	t.Run("fails when client not initialized", func(t *testing.T) {
-		tokenResp, err := service.ExchangeCodeForToken(ctx, "test-code")
-		assertAuthError(t, err, tokenResp, "WorkOS client not initialized")
-	})
-
-	t.Run("exchanges code successfully", func(t *testing.T) {
-		require.NoError(t, service.Initialize(ctx))
-
-		tokenResp, err := service.ExchangeCodeForToken(ctx, "test-code")
-		require.NoError(t, err)
-		assert.NotNil(t, tokenResp)
-		assert.Equal(t, "test-code-test_at_example.com", tokenResp.AccessToken)
-		assert.Equal(t, "test-code-test_at_example.com", tokenResp.IDToken)
-		assert.Equal(t, 3600, tokenResp.ExpiresIn)
-		assert.Equal(t, "Bearer", tokenResp.TokenType)
-	})
-}
-
-func TestWorkOSAuthService_ExchangeCodeForToken_EdgeCases(t *testing.T) {
-	service, ctx := newInitializedService(t)
-
-	t.Run("handles empty code", func(t *testing.T) {
-		tokenResp, err := service.ExchangeCodeForToken(ctx, "")
-		assertAuthError(t, err, tokenResp, "authorization code is required")
-	})
-
-	t.Run("handles whitespace code", func(t *testing.T) {
-		tokenResp, err := service.ExchangeCodeForToken(ctx, "   \t\n  ")
-		assertAuthError(t, err, tokenResp, "authorization code is required")
-	})
-
-	t.Run("handles uninitialized service", func(t *testing.T) {
-		uninitializedService, _ := newUninitializedService(t)
-		tokenResp, err := uninitializedService.ExchangeCodeForToken(ctx, "test-code")
-		assertAuthError(t, err, tokenResp, "WorkOS client not initialized")
-	})
+	cases := []struct {
+		name          string
+		code          string
+		initialize    bool
+		wantErrSubstr string
+	}{
+		{name: "fails when client not initialized", code: "test-code", wantErrSubstr: "WorkOS client not initialized"},
+		{name: "exchanges code successfully", code: "test-code", initialize: true},
+		{name: "handles empty code", code: "", initialize: true, wantErrSubstr: "authorization code is required"},
+		{name: "handles whitespace code", code: "   \t\n  ", initialize: true, wantErrSubstr: "authorization code is required"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			svc := service
+			if !tc.initialize {
+				// Use an uninitialized instance to cover the "not initialized" path.
+				svc, _ = newUninitializedService(t)
+			} else {
+				require.NoError(t, svc.Initialize(ctx))
+			}
+			tokenResp, err := svc.ExchangeCodeForToken(ctx, tc.code)
+			if tc.wantErrSubstr != "" {
+				assertAuthError(t, err, tokenResp, tc.wantErrSubstr)
+				return
+			}
+			require.NoError(t, err)
+			assert.NotNil(t, tokenResp)
+			assert.Equal(t, "test-code-test_at_example.com", tokenResp.AccessToken)
+			assert.Equal(t, "test-code-test_at_example.com", tokenResp.IDToken)
+			assert.Equal(t, 3600, tokenResp.ExpiresIn)
+			assert.Equal(t, "Bearer", tokenResp.TokenType)
+		})
+	}
 }
 
 // TestHandleTestCodeExchange exercises the private handleTestCodeExchange directly
