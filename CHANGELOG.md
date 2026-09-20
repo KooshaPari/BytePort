@@ -21,6 +21,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   one file. Three sites intentionally retained the `gin.H{"message": ...}`
   contract because tests assert on that field; they are documented as
   response-contract exceptions in `responses.go`.
+- refactor(go): sweep 5 sites that called `c.MustGet("user").(models.User)`
+  directly to use the existing `currentUser(c) (models.User, bool)` helper.
+  Three sites in `routes/auth.go` (`LinkHandler`, `UpdateLink`, `UpdateUser`)
+  and two in `routes/git.go` (`RetrieveRepositories`, `ValidateLink`) now
+  share the same defensive lookup the `instances.go` and `projects.go`
+  handlers already used. The previous `MustGet` form would panic if the
+  context were ever missing the user; `currentUser` writes a 401 envelope
+  and returns `(zero, false)` instead, so protected handlers can no longer
+  crash on a missing session even if the route is ever mounted outside the
+  protected group.
 
 ### Fixed
 
