@@ -221,6 +221,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- CI(deps): bump `codecov/codecov-action` from 7.1.0 to 7.1.1 in
+  `.github/workflows/release-go.yml` (Dependabot minor-and-patch group).
+  Patch release; no workflow logic change required. PR #371.
+
 - Dependabot: ignore major-version updates for `typescript` in
   `frontend/web/`. TypeScript 7.0 requires the consumer to ship both
   `typescript@~6` and `@typescript/native@npm:typescript@7` (npm alias) plus a
