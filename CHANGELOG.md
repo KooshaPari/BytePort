@@ -25,8 +25,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `assertExpirationInFuture`, `assertStringCustomClaim`), keeping the table
   body linear so each test function's complexity drops below the 15
   threshold. Test inventory unchanged (`func Test` set matches `HEAD`).
-  Reopens #383 — Quality Gate now has 2 of 5 conditions failing instead of 3
-  (reliability C → A; security and duplication still need separate work).
+  Closes #383 (reliability half of the regression).
+
+- refactor(go): extract duplicated string literals flagged by SonarCloud
+  `go:S1192` in the layer-C port (#383, dup 4.7% → target ≤ 3%). Nine sites
+  consolidated into named constants or package-level variables:
+  `backend/handlers.go` (provider list + 404 body),
+  `backend/internal/infrastructure/clients/credential_validator.go`
+  (`Authorization`/`Content-Type`/`application/json`/`Bearer `),
+  `backend/internal/infrastructure/persistence/postgres/deployment_repository.go`
+  (`uuid = ?`),
+  `backend/internal/infrastructure/secrets/manager.go` (`us-east-1`),
+  `backend/lib/cloud/provider_netlify.go` (`/sites/`),
+  `backend/server.go` (`/api/v1/deployments`).
 
 - CI: the Tier-1 `CHANGELOG Update Check` in `.github/workflows/tier-1-enforcement.yml`
   now skips PRs authored by `dependabot[bot]`. Dependabot bumps don't add

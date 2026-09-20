@@ -9,6 +9,16 @@ import (
 	"github.com/google/uuid"
 )
 
+// validProviders is the canonical list of provider identifiers accepted by the
+// deployment API. Defining it once here removes the duplicate literal that
+// SonarCloud flagged in two handler locations (see issue #383).
+var validProviders = []string{"vercel", "netlify", "render", "railway", "supabase", "cloudflare-pages"}
+
+// errDeploymentNotFound is the standard 404 body for "this deployment ID does
+// not resolve". Reusing it across the GET/TERMINATE/DELETE handlers removes
+// the 5-times duplication SonarCloud flagged (see issue #383).
+var errDeploymentNotFound = gin.H{"error": "Deployment not found"}
+
 // DeployRequest represents a deployment request
 type DeployRequest struct {
 	Name     string                 `json:"name" binding:"required"`
@@ -52,7 +62,7 @@ func handleDeploy(store *DeploymentStore) gin.HandlerFunc {
 		if !isValidProvider(req.Provider) {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error":           "Invalid provider",
-				"valid_providers": []string{"vercel", "netlify", "render", "railway", "supabase", "cloudflare-pages"},
+				"valid_providers": validProviders,
 			})
 			return
 		}
@@ -124,9 +134,7 @@ func handleGetDeployment(store *DeploymentStore) gin.HandlerFunc {
 		deployment := store.Get(id)
 
 		if deployment == nil {
-			c.JSON(http.StatusNotFound, gin.H{
-				"error": "Deployment not found",
-			})
+			c.JSON(http.StatusNotFound, errDeploymentNotFound)
 			return
 		}
 
@@ -141,9 +149,7 @@ func handleTerminateDeployment(store *DeploymentStore) gin.HandlerFunc {
 		deployment := store.Get(id)
 
 		if deployment == nil {
-			c.JSON(http.StatusNotFound, gin.H{
-				"error": "Deployment not found",
-			})
+			c.JSON(http.StatusNotFound, errDeploymentNotFound)
 			return
 		}
 
@@ -166,9 +172,7 @@ func handleGetStatus(store *DeploymentStore) gin.HandlerFunc {
 		deployment := store.Get(id)
 
 		if deployment == nil {
-			c.JSON(http.StatusNotFound, gin.H{
-				"error": "Deployment not found",
-			})
+			c.JSON(http.StatusNotFound, errDeploymentNotFound)
 			return
 		}
 
@@ -190,9 +194,7 @@ func handleGetLogs(store *DeploymentStore) gin.HandlerFunc {
 		deployment := store.Get(id)
 
 		if deployment == nil {
-			c.JSON(http.StatusNotFound, gin.H{
-				"error": "Deployment not found",
-			})
+			c.JSON(http.StatusNotFound, errDeploymentNotFound)
 			return
 		}
 
@@ -234,9 +236,7 @@ func handleGetMetrics(store *DeploymentStore) gin.HandlerFunc {
 		deployment := store.Get(id)
 
 		if deployment == nil {
-			c.JSON(http.StatusNotFound, gin.H{
-				"error": "Deployment not found",
-			})
+			c.JSON(http.StatusNotFound, errDeploymentNotFound)
 			return
 		}
 
@@ -443,8 +443,7 @@ func selectOptimalProvider(appType string) string {
 }
 
 func isValidProvider(provider string) bool {
-	valid := []string{"vercel", "netlify", "render", "railway", "supabase", "cloudflare-pages"}
-	for _, p := range valid {
+	for _, p := range validProviders {
 		if p == provider {
 			return true
 		}
