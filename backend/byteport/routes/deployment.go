@@ -97,7 +97,7 @@ func DeployProject(c *gin.Context) {
 
 	var req deployRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid deploy request: " + err.Error()})
+		respondBadRequest(c, "Invalid deploy request: "+err.Error())
 		return
 	}
 
@@ -129,13 +129,13 @@ func DeployProject(c *gin.Context) {
 
 	jsonBody, err := json.Marshal(sandboxCfg)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to convert to sandbox config"})
+		respondInternalError(c, "Failed to convert to sandbox config")
 		return
 	}
 
 	req2, err := http.NewRequest("POST", nvmsURL()+"/v1/deploy", bytes.NewBuffer(jsonBody))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create request"})
+		respondInternalError(c, "Failed to create request")
 		return
 	}
 
@@ -148,21 +148,20 @@ func DeployProject(c *gin.Context) {
 	resp, err := (&http.Client{}).Do(req2)
 	if err != nil {
 		log.Printf("deploy: sandbox provisioning failed for project %s: %v", project.UUID, err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to deploy project: " + err.Error()})
+		respondInternalError(c, "Failed to deploy project: "+err.Error())
 		return
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read deploy response"})
+		respondInternalError(c, "Failed to read deploy response")
 		return
 	}
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		log.Printf("deploy: sandbox provisioning rejected project %s with status %d", project.UUID, resp.StatusCode)
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":  "Failed to deploy project",
+		respondErrorWithDetails(c, http.StatusInternalServerError, "Failed to deploy project", gin.H{
 			"status": resp.StatusCode,
 			"body":   string(body),
 		})
@@ -172,7 +171,7 @@ func DeployProject(c *gin.Context) {
 	// Translate NanoVMS SandboxResponse → BytePort Project
 	var sandboxResp nvmsSandboxResponse
 	if err := json.Unmarshal(body, &sandboxResp); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse sandbox response"})
+		respondInternalError(c, "Failed to parse sandbox response")
 		return
 	}
 
@@ -187,11 +186,11 @@ func DeployProject(c *gin.Context) {
 	})
 
 	if err := project.BeforeSave(models.DB); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save project to DB"})
+		respondInternalError(c, "Failed to save project to DB")
 		return
 	}
 	if err := addNewProject(project); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add project to database"})
+		respondInternalError(c, "Failed to add project to database")
 		return
 	}
 
@@ -217,27 +216,27 @@ func TerminateInstance(c *gin.Context) {
 
 	var req terminateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid terminate request: " + err.Error()})
+		respondBadRequest(c, "Invalid terminate request: "+err.Error())
 		return
 	}
 
 	var project models.Project
 	if err := models.DB.Where("uuid = ? AND owner = ?", req.UUID, user.UUID).First(&project).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Project not found"})
+		respondNotFound(c, "Project not found")
 		return
 	}
 
 	// NanoVMS stop expects POST /v1/stop?id=<sandbox_id> with query param.
 	sandboxID := project.UUID
 	if sandboxID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "missing sandbox ID"})
+		respondBadRequest(c, "missing sandbox ID")
 		return
 	}
 
 	stopURL := fmt.Sprintf("%s/v1/stop?id=%s", nvmsURL(), url.QueryEscape(sandboxID))
 	req2, err := http.NewRequest("POST", stopURL, nil)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create request"})
+		respondInternalError(c, "Failed to create request")
 		return
 	}
 
@@ -249,7 +248,7 @@ func TerminateInstance(c *gin.Context) {
 	resp, err := (&http.Client{}).Do(req2)
 	if err != nil {
 		log.Printf("terminate: stopping sandbox for project %s failed: %v", project.UUID, err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to stop sandbox: " + err.Error()})
+		respondInternalError(c, "Failed to stop sandbox: "+err.Error())
 		return
 	}
 	defer resp.Body.Close()
@@ -257,8 +256,7 @@ func TerminateInstance(c *gin.Context) {
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
 		log.Printf("terminate: sandbox stop for project %s returned status %d", project.UUID, resp.StatusCode)
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":  "Failed to stop sandbox",
+		respondErrorWithDetails(c, http.StatusInternalServerError, "Failed to stop sandbox", gin.H{
 			"status": resp.StatusCode,
 			"body":   string(respBody),
 		})
@@ -266,7 +264,7 @@ func TerminateInstance(c *gin.Context) {
 	}
 
 	if err := removeProject(project); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to remove project from database"})
+		respondInternalError(c, "Failed to remove project from database")
 		return
 	}
 

@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- refactor(go): extract `respondError`, `respondBadRequest`, `respondUnauthorized`,
+  `respondNotFound`, `respondInternalError`, `respondConflict`, and
+  `respondErrorWithDetails` into `backend/byteport/routes/responses.go` and
+  sweep `routes/{auth,deployment,git,instances,projects}.go` to use them. The
+  inline `c.JSON(http.StatusXxx, gin.H{"error": "..."})` shape was repeated
+  across 64 call sites (62 single-field + 2 multi-field in
+  `deployment.go:DeployProject` and `TerminateInstance` that carry upstream
+  status + body). After the refactor the response shape has a single home, so
+  any future change to error envelope (`code`, `request_id`, ...) only touches
+  one file. Three sites intentionally retained the `gin.H{"message": ...}`
+  contract because tests assert on that field; they are documented as
+  response-contract exceptions in `responses.go`.
+
 ### Fixed
 
 - chore(deps): align `frontend/web` package manager with CI. The project
