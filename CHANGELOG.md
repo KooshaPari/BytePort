@@ -196,6 +196,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- test(go): dedupe the `backend/internal/application/deployment/` test
+  package. Three classes of duplication:
+
+  1. `MockRepository` / `MockService` were defined wholesale in
+     `create_deployment_test.go` and again as `MockRepositoryTerminate`
+     / `MockServiceTerminate` in `terminate_update_test.go` (with
+     slightly different default behaviours). They now share a single
+     `mocks_test.go`. Tests in `terminate_update_test.go` that depended
+     on the old `(nil, nil)` FindByUUID default now set `FindByUUIDFunc`
+     explicitly so the shared `MockRepository`'s `NotFoundError`
+     default is never silently substituted.
+  2. `errors_test.go` had six near-identical constructor tests plus
+     three ApplicationError / unwrap tests (14 functions, 331 lines).
+     Now four table-driven functions / 179 lines that also subsume the
+     prior `TestErrorCodes` uniqueness sweep.
+
+  Total: 2,342 → 2,139 lines (-203). The pre-existing `dto.go`
+  gofmt-only formatting issue is untouched (out of scope). See #383.
+
+### Changed
+
 - Dependabot: ignore major-version updates for `typescript` in
   `frontend/web/`. TypeScript 7.0 requires the consumer to ship both
   `typescript@~6` and `@typescript/native@npm:typescript@7` (npm alias) plus a
