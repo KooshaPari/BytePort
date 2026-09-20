@@ -183,34 +183,13 @@ func UpdateLink(c *gin.Context) {
 			return
 		}
 	}
-	decryptedAWSAccess, err := lib.DecryptSecret(user.AwsCreds.AccessKeyID)
+	decryptedAWS, decryptedPortfolio, err := decryptUserPlatformSecrets(user)
 	if err != nil {
-		respondInternalError(c, "Failed to decrypt AWS Access")
+		respondInternalError(c, platformSecretErrorMessage(err))
 		return
 	}
-	decryptedAWSSecret, err := lib.DecryptSecret(user.AwsCreds.SecretAccessKey)
-	if err != nil {
-		respondInternalError(c, "Failed to decrypt AWS Secret")
-		return
-	}
-	decryptedPortfolioURL, err := lib.DecryptSecret(user.Portfolio.RootEndpoint)
-	if err != nil {
-		respondInternalError(c, "Failed to decrypt Portfolio URL")
-		return
-	}
-	decryptedPortfolioKey, err := lib.DecryptSecret(user.Portfolio.APIKey)
-	if err != nil {
-		respondInternalError(c, "Failed to decrypt Portfolio Key ")
-		return
-	}
-	user.AwsCreds = models.AwsCreds{
-		AccessKeyID:     decryptedAWSAccess,
-		SecretAccessKey: decryptedAWSSecret,
-	}
-	user.Portfolio = models.Portfolio{
-		RootEndpoint: decryptedPortfolioURL,
-		APIKey:       decryptedPortfolioKey,
-	}
+	user.AwsCreds = decryptedAWS
+	user.Portfolio = decryptedPortfolio
 	if !providerFound {
 		// Provider was "local" (no credential entry) or absent: keep the key
 		// the request used so nothing is invented.
