@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- CI: Tier-2 Coverage Gate Go threshold raised from 71% to 73%
+  (regression guard; current achievable 74.1% as of #381). The five places
+  where the threshold is named in the workflow (job name, step name,
+  threshold constant, markdown summary table, GitHub-script comment) all
+  used inconsistent values (71% constant, 75% summary table, 71% comment).
+  They now all read `≥73%` so the PR summary comment matches the actual
+  gate. Aspirational target stays at 75%; see #377 for the test-density
+  uplift plan.
+
 ### Fixed
 
 - test(go): extract the repeated authenticated-setup block in

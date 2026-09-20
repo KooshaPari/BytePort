@@ -82,7 +82,7 @@ jobs:
   # Threshold: ≥71% (current achievable ~74.1%, aspirational 75%)
   # ─────────────────────────────────────────────────────────────────────
   go-framework-coverage:
-    name: Go framework coverage (≥71%)
+    name: Go framework coverage (≥73%)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -104,16 +104,21 @@ jobs:
         run: |
           go test -coverprofile=coverage.out -covermode=atomic ./...
 
-      - name: Check coverage threshold (≥71%)
+      - name: Check coverage threshold (≥73%)
         run: |
           COVERAGE=$(go tool cover -func=coverage.out | grep "total:" | awk '{print $3}' | sed 's/%//')
           echo "Go framework coverage: ${COVERAGE}%"
-          # Threshold is set slightly below the current achievable level
-          # (74.1% as of #381) to act as a regression guard, not as the
-          # goal. Aspirational target is 75%; see issue #377 for the
-          # test-density uplift plan that will gradually raise this
-          # threshold.
-          THRESHOLD=71.0
+          # Threshold is set slightly below the current achievable level to act
+          # as a regression guard, not as the goal. Aspirational target is
+          # tracked in issue #377.
+          #
+          # History:
+          #   74.1% as of PR #381 (cmd package 0% → 52.9%)
+          #   70.3% as of PR #379 (waves 2/3/4 of #377 plan)
+          #   35.0% as of PR #378 (wave 1 of #377 plan)
+          # The threshold tracks one notch below the achievable, leaving a
+          # small buffer for natural drift while still flagging real losses.
+          THRESHOLD=73.0
           if (( $(echo "$COVERAGE < $THRESHOLD" | bc -l) )); then
             echo "❌ Go framework coverage ${COVERAGE}% is below threshold ${THRESHOLD}%"
             go tool cover -func=coverage.out
@@ -219,11 +224,11 @@ jobs:
 
           # Go framework
           if [ "${{ needs.go-framework-coverage.result }}" = "success" ]; then
-            echo "| Go framework (backend/byteport) | ≥75% | ✅ Pass |" >> $GITHUB_STEP_SUMMARY
+            echo "| Go framework (backend/byteport) | ≥73% | ✅ Pass |" >> $GITHUB_STEP_SUMMARY
           elif [ "${{ needs.go-framework-coverage.result }}" = "skipped" ]; then
-            echo "| Go framework (backend/byteport) | ≥75% | ⏭️ Skipped |" >> $GITHUB_STEP_SUMMARY
+            echo "| Go framework (backend/byteport) | ≥73% | ⏭️ Skipped |" >> $GITHUB_STEP_SUMMARY
           else
-            echo "| Go framework (backend/byteport) | ≥75% | ❌ Fail |" >> $GITHUB_STEP_SUMMARY
+            echo "| Go framework (backend/byteport) | ≥73% | ❌ Fail |" >> $GITHUB_STEP_SUMMARY
           fi
 
           # Service
