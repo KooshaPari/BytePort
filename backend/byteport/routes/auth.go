@@ -58,7 +58,10 @@ func Authenticate(c *gin.Context) {
 }
 func LinkHandler(c *gin.Context) {
 	// Retrieve the authenticated user object
-	user := c.MustGet("user").(models.User)
+	user, ok := currentUser(c)
+	if !ok {
+		return
+	}
 	fmt.Println("Linking with Github: ", user)
 
 	lib.LinkWithGithub(c, user)
@@ -147,7 +150,10 @@ func Signup(c *gin.Context) {
 }
 
 func UpdateLink(c *gin.Context) {
-	user := c.MustGet("user").(models.User)
+	user, ok := currentUser(c)
+	if !ok {
+		return
+	}
 
 	if user.LLMConfig.Provider == "" {
 		user.LLMConfig = models.LLM{
@@ -218,7 +224,10 @@ func UpdateLink(c *gin.Context) {
 
 }
 func UpdateUser(c *gin.Context) {
-	user := c.MustGet("user").(models.User)
+	user, ok := currentUser(c)
+	if !ok {
+		return
+	}
 	var req models.User
 	if err := c.ShouldBindJSON(&req); err != nil {
 		respondBadRequest(c, err.Error())

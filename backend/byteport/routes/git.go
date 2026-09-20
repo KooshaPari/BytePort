@@ -19,7 +19,10 @@ const (
 )
 
 func RetrieveRepositories(c *gin.Context) {
-	user := c.MustGet("user").(models.User)
+	user, ok := currentUser(c)
+	if !ok {
+		return
+	}
 
 	decryptedToken, err := lib.DecryptSecret(user.Git.Token)
 
@@ -110,7 +113,10 @@ func ValidateLink(c *gin.Context) {
 	fmt.Println("USR: ", user)
 	fmt.Println("C:", c)
 	// Get the authenticated user for saving later
-	authUser := c.MustGet("user").(models.User)
+	authUser, ok := currentUser(c)
+	if !ok {
+		return
+	}
 
 	// Resolve the LLM credential before validating anything. The lookup is
 	// case-insensitive and AIProvider.UnmarshalJSON accepts the camelCase
