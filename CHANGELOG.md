@@ -21,6 +21,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   one file. Three sites intentionally retained the `gin.H{"message": ...}`
   contract because tests assert on that field; they are documented as
   response-contract exceptions in `responses.go`.
+- chore(lint): remove `respondConflict` from `backend/byteport/routes/
+  responses.go`. The helper was extracted in #401 as a shortcut for
+  `respondError(c, http.StatusConflict, msg)` but no route handler has
+  ever called it. The Go `unused` linter was catching this in every PR
+  built on top of #401's branch (golangci runs on every push), so the
+  function was paying a tax for no value. If a future route genuinely
+  needs a 409 response, the call site can use `respondError(c, http.
+  StatusConflict, msg)` directly; re-introducing the shortcut when a
+  second caller arrives will be a one-line follow-up.
 - refactor(go): sweep 5 sites that called `c.MustGet("user").(models.User)`
   directly to use the existing `currentUser(c) (models.User, bool)` helper.
   Three sites in `routes/auth.go` (`LinkHandler`, `UpdateLink`, `UpdateUser`)
