@@ -12,7 +12,7 @@ Toolchain requirements (pinned by repo config):
 |------|------------------|-------|
 | Rust | `stable` (rust-toolchain.toml: rustfmt, clippy, rust-src) | `rustup` |
 | Go | `1.26.0` (`backend/byteport/go.mod`) | `go.mod` module `github.com/byteport/api` |
-| Node / Yarn | Yarn 1.22 (`packageManager` field) | used by `frontend/web` |
+| Node / npm | npm 10.8.2 (`packageManager` field, matches `mise.toml`) | used by `frontend/web` |
 | Task | See `Taskfile.yml` | optional orchestrator (also `make`/`just`) |
 | pre-commit | `pip install pre-commit` | `just precommit-install` |
 | cargo-deny / cargo-audit / gitleaks / trufflehog | audit tools | `just audit` |
@@ -20,9 +20,11 @@ Toolchain requirements (pinned by repo config):
 Recommended bootstrap:
 
 ```bash
+# Run from the repository root. Each cd is independent of the previous one
+# (this block is meant to be copy-pasted line by line, not pasted all at once).
 rustup toolchain install stable --component rustfmt,clippy,rust-src
-cd frontend/web && yarn install        # or npm install (npm is also supported)
-cd backend/byteport && go mod download
+(cd frontend/web && npm ci --legacy-peer-deps)
+(cd backend/byteport && go mod download)
 task build                             # build all three engines
 ```
 

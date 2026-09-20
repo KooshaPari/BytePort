@@ -39,7 +39,6 @@
 Cargo.lock     -diff
 package-lock.json -diff
 bun.lockb      binary
-yarn.lock      -diff
 pnpm-lock.yaml -diff
 uv.lock        -diff
 

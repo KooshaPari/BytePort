@@ -20,7 +20,7 @@ exclude: |
     node_modules/.*|
     target/.*|
     .*\.(lock|sum)$|
-    frontend/web/(package-lock\.json|yarn\.lock)
+    frontend/web/package-lock\.json
   )$
 
 repos:

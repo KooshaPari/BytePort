@@ -102,21 +102,5 @@
 		"rollup": "4.60.2",
 		"validator": "13.15.35"
 	},
-	"resolutions": {
-		"cookie": "0.7.0",
-		"esbuild": "0.25.0",
-		"postcss": "8.5.26",
-		"prismjs": "1.30.0",
-		"uuid": "14.0.0",
-		"minimatch": "9.0.9",
-		"devalue": "5.9.2",
-		"effect": "3.21.2",
-		"flatted": "3.4.2",
-		"glob": "10.5.0",
-		"lodash": "4.18.1",
-		"picomatch": "2.3.2",
-		"rollup": "4.60.2",
-		"validator": "13.15.35"
-	},
-	"packageManager": "yarn@1.22.21+sha1.1959a18351b811cdeedbd484a8f86c3cc3bbaf72"
+	"packageManager": "npm@10.8.2"
 }
