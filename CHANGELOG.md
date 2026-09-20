@@ -21,6 +21,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   one file. Three sites intentionally retained the `gin.H{"message": ...}`
   contract because tests assert on that field; they are documented as
   response-contract exceptions in `responses.go`.
+- refactor(go): introduce package-level `defaultAPIValidationClient`
+  (`*http.Client` with a 15-second timeout, shared `http.DefaultTransport`)
+  in `backend/byteport/lib/apilink.go` and use it from
+  `ValidateOpenAICredentials`. The previous `client := &http.Client{}`
+  inline form had no timeout, so a hung OpenAI validation request could
+  pin the calling route handler indefinitely. After this change the only
+  remaining per-call `http.Client{}` allocations in non-test code are in
+  `ssrfSafePortfolioClient` (transport cloning + `CheckRedirect` require
+  a fresh instance) and `lib/git.go` (already had a 30 s timeout). The
+  SSRF-safe client keeps its own dialer-cloned transport because DNS
+  resolution must be intercepted for the host allow-list check; reusing
+  a shared `*http.Client` here would let a redirect bypass that check.
 - refactor(go): sweep 5 sites that called `c.MustGet("user").(models.User)`
   directly to use the existing `currentUser(c) (models.User, bool)` helper.
   Three sites in `routes/auth.go` (`LinkHandler`, `UpdateLink`, `UpdateUser`)
