@@ -361,26 +361,7 @@ func TestValidateServiceTokenRejectsSessionToken(t *testing.T) {
 // ValidateToken succeeds AND the user-id claim resolves to a row in the
 // database. The returned user must have its password cleared.
 func TestAuthenticateRequestReturnsUserFromDB(t *testing.T) {
-	resetMockKeyring(t)
-	if err := InitAuthSystem(); err != nil {
-		t.Fatalf("InitAuthSystem: %v", err)
-	}
-	db := newLibTestDB(t)
-
-	user := models.User{
-		UUID:     uuid.NewString(),
-		Email:    "auth@example.com",
-		Name:     "Auth",
-		Password: "secret-hash",
-	}
-	if err := db.Create(&user).Error; err != nil {
-		t.Fatalf("seed user: %v", err)
-	}
-
-	tok, err := GenerateToken(user)
-	if err != nil {
-		t.Fatalf("GenerateToken: %v", err)
-	}
+	_, user, tok := seedUserWithToken(t, "auth@example.com", "Auth", "secret-hash")
 
 	got, err := AuthenticateRequest(tok)
 	if err != nil {
@@ -472,26 +453,7 @@ func TestAuthMiddlewareRejectsInvalidBearer(t *testing.T) {
 // submitted as "Bearer <token>" is treated the same as "<token>".
 func TestAuthMiddlewareStripsBearerPrefix(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	resetMockKeyring(t)
-	if err := InitAuthSystem(); err != nil {
-		t.Fatalf("InitAuthSystem: %v", err)
-	}
-	db := newLibTestDB(t)
-
-	user := models.User{
-		UUID:     uuid.NewString(),
-		Email:    "bearer@example.com",
-		Name:     "Bearer",
-		Password: "x",
-	}
-	if err := db.Create(&user).Error; err != nil {
-		t.Fatalf("seed user: %v", err)
-	}
-
-	tok, err := GenerateToken(user)
-	if err != nil {
-		t.Fatalf("GenerateToken: %v", err)
-	}
+	_, _, tok := seedUserWithToken(t, "bearer@example.com", "Bearer", "x")
 
 	var hit bool
 	r := gin.New()
@@ -556,26 +518,7 @@ func TestAuthMiddlewareRejectsTokenForMissingUser(t *testing.T) {
 // "user" key.
 func TestAuthMiddlewareSetsUserOnHappyPath(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	resetMockKeyring(t)
-	if err := InitAuthSystem(); err != nil {
-		t.Fatalf("InitAuthSystem: %v", err)
-	}
-	db := newLibTestDB(t)
-
-	user := models.User{
-		UUID:     uuid.NewString(),
-		Email:    "happy@example.com",
-		Name:     "Happy",
-		Password: "x",
-	}
-	if err := db.Create(&user).Error; err != nil {
-		t.Fatalf("seed user: %v", err)
-	}
-
-	tok, err := GenerateToken(user)
-	if err != nil {
-		t.Fatalf("GenerateToken: %v", err)
-	}
+	_, user, tok := seedUserWithToken(t, "happy@example.com", "Happy", "x")
 
 	var got models.User
 	r := gin.New()
