@@ -167,6 +167,26 @@ func assertBlocked(t *testing.T, w *httptest.ResponseRecorder, c *gin.Context) {
 	assert.True(t, c.IsAborted())
 }
 
+// runOptionalMiddleware drives a single GET /test request through the
+// given service's OptionalMiddleware. hasHeader=false sends the request
+// without any Authorization header. Returns the response recorder so
+// the caller can assert status codes; the handler closure is invoked
+// inside the test route.
+func runOptionalMiddleware(t *testing.T, service *WorkOSAuthService, authHeader string, hasHeader bool, handler func(c *gin.Context)) *httptest.ResponseRecorder {
+	t.Helper()
+	w := httptest.NewRecorder()
+	_, router := gin.CreateTestContext(w)
+	router.Use(service.OptionalMiddleware())
+	router.GET("/test", handler)
+	req := httptest.NewRequest("GET", "/test", nil)
+	if hasHeader {
+		req.Header.Set("Authorization", authHeader)
+	}
+	router.ServeHTTP(w, req)
+	return w
+}
+
+
 // saveHTTPGet saves the package-level httpGet var and registers a
 // t.Cleanup hook to restore it on test exit. Use at the top of any
 // subtest that monkey-patches httpGet.
@@ -749,14 +769,13 @@ func TestWorkOSAuthService_OptionalMiddleware(t *testing.T) {
 		{"allows request without authorization header", "", false, false},
 		{"allows request with invalid authorization header", "Invalid", true, false},
 		{"sets user context with valid Bearer token", "Bearer test-valid-test_at_example.com", true, true},
+		{"handles malformed authorization header gracefully", "InvalidFormat token", true, false},
+		{"handles empty authorization header", "", false, false},
+		{"handles authorization header with only Bearer", "Bearer", true, false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			w := httptest.NewRecorder()
-			_, router := gin.CreateTestContext(w)
-
-			router.Use(service.OptionalMiddleware())
-			router.GET("/test", func(c *gin.Context) {
+			handler := func(c *gin.Context) {
 				if tc.hasUserCtx {
 					userID, exists := c.Get("user_id")
 					assert.True(t, exists)
@@ -774,49 +793,8 @@ func TestWorkOSAuthService_OptionalMiddleware(t *testing.T) {
 					assert.False(t, exists)
 				}
 				c.JSON(200, gin.H{"status": "ok"})
-			})
-
-			req := httptest.NewRequest("GET", "/test", nil)
-			if tc.hasHeader {
-				req.Header.Set("Authorization", tc.authHeader)
 			}
-			router.ServeHTTP(w, req)
-
-			assert.Equal(t, http.StatusOK, w.Code)
-		})
-	}
-}
-
-func TestWorkOSAuthService_OptionalMiddleware_EdgeCases(t *testing.T) {
-	service, _ := newInitializedService(t)
-
-	gin.SetMode(gin.TestMode)
-
-	cases := []struct {
-		name        string
-		authHeader  string
-		noHeader    bool
-	}{
-		{"handles malformed authorization header gracefully", "InvalidFormat token", false},
-		{"handles empty authorization header", "", true},
-		{"handles authorization header with only Bearer", "Bearer", false},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			w := httptest.NewRecorder()
-			_, router := gin.CreateTestContext(w)
-
-			router.Use(service.OptionalMiddleware())
-			router.GET("/test", func(c *gin.Context) {
-				c.JSON(200, gin.H{"status": "ok"})
-			})
-
-			req := httptest.NewRequest("GET", "/test", nil)
-			if !tc.noHeader {
-				req.Header.Set("Authorization", tc.authHeader)
-			}
-			router.ServeHTTP(w, req)
-
+			w := runOptionalMiddleware(t, service, tc.authHeader, tc.hasHeader, handler)
 			assert.Equal(t, http.StatusOK, w.Code)
 		})
 	}
