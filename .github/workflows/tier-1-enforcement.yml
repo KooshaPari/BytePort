@@ -136,6 +136,14 @@ jobs:
       - name: Check CHANGELOG.md was modified
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
+            # Dependabot PRs don't add CHANGELOG entries by default. The carve-out
+            # is at the workflow level rather than the mergify config because
+            # this check is what produces the mergeStateStatus: UNSTABLE flag
+            # that blocks merges. See #371 for the precedent.
+            if [ "${{ github.event.pull_request.user.login }}" = "dependabot[bot]" ]; then
+              echo "⏭️ Skipping CHANGELOG check for Dependabot PR"
+              exit 0
+            fi
             base="${{ github.event.pull_request.base.sha }}"
             head="${{ github.event.pull_request.head.sha }}"
             if git diff --name-only "$base"..."$head" | grep -q "^CHANGELOG.md"; then

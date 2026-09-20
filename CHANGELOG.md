@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- CI: the Tier-1 `CHANGELOG Update Check` in `.github/workflows/tier-1-enforcement.yml`
+  now skips PRs authored by `dependabot[bot]`. Dependabot bumps don't add
+  `CHANGELOG.md` entries by default, so the gate's `git diff … | grep -q
+  "^CHANGELOG.md"` test always failed for them and the PR landed with
+  `mergeStateStatus: UNSTABLE`. The carve-out sits at the workflow level (not
+  `.mergify.yml`) because the workflow is what produces the UNSTABLE flag.
+  See PR #371 (the codecov-action bump that exposed this) and PR #391 (this
+  fix). Non-Dependabot PRs still have to update CHANGELOG.md.
+
 - test(go): extract the repeated authenticated-setup block in
   `byteport/lib/auth_test.go`. Three tests carried the same 20-line preamble
   (reset the mock keyring, `InitAuthSystem`, open a DB, persist a user, mint a
