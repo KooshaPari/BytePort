@@ -152,6 +152,26 @@ func assertBlocked(t *testing.T, w *httptest.ResponseRecorder, c *gin.Context) {
 	assert.True(t, c.IsAborted())
 }
 
+// assertAuthError asserts a call returned an error, the response value is
+// nil, and the error contains wantMsg. response can be any pointer type
+// (typically *UserInfo or *TokenResponse); the helper only checks for
+// nil-ness.
+func assertAuthError(t *testing.T, err error, response interface{}, wantMsg string) {
+	t.Helper()
+	assert.Error(t, err)
+	assert.Nil(t, response)
+	assert.Contains(t, err.Error(), wantMsg)
+}
+
+// assertAuthSuccess asserts a call returned no error and a non-nil
+// response. Use it as the canonical "this should succeed" preamble
+// before additional field-level assertions.
+func assertAuthSuccess(t *testing.T, err error, response interface{}) {
+	t.Helper()
+	require.NoError(t, err)
+	assert.NotNil(t, response)
+}
+
 // =============================================================================
 // Constructor / Initialize
 // =============================================================================
@@ -200,9 +220,7 @@ func TestWorkOSAuthService_ValidateToken(t *testing.T) {
 
 	t.Run("fails when client not initialized", func(t *testing.T) {
 		userInfo, err := service.ValidateToken(ctx, "test-token")
-		assert.Error(t, err)
-		assert.Nil(t, userInfo)
-		assert.Contains(t, err.Error(), "WorkOS client not initialized")
+		assertAuthError(t, err, userInfo, "WorkOS client not initialized")
 	})
 
 	t.Run("validates test token successfully after initialization", func(t *testing.T) {
@@ -526,9 +544,7 @@ func TestWorkOSAuthService_ExchangeCodeForToken(t *testing.T) {
 
 	t.Run("fails when client not initialized", func(t *testing.T) {
 		tokenResp, err := service.ExchangeCodeForToken(ctx, "test-code")
-		assert.Error(t, err)
-		assert.Nil(t, tokenResp)
-		assert.Contains(t, err.Error(), "WorkOS client not initialized")
+		assertAuthError(t, err, tokenResp, "WorkOS client not initialized")
 	})
 
 	t.Run("exchanges code successfully", func(t *testing.T) {
@@ -549,24 +565,18 @@ func TestWorkOSAuthService_ExchangeCodeForToken_EdgeCases(t *testing.T) {
 
 	t.Run("handles empty code", func(t *testing.T) {
 		tokenResp, err := service.ExchangeCodeForToken(ctx, "")
-		assert.Error(t, err)
-		assert.Nil(t, tokenResp)
-		assert.Contains(t, err.Error(), "authorization code is required")
+		assertAuthError(t, err, tokenResp, "authorization code is required")
 	})
 
 	t.Run("handles whitespace code", func(t *testing.T) {
 		tokenResp, err := service.ExchangeCodeForToken(ctx, "   \t\n  ")
-		assert.Error(t, err)
-		assert.Nil(t, tokenResp)
-		assert.Contains(t, err.Error(), "authorization code is required")
+		assertAuthError(t, err, tokenResp, "authorization code is required")
 	})
 
 	t.Run("handles uninitialized service", func(t *testing.T) {
 		uninitializedService, _ := newUninitializedService(t)
 		tokenResp, err := uninitializedService.ExchangeCodeForToken(ctx, "test-code")
-		assert.Error(t, err)
-		assert.Nil(t, tokenResp)
-		assert.Contains(t, err.Error(), "WorkOS client not initialized")
+		assertAuthError(t, err, tokenResp, "WorkOS client not initialized")
 	})
 }
 
@@ -595,9 +605,7 @@ func TestHandleTestCodeExchange(t *testing.T) {
 
 	t.Run("with invalid format - too few parts", func(t *testing.T) {
 		tokenResp, err := service.handleTestCodeExchange("test")
-		assert.Error(t, err)
-		assert.Nil(t, tokenResp)
-		assert.Contains(t, err.Error(), "invalid test code format")
+		assertAuthError(t, err, tokenResp, "invalid test code format")
 	})
 
 	t.Run("with invalid format - empty parts", func(t *testing.T) {
