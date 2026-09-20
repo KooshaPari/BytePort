@@ -242,61 +242,48 @@ func TestWorkOSAuthService_ValidateJWTToken(t *testing.T) {
 func TestWorkOSAuthService_ValidateJWTToken_EdgeCases(t *testing.T) {
 	service, ctx := newInitializedService(t)
 
-	t.Run("handles empty token", func(t *testing.T) {
-		userInfo, err := service.ValidateToken(ctx, "")
-		assert.Error(t, err)
-		assert.Nil(t, userInfo)
-		assert.Contains(t, err.Error(), "token is empty")
-	})
+	errorCases := []struct {
+		name      string
+		token     string
+		wantErr   string
+	}{
+		{"handles empty token", "", "token is empty"},
+		{"handles whitespace-only token", "   \t\n  ", "token is empty"},
+		{"handles invalid JWT format", "invalid.jwt.token", "failed to parse JWT"},
+		{"handles malformed JWT", "not-a-jwt", "failed to parse JWT"},
+	}
+	for _, tc := range errorCases {
+		t.Run(tc.name, func(t *testing.T) {
+			userInfo, err := service.ValidateToken(ctx, tc.token)
+			assert.Error(t, err)
+			assert.Nil(t, userInfo)
+			assert.Contains(t, err.Error(), tc.wantErr)
+		})
+	}
 
-	t.Run("handles whitespace-only token", func(t *testing.T) {
-		userInfo, err := service.ValidateToken(ctx, "   \t\n  ")
-		assert.Error(t, err)
-		assert.Nil(t, userInfo)
-		assert.Contains(t, err.Error(), "token is empty")
-	})
-
-	t.Run("handles invalid JWT format", func(t *testing.T) {
-		userInfo, err := service.ValidateToken(ctx, "invalid.jwt.token")
-		assert.Error(t, err)
-		assert.Nil(t, userInfo)
-		assert.Contains(t, err.Error(), "failed to parse JWT")
-	})
-
-	t.Run("handles malformed JWT", func(t *testing.T) {
-		userInfo, err := service.ValidateToken(ctx, "not-a-jwt")
-		assert.Error(t, err)
-		assert.Nil(t, userInfo)
-		assert.Contains(t, err.Error(), "failed to parse JWT")
-	})
-
-	t.Run("handles test token with minimal format", func(t *testing.T) {
-		userInfo, err := service.ValidateToken(ctx, "test-user123")
-		require.NoError(t, err)
-		assert.NotNil(t, userInfo)
-		assert.Equal(t, "user123", userInfo.ID)
-		assert.Equal(t, "test@example.com", userInfo.Email)
-		assert.Equal(t, "Test", userInfo.FirstName)
-		assert.Equal(t, "User", userInfo.LastName)
-	})
-
-	t.Run("handles test token with email", func(t *testing.T) {
-		userInfo, err := service.ValidateToken(ctx, "test-user456-john_at_example.com")
-		require.NoError(t, err)
-		assert.NotNil(t, userInfo)
-		assert.Equal(t, "user456", userInfo.ID)
-		assert.Equal(t, "john@example.com", userInfo.Email)
-		assert.Equal(t, "Test", userInfo.FirstName)
-		assert.Equal(t, "User", userInfo.LastName)
-	})
-
-	t.Run("handles mock token", func(t *testing.T) {
-		userInfo, err := service.ValidateToken(ctx, "mock-user789")
-		require.NoError(t, err)
-		assert.NotNil(t, userInfo)
-		assert.Equal(t, "user789", userInfo.ID)
-		assert.Equal(t, "test@example.com", userInfo.Email)
-	})
+	successCases := []struct {
+		name      string
+		token     string
+		wantID    string
+		wantEmail string
+	}{
+		{"handles test token with minimal format", "test-user123", "user123", "test@example.com"},
+		{"handles test token with email", "test-user456-john_at_example.com", "user456", "john@example.com"},
+		{"handles mock token", "mock-user789", "user789", "test@example.com"},
+	}
+	for _, tc := range successCases {
+		t.Run(tc.name, func(t *testing.T) {
+			userInfo, err := service.ValidateToken(ctx, tc.token)
+			require.NoError(t, err)
+			assert.NotNil(t, userInfo)
+			assert.Equal(t, tc.wantID, userInfo.ID)
+			assert.Equal(t, tc.wantEmail, userInfo.Email)
+			if tc.wantEmail != "test@example.com" {
+				assert.Equal(t, "Test", userInfo.FirstName)
+				assert.Equal(t, "User", userInfo.LastName)
+			}
+		})
+	}
 
 	t.Run("handles invalid test token format", func(t *testing.T) {
 		userInfo, err := service.ValidateToken(ctx, "test")
