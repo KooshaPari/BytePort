@@ -70,8 +70,7 @@ func LinkHandler(c *gin.Context) {
 }
 func Login(c *gin.Context) {
 	var req models.LoginRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		respondBadRequest(c, err.Error())
+	if !bindJSON(c, &req, "") {
 		return
 	}
 
@@ -104,8 +103,7 @@ func Login(c *gin.Context) {
 }
 func Signup(c *gin.Context) {
 	var req models.SignupRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		respondBadRequest(c, err.Error())
+	if !bindJSON(c, &req, "") {
 		return
 	}
 
@@ -229,8 +227,7 @@ func UpdateUser(c *gin.Context) {
 		return
 	}
 	var req models.User
-	if err := c.ShouldBindJSON(&req); err != nil {
-		respondBadRequest(c, err.Error())
+	if !bindJSON(c, &req, "") {
 		return
 	}
 	if req.Name != "" {
