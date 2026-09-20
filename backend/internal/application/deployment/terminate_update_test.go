@@ -9,89 +9,18 @@ import (
 	"github.com/byteport/api/internal/domain/deployment"
 )
 
-// Mock implementations for terminate/update tests
-type MockRepositoryTerminate struct {
-	FindByUUIDFunc func(ctx context.Context, uuid string) (*deployment.Deployment, error)
-	UpdateFunc     func(ctx context.Context, dep *deployment.Deployment) error
-}
-
-func (m *MockRepositoryTerminate) Create(ctx context.Context, dep *deployment.Deployment) error {
-	return nil
-}
-
-func (m *MockRepositoryTerminate) Update(ctx context.Context, dep *deployment.Deployment) error {
-	if m.UpdateFunc != nil {
-		return m.UpdateFunc(ctx, dep)
-	}
-	return nil
-}
-
-func (m *MockRepositoryTerminate) Delete(ctx context.Context, uuid string) error {
-	return nil
-}
-
-func (m *MockRepositoryTerminate) FindByUUID(ctx context.Context, uuid string) (*deployment.Deployment, error) {
-	if m.FindByUUIDFunc != nil {
-		return m.FindByUUIDFunc(ctx, uuid)
-	}
-	return nil, nil
-}
-
-func (m *MockRepositoryTerminate) FindByOwner(ctx context.Context, owner string) ([]*deployment.Deployment, error) {
-	return []*deployment.Deployment{}, nil
-}
-
-func (m *MockRepositoryTerminate) FindByProject(ctx context.Context, projectUUID string) ([]*deployment.Deployment, error) {
-	return []*deployment.Deployment{}, nil
-}
-
-func (m *MockRepositoryTerminate) FindByStatus(ctx context.Context, status deployment.Status) ([]*deployment.Deployment, error) {
-	return []*deployment.Deployment{}, nil
-}
-
-func (m *MockRepositoryTerminate) List(ctx context.Context, offset, limit int) ([]*deployment.Deployment, error) {
-	return []*deployment.Deployment{}, nil
-}
-
-func (m *MockRepositoryTerminate) Count(ctx context.Context) (int64, error) {
-	return 0, nil
-}
-
-func (m *MockRepositoryTerminate) CountByOwner(ctx context.Context, owner string) (int64, error) {
-	return 0, nil
-}
-
-type MockServiceTerminate struct {
-	CanUserAccessDeploymentFunc func(ctx context.Context, userUUID, deploymentUUID string) (bool, error)
-}
-
-func (m *MockServiceTerminate) ValidateDeployment(ctx context.Context, dep *deployment.Deployment) error {
-	return nil
-}
-
-func (m *MockServiceTerminate) CanUserAccessDeployment(ctx context.Context, userUUID, deploymentUUID string) (bool, error) {
-	if m.CanUserAccessDeploymentFunc != nil {
-		return m.CanUserAccessDeploymentFunc(ctx, userUUID, deploymentUUID)
-	}
-	return true, nil
-}
-
-func (m *MockServiceTerminate) CalculateEstimatedCost(ctx context.Context, dep *deployment.Deployment) (*deployment.CostInfo, error) {
-	return &deployment.CostInfo{}, nil
-}
-
-func (m *MockServiceTerminate) SelectOptimalProvider(ctx context.Context, serviceType string, constraints map[string]interface{}) (string, error) {
-	return "vercel", nil
-}
+// MockRepository and MockService live in mocks_test.go; the terminate / update
+// tests below use them directly. Where a test needs FindByUUID to return
+// (nil, nil) instead of (nil, NotFoundError), it sets FindByUUIDFunc explicitly.
 
 // ==================== Terminate Deployment Tests ====================
 
 func TestNewTerminateDeploymentUseCase(t *testing.T) {
-	repo := &MockRepositoryTerminate{}
-	service := &MockServiceTerminate{}
-	
+	repo := &MockRepository{}
+	service := &MockService{}
+
 	uc := NewTerminateDeploymentUseCase(repo, service)
-	
+
 	if uc == nil {
 		t.Fatal("Expected use case to be created, got nil")
 	}
@@ -99,8 +28,8 @@ func TestNewTerminateDeploymentUseCase(t *testing.T) {
 
 func TestTerminateDeployment_Success(t *testing.T) {
 	dep, _ := deployment.NewDeployment("test-deploy", "owner-123", nil)
-	
-	repo := &MockRepositoryTerminate{
+
+	repo := &MockRepository{
 		FindByUUIDFunc: func(ctx context.Context, uuid string) (*deployment.Deployment, error) {
 			return dep, nil
 		},
@@ -108,15 +37,15 @@ func TestTerminateDeployment_Success(t *testing.T) {
 			return nil
 		},
 	}
-	
-	service := &MockServiceTerminate{
+
+	service := &MockService{
 		CanUserAccessDeploymentFunc: func(ctx context.Context, userUUID, deploymentUUID string) (bool, error) {
 			return true, nil
 		},
 	}
-	
+
 	uc := NewTerminateDeploymentUseCase(repo, service)
-	
+
 	response, err := uc.Execute(context.Background(), dep.UUID(), "owner-123")
 	if err != nil {
 		t.Errorf("Expected no error, got: %v", err)
@@ -133,15 +62,15 @@ func TestTerminateDeployment_Success(t *testing.T) {
 }
 
 func TestTerminateDeployment_EmptyUUID(t *testing.T) {
-	repo := &MockRepositoryTerminate{}
-	service := &MockServiceTerminate{}
+	repo := &MockRepository{}
+	service := &MockService{}
 	uc := NewTerminateDeploymentUseCase(repo, service)
-	
+
 	_, err := uc.Execute(context.Background(), "", "owner-123")
 	if err == nil {
 		t.Error("Expected validation error for empty UUID, got nil")
 	}
-	
+
 	var appErr *ApplicationError
 	if !errors.As(err, &appErr) {
 		t.Fatalf("Expected ApplicationError, got: %T", err)
@@ -152,15 +81,15 @@ func TestTerminateDeployment_EmptyUUID(t *testing.T) {
 }
 
 func TestTerminateDeployment_EmptyUserUUID(t *testing.T) {
-	repo := &MockRepositoryTerminate{}
-	service := &MockServiceTerminate{}
+	repo := &MockRepository{}
+	service := &MockService{}
 	uc := NewTerminateDeploymentUseCase(repo, service)
-	
+
 	_, err := uc.Execute(context.Background(), "deploy-uuid", "")
 	if err == nil {
 		t.Error("Expected unauthorized error for empty user UUID, got nil")
 	}
-	
+
 	var appErr *ApplicationError
 	if !errors.As(err, &appErr) {
 		t.Fatalf("Expected ApplicationError, got: %T", err)
@@ -171,19 +100,19 @@ func TestTerminateDeployment_EmptyUserUUID(t *testing.T) {
 }
 
 func TestTerminateDeployment_NotFound(t *testing.T) {
-	repo := &MockRepositoryTerminate{
+	repo := &MockRepository{
 		FindByUUIDFunc: func(ctx context.Context, uuid string) (*deployment.Deployment, error) {
 			return nil, nil
 		},
 	}
-	service := &MockServiceTerminate{}
+	service := &MockService{}
 	uc := NewTerminateDeploymentUseCase(repo, service)
-	
+
 	_, err := uc.Execute(context.Background(), "nonexistent-uuid", "owner-123")
 	if err == nil {
 		t.Error("Expected not found error, got nil")
 	}
-	
+
 	var appErr *ApplicationError
 	if !errors.As(err, &appErr) {
 		t.Fatalf("Expected ApplicationError, got: %T", err)
@@ -194,19 +123,19 @@ func TestTerminateDeployment_NotFound(t *testing.T) {
 }
 
 func TestTerminateDeployment_RepositoryError(t *testing.T) {
-	repo := &MockRepositoryTerminate{
+	repo := &MockRepository{
 		FindByUUIDFunc: func(ctx context.Context, uuid string) (*deployment.Deployment, error) {
 			return nil, errors.New("database error")
 		},
 	}
-	service := &MockServiceTerminate{}
+	service := &MockService{}
 	uc := NewTerminateDeploymentUseCase(repo, service)
-	
+
 	_, err := uc.Execute(context.Background(), "deploy-uuid", "owner-123")
 	if err == nil {
 		t.Error("Expected internal error, got nil")
 	}
-	
+
 	var appErr *ApplicationError
 	if !errors.As(err, &appErr) {
 		t.Fatalf("Expected ApplicationError, got: %T", err)
@@ -218,19 +147,19 @@ func TestTerminateDeployment_RepositoryError(t *testing.T) {
 
 func TestTerminateDeployment_PermissionCheckError(t *testing.T) {
 	dep, _ := deployment.NewDeployment("test-deploy", "owner-123", nil)
-	
-	repo := &MockRepositoryTerminate{
+
+	repo := &MockRepository{
 		FindByUUIDFunc: func(ctx context.Context, uuid string) (*deployment.Deployment, error) {
 			return dep, nil
 		},
 	}
-	service := &MockServiceTerminate{
+	service := &MockService{
 		CanUserAccessDeploymentFunc: func(ctx context.Context, userUUID, deploymentUUID string) (bool, error) {
 			return false, errors.New("permission check failed")
 		},
 	}
 	uc := NewTerminateDeploymentUseCase(repo, service)
-	
+
 	_, err := uc.Execute(context.Background(), dep.UUID(), "owner-123")
 	if err == nil {
 		t.Error("Expected internal error, got nil")
@@ -239,24 +168,24 @@ func TestTerminateDeployment_PermissionCheckError(t *testing.T) {
 
 func TestTerminateDeployment_Forbidden(t *testing.T) {
 	dep, _ := deployment.NewDeployment("test-deploy", "owner-123", nil)
-	
-	repo := &MockRepositoryTerminate{
+
+	repo := &MockRepository{
 		FindByUUIDFunc: func(ctx context.Context, uuid string) (*deployment.Deployment, error) {
 			return dep, nil
 		},
 	}
-	service := &MockServiceTerminate{
+	service := &MockService{
 		CanUserAccessDeploymentFunc: func(ctx context.Context, userUUID, deploymentUUID string) (bool, error) {
 			return false, nil
 		},
 	}
 	uc := NewTerminateDeploymentUseCase(repo, service)
-	
+
 	_, err := uc.Execute(context.Background(), dep.UUID(), "other-user")
 	if err == nil {
 		t.Error("Expected forbidden error, got nil")
 	}
-	
+
 	var appErr *ApplicationError
 	if !errors.As(err, &appErr) {
 		t.Fatalf("Expected ApplicationError, got: %T", err)
@@ -269,24 +198,24 @@ func TestTerminateDeployment_Forbidden(t *testing.T) {
 func TestTerminateDeployment_AlreadyTerminated(t *testing.T) {
 	dep, _ := deployment.NewDeployment("test-deploy", "owner-123", nil)
 	_ = dep.SetStatus(deployment.StatusTerminated)
-	
-	repo := &MockRepositoryTerminate{
+
+	repo := &MockRepository{
 		FindByUUIDFunc: func(ctx context.Context, uuid string) (*deployment.Deployment, error) {
 			return dep, nil
 		},
 	}
-	service := &MockServiceTerminate{
+	service := &MockService{
 		CanUserAccessDeploymentFunc: func(ctx context.Context, userUUID, deploymentUUID string) (bool, error) {
 			return true, nil
 		},
 	}
 	uc := NewTerminateDeploymentUseCase(repo, service)
-	
+
 	_, err := uc.Execute(context.Background(), dep.UUID(), "owner-123")
 	if err == nil {
 		t.Error("Expected conflict error, got nil")
 	}
-	
+
 	var appErr *ApplicationError
 	if !errors.As(err, &appErr) {
 		t.Fatalf("Expected ApplicationError, got: %T", err)
@@ -298,8 +227,8 @@ func TestTerminateDeployment_AlreadyTerminated(t *testing.T) {
 
 func TestTerminateDeployment_UpdateError(t *testing.T) {
 	dep, _ := deployment.NewDeployment("test-deploy", "owner-123", nil)
-	
-	repo := &MockRepositoryTerminate{
+
+	repo := &MockRepository{
 		FindByUUIDFunc: func(ctx context.Context, uuid string) (*deployment.Deployment, error) {
 			return dep, nil
 		},
@@ -307,18 +236,18 @@ func TestTerminateDeployment_UpdateError(t *testing.T) {
 			return errors.New("update failed")
 		},
 	}
-	service := &MockServiceTerminate{
+	service := &MockService{
 		CanUserAccessDeploymentFunc: func(ctx context.Context, userUUID, deploymentUUID string) (bool, error) {
 			return true, nil
 		},
 	}
 	uc := NewTerminateDeploymentUseCase(repo, service)
-	
+
 	_, err := uc.Execute(context.Background(), dep.UUID(), "owner-123")
 	if err == nil {
 		t.Error("Expected internal error, got nil")
 	}
-	
+
 	var appErr *ApplicationError
 	if !errors.As(err, &appErr) {
 		t.Fatalf("Expected ApplicationError, got: %T", err)
@@ -331,11 +260,11 @@ func TestTerminateDeployment_UpdateError(t *testing.T) {
 // ==================== Update Status Tests ====================
 
 func TestNewUpdateStatusUseCase(t *testing.T) {
-	repo := &MockRepositoryTerminate{}
-	service := &MockServiceTerminate{}
-	
+	repo := &MockRepository{}
+	service := &MockService{}
+
 	uc := NewUpdateStatusUseCase(repo, service)
-	
+
 	if uc == nil {
 		t.Fatal("Expected use case to be created, got nil")
 	}
@@ -343,8 +272,8 @@ func TestNewUpdateStatusUseCase(t *testing.T) {
 
 func TestUpdateStatus_Success(t *testing.T) {
 	dep, _ := deployment.NewDeployment("test-deploy", "owner-123", nil)
-	
-	repo := &MockRepositoryTerminate{
+
+	repo := &MockRepository{
 		FindByUUIDFunc: func(ctx context.Context, uuid string) (*deployment.Deployment, error) {
 			return dep, nil
 		},
@@ -352,13 +281,13 @@ func TestUpdateStatus_Success(t *testing.T) {
 			return nil
 		},
 	}
-	service := &MockServiceTerminate{
+	service := &MockService{
 		CanUserAccessDeploymentFunc: func(ctx context.Context, userUUID, deploymentUUID string) (bool, error) {
 			return true, nil
 		},
 	}
 	uc := NewUpdateStatusUseCase(repo, service)
-	
+
 	req := UpdateStatusRequest{Status: "detecting"}
 	err := uc.Execute(context.Background(), dep.UUID(), req, "owner-123")
 	if err != nil {
@@ -367,16 +296,16 @@ func TestUpdateStatus_Success(t *testing.T) {
 }
 
 func TestUpdateStatus_EmptyUUID(t *testing.T) {
-	repo := &MockRepositoryTerminate{}
-	service := &MockServiceTerminate{}
+	repo := &MockRepository{}
+	service := &MockService{}
 	uc := NewUpdateStatusUseCase(repo, service)
-	
+
 	req := UpdateStatusRequest{Status: "detecting"}
 	err := uc.Execute(context.Background(), "", req, "owner-123")
 	if err == nil {
 		t.Error("Expected validation error for empty UUID, got nil")
 	}
-	
+
 	var appErr *ApplicationError
 	if !errors.As(err, &appErr) {
 		t.Fatalf("Expected ApplicationError, got: %T", err)
@@ -387,16 +316,16 @@ func TestUpdateStatus_EmptyUUID(t *testing.T) {
 }
 
 func TestUpdateStatus_EmptyStatus(t *testing.T) {
-	repo := &MockRepositoryTerminate{}
-	service := &MockServiceTerminate{}
+	repo := &MockRepository{}
+	service := &MockService{}
 	uc := NewUpdateStatusUseCase(repo, service)
-	
+
 	req := UpdateStatusRequest{Status: ""}
 	err := uc.Execute(context.Background(), "deploy-uuid", req, "owner-123")
 	if err == nil {
 		t.Error("Expected validation error for empty status, got nil")
 	}
-	
+
 	var appErr *ApplicationError
 	if !errors.As(err, &appErr) {
 		t.Fatalf("Expected ApplicationError, got: %T", err)
@@ -407,16 +336,16 @@ func TestUpdateStatus_EmptyStatus(t *testing.T) {
 }
 
 func TestUpdateStatus_EmptyUserUUID(t *testing.T) {
-	repo := &MockRepositoryTerminate{}
-	service := &MockServiceTerminate{}
+	repo := &MockRepository{}
+	service := &MockService{}
 	uc := NewUpdateStatusUseCase(repo, service)
-	
+
 	req := UpdateStatusRequest{Status: "detecting"}
 	err := uc.Execute(context.Background(), "deploy-uuid", req, "")
 	if err == nil {
 		t.Error("Expected unauthorized error for empty user UUID, got nil")
 	}
-	
+
 	var appErr *ApplicationError
 	if !errors.As(err, &appErr) {
 		t.Fatalf("Expected ApplicationError, got: %T", err)
@@ -427,16 +356,16 @@ func TestUpdateStatus_EmptyUserUUID(t *testing.T) {
 }
 
 func TestUpdateStatus_InvalidStatus(t *testing.T) {
-	repo := &MockRepositoryTerminate{}
-	service := &MockServiceTerminate{}
+	repo := &MockRepository{}
+	service := &MockService{}
 	uc := NewUpdateStatusUseCase(repo, service)
-	
+
 	req := UpdateStatusRequest{Status: "invalid-status"}
 	err := uc.Execute(context.Background(), "deploy-uuid", req, "owner-123")
 	if err == nil {
 		t.Error("Expected validation error for invalid status, got nil")
 	}
-	
+
 	var appErr *ApplicationError
 	if !errors.As(err, &appErr) {
 		t.Fatalf("Expected ApplicationError, got: %T", err)
@@ -447,20 +376,20 @@ func TestUpdateStatus_InvalidStatus(t *testing.T) {
 }
 
 func TestUpdateStatus_DeploymentNotFound(t *testing.T) {
-	repo := &MockRepositoryTerminate{
+	repo := &MockRepository{
 		FindByUUIDFunc: func(ctx context.Context, uuid string) (*deployment.Deployment, error) {
 			return nil, nil
 		},
 	}
-	service := &MockServiceTerminate{}
+	service := &MockService{}
 	uc := NewUpdateStatusUseCase(repo, service)
-	
+
 	req := UpdateStatusRequest{Status: "detecting"}
 	err := uc.Execute(context.Background(), "nonexistent-uuid", req, "owner-123")
 	if err == nil {
 		t.Error("Expected not found error, got nil")
 	}
-	
+
 	var appErr *ApplicationError
 	if !errors.As(err, &appErr) {
 		t.Fatalf("Expected ApplicationError, got: %T", err)
@@ -471,20 +400,20 @@ func TestUpdateStatus_DeploymentNotFound(t *testing.T) {
 }
 
 func TestUpdateStatus_RepositoryError(t *testing.T) {
-	repo := &MockRepositoryTerminate{
+	repo := &MockRepository{
 		FindByUUIDFunc: func(ctx context.Context, uuid string) (*deployment.Deployment, error) {
 			return nil, errors.New("database error")
 		},
 	}
-	service := &MockServiceTerminate{}
+	service := &MockService{}
 	uc := NewUpdateStatusUseCase(repo, service)
-	
+
 	req := UpdateStatusRequest{Status: "detecting"}
 	err := uc.Execute(context.Background(), "deploy-uuid", req, "owner-123")
 	if err == nil {
 		t.Error("Expected internal error, got nil")
 	}
-	
+
 	var appErr *ApplicationError
 	if !errors.As(err, &appErr) {
 		t.Fatalf("Expected ApplicationError, got: %T", err)
@@ -496,19 +425,19 @@ func TestUpdateStatus_RepositoryError(t *testing.T) {
 
 func TestUpdateStatus_PermissionCheckError(t *testing.T) {
 	dep, _ := deployment.NewDeployment("test-deploy", "owner-123", nil)
-	
-	repo := &MockRepositoryTerminate{
+
+	repo := &MockRepository{
 		FindByUUIDFunc: func(ctx context.Context, uuid string) (*deployment.Deployment, error) {
 			return dep, nil
 		},
 	}
-	service := &MockServiceTerminate{
+	service := &MockService{
 		CanUserAccessDeploymentFunc: func(ctx context.Context, userUUID, deploymentUUID string) (bool, error) {
 			return false, errors.New("permission check failed")
 		},
 	}
 	uc := NewUpdateStatusUseCase(repo, service)
-	
+
 	req := UpdateStatusRequest{Status: "detecting"}
 	err := uc.Execute(context.Background(), dep.UUID(), req, "owner-123")
 	if err == nil {
@@ -518,25 +447,25 @@ func TestUpdateStatus_PermissionCheckError(t *testing.T) {
 
 func TestUpdateStatus_Forbidden(t *testing.T) {
 	dep, _ := deployment.NewDeployment("test-deploy", "owner-123", nil)
-	
-	repo := &MockRepositoryTerminate{
+
+	repo := &MockRepository{
 		FindByUUIDFunc: func(ctx context.Context, uuid string) (*deployment.Deployment, error) {
 			return dep, nil
 		},
 	}
-	service := &MockServiceTerminate{
+	service := &MockService{
 		CanUserAccessDeploymentFunc: func(ctx context.Context, userUUID, deploymentUUID string) (bool, error) {
 			return false, nil
 		},
 	}
 	uc := NewUpdateStatusUseCase(repo, service)
-	
+
 	req := UpdateStatusRequest{Status: "detecting"}
 	err := uc.Execute(context.Background(), dep.UUID(), req, "other-user")
 	if err == nil {
 		t.Error("Expected forbidden error, got nil")
 	}
-	
+
 	var appErr *ApplicationError
 	if !errors.As(err, &appErr) {
 		t.Fatalf("Expected ApplicationError, got: %T", err)
@@ -548,26 +477,26 @@ func TestUpdateStatus_Forbidden(t *testing.T) {
 
 func TestUpdateStatus_InvalidTransition(t *testing.T) {
 	dep, _ := deployment.NewDeployment("test-deploy", "owner-123", nil)
-	
-	repo := &MockRepositoryTerminate{
+
+	repo := &MockRepository{
 		FindByUUIDFunc: func(ctx context.Context, uuid string) (*deployment.Deployment, error) {
 			return dep, nil
 		},
 	}
-	service := &MockServiceTerminate{
+	service := &MockService{
 		CanUserAccessDeploymentFunc: func(ctx context.Context, userUUID, deploymentUUID string) (bool, error) {
 			return true, nil
 		},
 	}
 	uc := NewUpdateStatusUseCase(repo, service)
-	
+
 	// Try invalid transition: pending -> deployed (should go through detecting, provisioning, deploying first)
 	req := UpdateStatusRequest{Status: "deployed"}
 	err := uc.Execute(context.Background(), dep.UUID(), req, "owner-123")
 	if err == nil {
 		t.Error("Expected conflict error for invalid transition, got nil")
 	}
-	
+
 	var appErr *ApplicationError
 	if !errors.As(err, &appErr) {
 		t.Fatalf("Expected ApplicationError, got: %T", err)
@@ -579,8 +508,8 @@ func TestUpdateStatus_InvalidTransition(t *testing.T) {
 
 func TestUpdateStatus_UpdateError(t *testing.T) {
 	dep, _ := deployment.NewDeployment("test-deploy", "owner-123", nil)
-	
-	repo := &MockRepositoryTerminate{
+
+	repo := &MockRepository{
 		FindByUUIDFunc: func(ctx context.Context, uuid string) (*deployment.Deployment, error) {
 			return dep, nil
 		},
@@ -588,19 +517,19 @@ func TestUpdateStatus_UpdateError(t *testing.T) {
 			return errors.New("update failed")
 		},
 	}
-	service := &MockServiceTerminate{
+	service := &MockService{
 		CanUserAccessDeploymentFunc: func(ctx context.Context, userUUID, deploymentUUID string) (bool, error) {
 			return true, nil
 		},
 	}
 	uc := NewUpdateStatusUseCase(repo, service)
-	
+
 	req := UpdateStatusRequest{Status: "detecting"}
 	err := uc.Execute(context.Background(), dep.UUID(), req, "owner-123")
 	if err == nil {
 		t.Error("Expected internal error, got nil")
 	}
-	
+
 	var appErr *ApplicationError
 	if !errors.As(err, &appErr) {
 		t.Fatalf("Expected ApplicationError, got: %T", err)
@@ -614,23 +543,23 @@ func TestUpdateStatus_UpdateError(t *testing.T) {
 func TestTerminateDeployment_SetStatusError(t *testing.T) {
 	// Create a deployment that's already in a state where transition to terminated would be invalid
 	dep, _ := deployment.NewDeployment("test-deploy", "owner-123", nil)
-	// First set it to a status that can't transition to terminated 
+	// First set it to a status that can't transition to terminated
 	// Actually, all statuses can transition to terminated, so we need to simulate an internal SetStatus error
-	
-	repo := &MockRepositoryTerminate{
+
+	repo := &MockRepository{
 		FindByUUIDFunc: func(ctx context.Context, uuid string) (*deployment.Deployment, error) {
 			// Return a deployment that will cause SetStatus to fail
 			// Since all statuses can transition to terminated, we simulate an edge case
 			return dep, nil
 		},
 	}
-	service := &MockServiceTerminate{
+	service := &MockService{
 		CanUserAccessDeploymentFunc: func(ctx context.Context, userUUID, deploymentUUID string) (bool, error) {
 			return true, nil
 		},
 	}
 	uc := NewTerminateDeploymentUseCase(repo, service)
-	
+
 	_, err := uc.Execute(context.Background(), dep.UUID(), "owner-123")
 	// Since terminated is a valid transition from pending, this should succeed
 	// The actual domain logic prevents invalid transitions, but all can go to terminated
@@ -648,7 +577,7 @@ func TestTerminateDeploymentResponse(t *testing.T) {
 		Message:    "Success",
 		Terminated: now,
 	}
-	
+
 	if response.UUID != "test-uuid" {
 		t.Errorf("Expected UUID 'test-uuid', got %s", response.UUID)
 	}

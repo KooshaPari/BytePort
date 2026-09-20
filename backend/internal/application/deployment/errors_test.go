@@ -6,326 +6,174 @@ import (
 	"testing"
 )
 
-// TestApplicationError_Error tests Error() method with wrapped error
-func TestApplicationError_Error_WithWrappedError(t *testing.T) {
-	innerErr := errors.New("database error")
-	appErr := &ApplicationError{
-		Code:       "TEST_CODE",
-		Message:    "test message",
-		StatusCode: 500,
-		Err:        innerErr,
-	}
+// =============================================================================
+// ApplicationError.Error / Unwrap
+// =============================================================================
 
-	errorString := appErr.Error()
-	
-	if !strings.Contains(errorString, "TEST_CODE") {
-		t.Errorf("Expected error to contain code 'TEST_CODE', got: %s", errorString)
-	}
-	if !strings.Contains(errorString, "test message") {
-		t.Errorf("Expected error to contain message 'test message', got: %s", errorString)
-	}
-	if !strings.Contains(errorString, "database error") {
-		t.Errorf("Expected error to contain wrapped error, got: %s", errorString)
-	}
+func TestApplicationError_ErrorString(t *testing.T) {
+	t.Run("with wrapped error contains all parts", func(t *testing.T) {
+		innerErr := errors.New("database error")
+		appErr := &ApplicationError{
+			Code:       "TEST_CODE",
+			Message:    "test message",
+			StatusCode: 500,
+			Err:        innerErr,
+		}
+
+		got := appErr.Error()
+		for _, want := range []string{"TEST_CODE", "test message", "database error"} {
+			if !strings.Contains(got, want) {
+				t.Errorf("Error() = %q, want it to contain %q", got, want)
+			}
+		}
+	})
+
+	t.Run("without wrapped error is 'CODE: message'", func(t *testing.T) {
+		appErr := &ApplicationError{
+			Code:       "TEST_CODE",
+			Message:    "test message",
+			StatusCode: 400,
+		}
+
+		if got, want := appErr.Error(), "TEST_CODE: test message"; got != want {
+			t.Errorf("Error() = %q, want %q", got, want)
+		}
+	})
 }
 
-// TestApplicationError_Error tests Error() method without wrapped error
-func TestApplicationError_Error_WithoutWrappedError(t *testing.T) {
-	appErr := &ApplicationError{
-		Code:       "TEST_CODE",
-		Message:    "test message",
-		StatusCode: 400,
-		Err:        nil,
-	}
-
-	errorString := appErr.Error()
-	expected := "TEST_CODE: test message"
-	
-	if errorString != expected {
-		t.Errorf("Expected error '%s', got: %s", expected, errorString)
-	}
-}
-
-// TestApplicationError_Unwrap tests Unwrap() method
 func TestApplicationError_Unwrap(t *testing.T) {
-	innerErr := errors.New("inner error")
-	appErr := &ApplicationError{
-		Code:       "TEST_CODE",
-		Message:    "test message",
-		StatusCode: 500,
-		Err:        innerErr,
-	}
+	t.Run("returns wrapped error", func(t *testing.T) {
+		innerErr := errors.New("inner error")
+		appErr := &ApplicationError{Err: innerErr}
 
-	unwrapped := appErr.Unwrap()
-	if unwrapped != innerErr {
-		t.Errorf("Expected unwrapped error to be inner error, got: %v", unwrapped)
-	}
+		if got := appErr.Unwrap(); got != innerErr {
+			t.Errorf("Unwrap() = %v, want %v", got, innerErr)
+		}
+	})
+
+	t.Run("returns nil when no wrapped error", func(t *testing.T) {
+		appErr := &ApplicationError{}
+
+		if got := appErr.Unwrap(); got != nil {
+			t.Errorf("Unwrap() = %v, want nil", got)
+		}
+	})
 }
 
-// TestApplicationError_Unwrap_Nil tests Unwrap() with no wrapped error
-func TestApplicationError_Unwrap_Nil(t *testing.T) {
-	appErr := &ApplicationError{
-		Code:       "TEST_CODE",
-		Message:    "test message",
-		StatusCode: 400,
-		Err:        nil,
-	}
+// =============================================================================
+// NewXxxError constructors (table-driven)
+// =============================================================================
 
-	unwrapped := appErr.Unwrap()
-	if unwrapped != nil {
-		t.Errorf("Expected unwrapped error to be nil, got: %v", unwrapped)
-	}
-}
-
-// TestNewValidationError tests validation error constructor
-func TestNewValidationError(t *testing.T) {
-	err := NewValidationError("invalid input")
-	
-	if err == nil {
-		t.Fatal("Expected error to be created, got nil")
-	}
-
-	if err.Code != "VALIDATION_ERROR" {
-		t.Errorf("Expected code 'VALIDATION_ERROR', got: %s", err.Code)
-	}
-
-	if err.StatusCode != StatusBadRequest {
-		t.Errorf("Expected status code %d, got: %d", StatusBadRequest, err.StatusCode)
-	}
-
-	if err.Message != "invalid input" {
-		t.Errorf("Expected message 'invalid input', got: %s", err.Message)
-	}
-}
-
-// TestNewNotFoundError tests not found error constructor
-func TestNewNotFoundError(t *testing.T) {
-	err := NewNotFoundError("deployment")
-	
-	if err == nil {
-		t.Fatal("Expected error to be created, got nil")
-	}
-
-	if err.Code != "NOT_FOUND" {
-		t.Errorf("Expected code 'NOT_FOUND', got: %s", err.Code)
-	}
-
-	if err.StatusCode != StatusNotFound {
-		t.Errorf("Expected status code %d, got: %d", StatusNotFound, err.StatusCode)
-	}
-
-	if !strings.Contains(err.Message, "deployment") {
-		t.Errorf("Expected message to contain 'deployment', got: %s", err.Message)
-	}
-}
-
-// TestNewUnauthorizedError tests unauthorized error constructor
-func TestNewUnauthorizedError(t *testing.T) {
-	err := NewUnauthorizedError("authentication required")
-	
-	if err == nil {
-		t.Fatal("Expected error to be created, got nil")
-	}
-
-	if err.Code != "UNAUTHORIZED" {
-		t.Errorf("Expected code 'UNAUTHORIZED', got: %s", err.Code)
-	}
-
-	if err.StatusCode != StatusUnauthorized {
-		t.Errorf("Expected status code %d, got: %d", StatusUnauthorized, err.StatusCode)
-	}
-
-	if err.Message != "authentication required" {
-		t.Errorf("Expected message 'authentication required', got: %s", err.Message)
-	}
-}
-
-// TestNewForbiddenError tests forbidden error constructor
-func TestNewForbiddenError(t *testing.T) {
-	err := NewForbiddenError("access denied")
-	
-	if err == nil {
-		t.Fatal("Expected error to be created, got nil")
-	}
-
-	if err.Code != "FORBIDDEN" {
-		t.Errorf("Expected code 'FORBIDDEN', got: %s", err.Code)
-	}
-
-	if err.StatusCode != StatusForbidden {
-		t.Errorf("Expected status code %d, got: %d", StatusForbidden, err.StatusCode)
-	}
-
-	if err.Message != "access denied" {
-		t.Errorf("Expected message 'access denied', got: %s", err.Message)
-	}
-}
-
-// TestNewConflictError tests conflict error constructor
-func TestNewConflictError(t *testing.T) {
-	err := NewConflictError("resource already exists")
-	
-	if err == nil {
-		t.Fatal("Expected error to be created, got nil")
-	}
-
-	if err.Code != "CONFLICT" {
-		t.Errorf("Expected code 'CONFLICT', got: %s", err.Code)
-	}
-
-	if err.StatusCode != StatusConflict {
-		t.Errorf("Expected status code %d, got: %d", StatusConflict, err.StatusCode)
-	}
-
-	if err.Message != "resource already exists" {
-		t.Errorf("Expected message 'resource already exists', got: %s", err.Message)
-	}
-}
-
-// TestNewInternalError tests internal error constructor
-func TestNewInternalError(t *testing.T) {
+func TestNewErrorConstructors(t *testing.T) {
 	innerErr := errors.New("database connection failed")
-	err := NewInternalError("internal server error", innerErr)
-	
-	if err == nil {
-		t.Fatal("Expected error to be created, got nil")
-	}
 
-	if err.Code != "INTERNAL_ERROR" {
-		t.Errorf("Expected code 'INTERNAL_ERROR', got: %s", err.Code)
-	}
-
-	if err.StatusCode != StatusInternalServerError {
-		t.Errorf("Expected status code %d, got: %d", StatusInternalServerError, err.StatusCode)
-	}
-
-	if err.Message != "internal server error" {
-		t.Errorf("Expected message 'internal server error', got: %s", err.Message)
-	}
-
-	if err.Err != innerErr {
-		t.Errorf("Expected wrapped error to be preserved, got: %v", err.Err)
-	}
-}
-
-// TestErrorStatusCodes verifies all status codes are correct
-func TestErrorStatusCodes(t *testing.T) {
-	testCases := []struct {
-		name           string
-		err            *ApplicationError
-		expectedStatus int
-	}{
-		{
-			name:           "Validation Error",
-			err:            NewValidationError("test"),
-			expectedStatus: 400,
-		},
-		{
-			name:           "Not Found Error",
-			err:            NewNotFoundError("test"),
-			expectedStatus: 404,
-		},
-		{
-			name:           "Unauthorized Error",
-			err:            NewUnauthorizedError("test"),
-			expectedStatus: 401,
-		},
-		{
-			name:           "Forbidden Error",
-			err:            NewForbiddenError("test"),
-			expectedStatus: 403,
-		},
-		{
-			name:           "Conflict Error",
-			err:            NewConflictError("test"),
-			expectedStatus: 409,
-		},
-		{
-			name:           "Internal Error",
-			err:            NewInternalError("test", nil),
-			expectedStatus: 500,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			if tc.err.StatusCode != tc.expectedStatus {
-				t.Errorf("Expected status code %d, got: %d", tc.expectedStatus, tc.err.StatusCode)
-			}
-		})
-	}
-}
-
-// TestErrorCodes verifies all error codes are unique and consistent
-func TestErrorCodes(t *testing.T) {
-	testCases := []struct {
+	cases := []struct {
 		name         string
-		err          *ApplicationError
-		expectedCode string
+		build        func() *ApplicationError
+		wantCode     string
+		wantStatus   int
+		wantMsg      string
+		wantContains bool // if true, only check message contains (not equality)
+		wantWrapped  error
 	}{
 		{
-			name:         "Validation Error",
-			err:          NewValidationError("test"),
-			expectedCode: "VALIDATION_ERROR",
+			name:       "Validation",
+			build:      func() *ApplicationError { return NewValidationError("invalid input") },
+			wantCode:   "VALIDATION_ERROR",
+			wantStatus: StatusBadRequest,
+			wantMsg:    "invalid input",
 		},
 		{
-			name:         "Not Found",
-			err:          NewNotFoundError("test"),
-			expectedCode: "NOT_FOUND",
+			name:         "NotFound",
+			build:        func() *ApplicationError { return NewNotFoundError("deployment") },
+			wantCode:     "NOT_FOUND",
+			wantStatus:   StatusNotFound,
+			wantMsg:      "deployment",
+			wantContains: true,
 		},
 		{
-			name:         "Unauthorized",
-			err:          NewUnauthorizedError("test"),
-			expectedCode: "UNAUTHORIZED",
+			name:       "Unauthorized",
+			build:      func() *ApplicationError { return NewUnauthorizedError("authentication required") },
+			wantCode:   "UNAUTHORIZED",
+			wantStatus: StatusUnauthorized,
+			wantMsg:    "authentication required",
 		},
 		{
-			name:         "Forbidden",
-			err:          NewForbiddenError("test"),
-			expectedCode: "FORBIDDEN",
+			name:       "Forbidden",
+			build:      func() *ApplicationError { return NewForbiddenError("access denied") },
+			wantCode:   "FORBIDDEN",
+			wantStatus: StatusForbidden,
+			wantMsg:    "access denied",
 		},
 		{
-			name:         "Conflict",
-			err:          NewConflictError("test"),
-			expectedCode: "CONFLICT",
+			name:       "Conflict",
+			build:      func() *ApplicationError { return NewConflictError("resource already exists") },
+			wantCode:   "CONFLICT",
+			wantStatus: StatusConflict,
+			wantMsg:    "resource already exists",
 		},
 		{
-			name:         "Internal Error",
-			err:          NewInternalError("test", nil),
-			expectedCode: "INTERNAL_ERROR",
+			name:        "Internal",
+			build:       func() *ApplicationError { return NewInternalError("internal server error", innerErr) },
+			wantCode:    "INTERNAL_ERROR",
+			wantStatus:  StatusInternalServerError,
+			wantMsg:     "internal server error",
+			wantWrapped: innerErr,
 		},
 	}
 
-	codes := make(map[string]bool)
-	for _, tc := range testCases {
+	seenCodes := make(map[string]bool)
+	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			if tc.err.Code != tc.expectedCode {
-				t.Errorf("Expected code '%s', got: %s", tc.expectedCode, tc.err.Code)
+			err := tc.build()
+			if err == nil {
+				t.Fatal("constructor returned nil")
 			}
-
-			if codes[tc.err.Code] {
-				t.Errorf("Duplicate error code: %s", tc.err.Code)
+			if err.Code != tc.wantCode {
+				t.Errorf("Code = %q, want %q", err.Code, tc.wantCode)
 			}
-			codes[tc.err.Code] = true
+			if err.StatusCode != tc.wantStatus {
+				t.Errorf("StatusCode = %d, want %d", err.StatusCode, tc.wantStatus)
+			}
+			if tc.wantContains {
+				if !strings.Contains(err.Message, tc.wantMsg) {
+					t.Errorf("Message = %q, want it to contain %q", err.Message, tc.wantMsg)
+				}
+			} else if err.Message != tc.wantMsg {
+				t.Errorf("Message = %q, want %q", err.Message, tc.wantMsg)
+			}
+			if tc.wantWrapped != nil && err.Err != tc.wantWrapped {
+				t.Errorf("wrapped error = %v, want %v", err.Err, tc.wantWrapped)
+			}
+			if seenCodes[err.Code] {
+				t.Errorf("duplicate error code %q across constructors", err.Code)
+			}
+			seenCodes[err.Code] = true
 		})
 	}
 }
 
-// TestErrorUnwrapping tests error unwrapping with errors.Is and errors.As
+// =============================================================================
+// errors.Is / errors.As integration
+// =============================================================================
+
 func TestErrorUnwrapping(t *testing.T) {
 	innerErr := errors.New("database error")
 	appErr := NewInternalError("failed operation", innerErr)
 
-	// Test errors.Is
-	if !errors.Is(appErr, innerErr) {
-		t.Error("Expected errors.Is to find wrapped error")
-	}
+	t.Run("errors.Is finds wrapped error", func(t *testing.T) {
+		if !errors.Is(appErr, innerErr) {
+			t.Error("expected errors.Is to find wrapped error")
+		}
+	})
 
-	// Test errors.As
-	var asAppErr *ApplicationError
-	if !errors.As(appErr, &asAppErr) {
-		t.Error("Expected errors.As to work with ApplicationError")
-	}
-	if asAppErr.Code != "INTERNAL_ERROR" {
-		t.Errorf("Expected code 'INTERNAL_ERROR', got: %s", asAppErr.Code)
-	}
+	t.Run("errors.As extracts ApplicationError", func(t *testing.T) {
+		var asAppErr *ApplicationError
+		if !errors.As(appErr, &asAppErr) {
+			t.Fatal("expected errors.As to work with ApplicationError")
+		}
+		if asAppErr.Code != "INTERNAL_ERROR" {
+			t.Errorf("Code = %q, want %q", asAppErr.Code, "INTERNAL_ERROR")
+		}
+	})
 }
