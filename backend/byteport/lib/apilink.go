@@ -25,6 +25,16 @@ import (
 
 const portfolioAllowedHostsEnv = "BYTEPORT_PORTFOLIO_API_ALLOWED_HOSTS"
 
+// defaultAPIValidationClient is the shared *http.Client used by one-shot API
+// credential validations (currently ValidateOpenAICredentials). It carries a
+// 15-second total timeout so a hung validation request cannot pin a route
+// handler indefinitely, and uses http.DefaultTransport so connection pooling
+// is shared with the rest of the process. The SSRF-safe portfolio validation
+// keeps its own dialer-cloned transport; this client is only for outbound
+// requests to fixed, trusted hosts (api.openai.com, ...) where dial-time
+// address validation is unnecessary.
+var defaultAPIValidationClient = &http.Client{Timeout: 15 * time.Second}
+
 // ValidatePortfolioAPI validates the provided portfolio API key and endpoint.
 //
 // Declared as a function value rather than a func so tests can substitute a
@@ -303,8 +313,7 @@ var ValidateOpenAICredentials = func(apiToken string) error {
 	}
 	req.Header.Set("Authorization", "Bearer "+apiToken)
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := defaultAPIValidationClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to connect to OpenAI API: %v", err)
 	}
