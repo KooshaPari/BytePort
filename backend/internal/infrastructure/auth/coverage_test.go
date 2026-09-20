@@ -414,47 +414,49 @@ func TestWorkOSAuthService_ValidateJWTToken_RealJWT(t *testing.T) {
 func TestWorkOSAuthService_GetWorkOSPublicKey(t *testing.T) {
 	service, ctx := newUninitializedService(t)
 
-	t.Run("handles successful JWKS fetch", func(t *testing.T) {
-		// Save and restore the package-level httpGet var.
-		saveHTTPGet(t)
-
-		jwks := JWKSResponse{
-			Keys: []jose.JSONWebKey{
-				{
-					KeyID: "test-key-1",
-					Key:   generateTestRSAPublicKey(),
-				},
-			},
-		}
-		body, _ := json.Marshal(jwks)
-
-		var capturedURL string
-		httpGet = func(url string) (*http.Response, error) {
-			capturedURL = url
-			return &http.Response{
-				StatusCode: http.StatusOK,
-				Header:     make(http.Header),
-				Body:       io.NopCloser(bytes.NewReader(body)),
-			}, nil
-		}
-
-		key, err := service.getWorkOSPublicKey(ctx, "test-key-1")
-		assert.NoError(t, err)
-		assert.NotNil(t, key)
-		assert.Equal(t, "https://api.workos.com/.well-known/jwks.json", capturedURL)
-	})
-
-	t.Run("handles JWKS fetch failure", func(t *testing.T) {
-		saveHTTPGet(t)
-
-		httpGet = func(url string) (*http.Response, error) {
-			return nil, fmt.Errorf("network error")
-		}
-
-		_, err := service.getWorkOSPublicKey(ctx, "test-key")
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "failed to fetch JWKS")
-	})
+	cases := []struct {
+		name           string
+		wantErrSubstr  string
+	}{
+		{name: "handles successful JWKS fetch"},
+		{name: "handles JWKS fetch failure", wantErrSubstr: "failed to fetch JWKS"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			saveHTTPGet(t)
+			if tc.wantErrSubstr == "" {
+				jwks := JWKSResponse{
+					Keys: []jose.JSONWebKey{
+						{
+							KeyID: "test-key-1",
+							Key:   generateTestRSAPublicKey(),
+						},
+					},
+				}
+				body, _ := json.Marshal(jwks)
+				var capturedURL string
+				httpGet = func(url string) (*http.Response, error) {
+					capturedURL = url
+					return &http.Response{
+						StatusCode: http.StatusOK,
+						Header:     make(http.Header),
+						Body:       io.NopCloser(bytes.NewReader(body)),
+					}, nil
+				}
+				key, err := service.getWorkOSPublicKey(ctx, "test-key-1")
+				assert.NoError(t, err)
+				assert.NotNil(t, key)
+				assert.Equal(t, "https://api.workos.com/.well-known/jwks.json", capturedURL)
+				return
+			}
+			httpGet = func(url string) (*http.Response, error) {
+				return nil, fmt.Errorf("network error")
+			}
+			_, err := service.getWorkOSPublicKey(ctx, "test-key")
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), tc.wantErrSubstr)
+		})
+	}
 }
 
 func TestWorkOSAuthService_ExchangeWithWorkOS(t *testing.T) {
