@@ -95,12 +95,3 @@ func assertHeaderContains(t *testing.T, w *httptest.ResponseRecorder, header, wa
 		t.Errorf("header[%s] = %q, want to contain %q", header, got, wantSubstr)
 	}
 }
-
-// assertStringContains fails the test if the string doesn't contain wantSubstr.
-// Useful for raw header values that have been pre-extracted.
-func assertStringContains(t *testing.T, got, wantSubstr string) {
-	t.Helper()
-	if !strings.Contains(got, wantSubstr) {
-		t.Errorf("got %q, want to contain %q", got, wantSubstr)
-	}
-}
