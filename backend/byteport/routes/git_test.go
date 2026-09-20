@@ -20,11 +20,7 @@ import (
 // must call lib.ListRepositories (stubbed to return canned JSON) and surface
 // it as application/json.
 func TestRetrieveRepositoriesHappyPath(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	resetMockKeyring(t)
-	seedAuthSystem(t)
-
-	db := newRouteTestDB(t)
+	db := setupAuthDB(t)
 	user := models.User{
 		UUID: uuid.NewString(),
 		Git: models.Git{
@@ -72,11 +68,7 @@ func TestRetrieveRepositoriesHappyPath(t *testing.T) {
 // when the stored Git token is not a valid AES payload, the route must
 // respond 500 with "Failed to decrypt Git token".
 func TestRetrieveRepositoriesDecryptError(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	resetMockKeyring(t)
-	seedAuthSystem(t)
-
-	db := newRouteTestDB(t)
+	db := setupAuthDB(t)
 	user := models.User{
 		UUID: uuid.NewString(),
 		Git:  models.Git{Token: "garbage-not-encrypted"},
@@ -106,11 +98,7 @@ func TestRetrieveRepositoriesDecryptError(t *testing.T) {
 // when lib.ListRepositories returns an error, the route must respond 500
 // with "Failed to list repositories".
 func TestRetrieveRepositoriesGitHubError(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	resetMockKeyring(t)
-	seedAuthSystem(t)
-
-	db := newRouteTestDB(t)
+	db := setupAuthDB(t)
 	user := models.User{
 		UUID: uuid.NewString(),
 		Git:  models.Git{Token: mustEncrypt(t, "real-access-token")},
@@ -148,11 +136,7 @@ func TestRetrieveRepositoriesGitHubError(t *testing.T) {
 // AND lib.ValidateGit succeeds, the route must persist the new git
 // credentials and return the success HTML.
 func TestHandleCallbackHappyPath(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	resetMockKeyring(t)
-	seedAuthSystem(t)
-
-	db := newRouteTestDB(t)
+	db := setupAuthDB(t)
 	cidEnc, _ := lib.EncryptSecret("cid")
 	csecEnc, _ := lib.EncryptSecret("csec")
 	if err := db.Create(&models.GitSecret{ClientID: cidEnc, ClientSecret: csecEnc}).Error; err != nil {

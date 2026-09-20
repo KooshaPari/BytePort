@@ -144,11 +144,7 @@ func TestSetAuthCookieWritesCookie(t *testing.T) {
 // password gets back a 200, the authToken cookie is set, and the response
 // body lists the user with the password field cleared.
 func TestLoginHappyPath(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	resetMockKeyring(t)
-	seedAuthSystem(t)
-
-	db := newRouteTestDB(t)
+	db := setupAuthDB(t)
 	hashed := lib.EncryptPass("hunter2")
 	user := models.User{
 		UUID:     uuid.NewString(),
@@ -220,11 +216,7 @@ func TestLoginUnknownEmail(t *testing.T) {
 // TestLoginWrongPassword covers the bad-credentials branch: the user
 // exists but the password does not match. Login must respond 401.
 func TestLoginWrongPassword(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	resetMockKeyring(t)
-	seedAuthSystem(t)
-
-	db := newRouteTestDB(t)
+	db := setupAuthDB(t)
 	hashed := lib.EncryptPass("right")
 	user := models.User{
 		UUID:     uuid.NewString(),
@@ -271,11 +263,7 @@ func TestLoginRejectsNonJSONBody(t *testing.T) {
 // credentials must be persisted with a hashed password (NOT the plaintext),
 // receive an authToken cookie, and return 201.
 func TestSignupHappyPath(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	resetMockKeyring(t)
-	seedAuthSystem(t)
-
-	db := newRouteTestDB(t)
+	db := setupAuthDB(t)
 
 	r := gin.New()
 	r.POST("/signup", Signup)
@@ -314,11 +302,7 @@ func TestSignupHappyPath(t *testing.T) {
 // TestSignupDuplicateEmail covers the duplicate branch: a Signup request
 // with an email that already exists must produce 409 Conflict.
 func TestSignupDuplicateEmail(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	resetMockKeyring(t)
-	seedAuthSystem(t)
-
-	db := newRouteTestDB(t)
+	db := setupAuthDB(t)
 	hashed := lib.EncryptPass("anything")
 	existing := models.User{
 		UUID:     uuid.NewString(),
@@ -374,11 +358,7 @@ func TestSignupRejectsNonJSONBody(t *testing.T) {
 // carries a valid token that resolves to a real user, Authenticate must
 // respond 200 and put the user in the context.
 func TestAuthenticateHappyPath(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	resetMockKeyring(t)
-	seedAuthSystem(t)
-
-	db := newRouteTestDB(t)
+	db := setupAuthDB(t)
 	user := models.User{
 		UUID:     uuid.NewString(),
 		Email:    "auth@example.com",
@@ -487,11 +467,7 @@ func TestAuthenticateMissingCookie(t *testing.T) {
 // TestUpdateUserHappyPath covers the success branch: a partial update (just
 // name) must persist the change and return 200 with the updated user.
 func TestUpdateUserHappyPath(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	resetMockKeyring(t)
-	seedAuthSystem(t)
-
-	db := newRouteTestDB(t)
+	db := setupAuthDB(t)
 	user := models.User{
 		UUID:     uuid.NewString(),
 		Email:    "upd@example.com",
@@ -560,11 +536,7 @@ func TestUpdateUserRejectsBadJSON(t *testing.T) {
 // auth context has a real user, LinkHandler must call LinkWithGithub and
 // emit a 302 to github.com/login/oauth/authorize.
 func TestLinkHandlerRedirectsToGitHub(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	resetMockKeyring(t)
-	seedAuthSystem(t)
-
-	db := newRouteTestDB(t)
+	db := setupAuthDB(t)
 	clientIDPlain := "client-id-123"
 	encrypted, err := lib.EncryptSecret(clientIDPlain)
 	if err != nil {
@@ -601,11 +573,7 @@ func TestLinkHandlerRedirectsToGitHub(t *testing.T) {
 // This is the path the UI hits when the user picks a local LLM and so has
 // no provider entry in LLMConfig.Providers.
 func TestUpdateLinkLocalProviderNoDecrypt(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	resetMockKeyring(t)
-	seedAuthSystem(t)
-
-	db := newRouteTestDB(t)
+	db := setupAuthDB(t)
 	user := models.User{
 		UUID:     uuid.NewString(),
 		Email:    "local@example.com",
@@ -653,11 +621,7 @@ func TestUpdateLinkLocalProviderNoDecrypt(t *testing.T) {
 // the stored AWS secret is not a valid AES payload, UpdateLink must
 // respond 500 with "Failed to decrypt AWS Access".
 func TestUpdateLinkDecryptError(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	resetMockKeyring(t)
-	seedAuthSystem(t)
-
-	db := newRouteTestDB(t)
+	db := setupAuthDB(t)
 	user := models.User{
 		UUID:     uuid.NewString(),
 		Email:    "broken@example.com",

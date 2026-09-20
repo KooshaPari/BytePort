@@ -7,29 +7,11 @@ import (
 	"strings"
 	"testing"
 
-	"byteport/lib"
 	"byteport/models"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
-
-// seedUser creates and persists a fresh user; returned UUID is the
-// authenticated identity for downstream routes.
-func seedUser(t *testing.T, db *gorm.DB) models.User {
-	t.Helper()
-	u := models.User{
-		UUID:     uuid.NewString(),
-		Email:    "u@example.com",
-		Name:     "U",
-		Password: "x",
-	}
-	if err := db.Create(&u).Error; err != nil {
-		t.Fatalf("seed user: %v", err)
-	}
-	return u
-}
 
 // TestRepositoryIDPrefersExplicitField covers the first branch of
 // repositoryID: when `repository_id` is set, it wins regardless of the
@@ -69,69 +51,34 @@ func TestRepositoryIDReturnsEmptyWhenAbsent(t *testing.T) {
 // TestGetProjectsEmpty covers the empty branch: an authenticated user with
 // no projects must get back an empty (or null) list, NOT a 500.
 func TestGetProjectsEmpty(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	resetMockKeyring(t)
-	seedAuthSystem(t)
-
-	db := newRouteTestDB(t)
-	user := seedUser(t, db)
+	db := setupAuthDB(t)
+	_ = seedUser(t, db)
 
 	r := gin.New()
 	r.GET("/projects", GetProjects)
 	req := httptest.NewRequest(http.MethodGet, "/projects", nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
-
-	// AuthMiddleware runs before the handler, so this test wires a
-	// middleware that just shoves the user into the gin context.
-	_ = user
 }
 
 // TestGetInstancesEmpty covers the empty branch: an authenticated user
 // with no instances must get back an empty list.
 func TestGetInstancesEmpty(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	resetMockKeyring(t)
-	seedAuthSystem(t)
-
-	db := newRouteTestDB(t)
+	db := setupAuthDB(t)
 	user := seedUser(t, db)
+	_ = db // referenced for clarity; seedUser mutates it
 
-	// Wire AuthMiddleware with a real token; reuse lib's test key.
-	tok, err := lib.GenerateToken(user)
-	if err != nil {
-		t.Fatalf("GenerateToken: %v", err)
-	}
-
-	r := gin.New()
-	r.Use(lib.AuthMiddleware())
-	r.GET("/instances", GetInstances)
-
-	req := httptest.NewRequest(http.MethodGet, "/instances", nil)
-	req.AddCookie(&http.Cookie{Name: "authToken", Value: tok})
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Fatalf("status = %d, want 200 (body %s)", w.Code, w.Body.String())
-	}
+	// Reuse authedGet so the token/cookie/middleware boilerplate stays
+	// in one place. It asserts 200.
+	authedGet(t, user, "/instances", GetInstances)
 }
 
 // TestGetInstancesHappyPath covers the populated branch: an authenticated
 // user with two instances must get them both back, scoped to that owner.
 func TestGetInstancesHappyPath(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	resetMockKeyring(t)
-	seedAuthSystem(t)
-
-	db := newRouteTestDB(t)
+	db := setupAuthDB(t)
 	user := seedUser(t, db)
-	other := models.User{
-		UUID: uuid.NewString(), Email: "other@example.com", Name: "Other", Password: "x",
-	}
-	if err := db.Create(&other).Error; err != nil {
-		t.Fatalf("seed other user: %v", err)
-	}
+	other := seedOtherUser(t, db)
 
 	// Two instances owned by `user`, one owned by `other`. Only the two
 	// owned by `user` must come back.
@@ -164,18 +111,9 @@ func TestGetInstancesHappyPath(t *testing.T) {
 // TestGetProjectsHappyPath covers the populated branch: an authenticated
 // user with two projects must get them back.
 func TestGetProjectsHappyPath(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	resetMockKeyring(t)
-	seedAuthSystem(t)
-
-	db := newRouteTestDB(t)
+	db := setupAuthDB(t)
 	user := seedUser(t, db)
-	other := models.User{
-		UUID: uuid.NewString(), Email: "other@example.com", Name: "Other", Password: "x",
-	}
-	if err := db.Create(&other).Error; err != nil {
-		t.Fatalf("seed other user: %v", err)
-	}
+	other := seedOtherUser(t, db)
 
 	// Two projects owned by `user`, one owned by `other`.
 	for i, owner := range []string{user.UUID, user.UUID, other.UUID} {

@@ -6,7 +6,6 @@ import (
 
 	"byteport/models"
 
-	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
@@ -28,11 +27,7 @@ import (
 // guard makes future re-introductions of `json:"-"` an immediate failure
 // rather than a silent regression.
 func TestGetProjectsResponseExposesDeploymentsJSON(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	resetMockKeyring(t)
-	seedAuthSystem(t)
-
-	db := newRouteTestDB(t)
+	db := setupAuthDB(t)
 	user := seedUser(t, db)
 
 	project := models.Project{
