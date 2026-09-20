@@ -142,10 +142,10 @@ func newUninitializedService(t *testing.T) (*WorkOSAuthService, context.Context)
 
 // runMiddlewareRequest drives a single GET /test request through the given
 // middleware (service.Middleware() or service.OptionalMiddleware()) and
-// returns the recorder. authHeader="" sends the request with no
-// Authorization header set. The Gin test context is fully wired before
-// the middleware runs.
-func runMiddlewareRequest(t *testing.T, middleware gin.HandlerFunc, authHeader string) *httptest.ResponseRecorder {
+// returns the recorder and gin context. authHeader="" sends the request with
+// no Authorization header set. The Gin test context is fully wired before
+// the middleware runs, so callers can inspect c.IsAborted().
+func runMiddlewareRequest(t *testing.T, middleware gin.HandlerFunc, authHeader string) (*httptest.ResponseRecorder, *gin.Context) {
 	t.Helper()
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
@@ -155,7 +155,7 @@ func runMiddlewareRequest(t *testing.T, middleware gin.HandlerFunc, authHeader s
 	}
 	c.Request = req
 	middleware(c)
-	return w
+	return w, c
 }
 
 // assertBlocked asserts the middleware rejected the request with 401 and
@@ -678,32 +678,23 @@ func TestHandleTestCodeExchange(t *testing.T) {
 func TestWorkOSAuthService_Middleware(t *testing.T) {
 	service, _ := newInitializedService(t)
 
-	// Setup Gin for testing.
 	gin.SetMode(gin.TestMode)
 
 	blockedCases := []struct {
-		name        string
-		authHeader  string
+		name       string
+		authHeader string
 	}{
 		{"blocks request without authorization header", ""},
 		{"blocks request with invalid authorization header format", "InvalidFormat"},
 		{"blocks request with non-Bearer token", "Basic token"},
+		{"handles malformed authorization header", "InvalidFormat token"},
+		{"handles authorization header with extra spaces", "  Bearer  test-token  "},
+		{"handles empty bearer token", "Bearer "},
 	}
 	for _, tc := range blockedCases {
 		t.Run(tc.name, func(t *testing.T) {
-			w := httptest.NewRecorder()
-			c, _ := gin.CreateTestContext(w)
-			req := httptest.NewRequest("GET", "/test", nil)
-			if tc.authHeader != "" {
-				req.Header.Set("Authorization", tc.authHeader)
-			}
-			c.Request = req
-
-			middleware := service.Middleware()
-			middleware(c)
-
-			assert.Equal(t, http.StatusUnauthorized, w.Code)
-			assert.True(t, c.IsAborted())
+			w, c := runMiddlewareRequest(t, service.Middleware(), tc.authHeader)
+			assertBlocked(t, w, c)
 		})
 	}
 
@@ -723,36 +714,6 @@ func TestWorkOSAuthService_Middleware(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Code)
 	})
-}
-
-func TestWorkOSAuthService_Middleware_EdgeCases(t *testing.T) {
-	service, _ := newInitializedService(t)
-
-	gin.SetMode(gin.TestMode)
-
-	edgeCases := []struct {
-		name       string
-		authHeader string
-	}{
-		{"handles malformed authorization header", "InvalidFormat token"},
-		{"handles authorization header with extra spaces", "  Bearer  test-token  "},
-		{"handles empty bearer token", "Bearer "},
-	}
-	for _, tc := range edgeCases {
-		t.Run(tc.name, func(t *testing.T) {
-			w := httptest.NewRecorder()
-			c, _ := gin.CreateTestContext(w)
-			req := httptest.NewRequest("GET", "/test", nil)
-			req.Header.Set("Authorization", tc.authHeader)
-			c.Request = req
-
-			middleware := service.Middleware()
-			middleware(c)
-
-			assert.Equal(t, http.StatusUnauthorized, w.Code)
-			assert.True(t, c.IsAborted())
-		})
-	}
 }
 
 func TestWorkOSAuthService_OptionalMiddleware(t *testing.T) {
