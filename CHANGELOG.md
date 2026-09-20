@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- refactor(go): extract `respondError`, `respondBadRequest`, `respondUnauthorized`,
+  `respondNotFound`, `respondInternalError`, `respondConflict`, and
+  `respondErrorWithDetails` into `backend/byteport/routes/responses.go` and
+  sweep `routes/{auth,deployment,git,instances,projects}.go` to use them. The
+  inline `c.JSON(http.StatusXxx, gin.H{"error": "..."})` shape was repeated
+  across 64 call sites (62 single-field + 2 multi-field in
+  `deployment.go:DeployProject` and `TerminateInstance` that carry upstream
+  status + body). After the refactor the response shape has a single home, so
+  any future change to error envelope (`code`, `request_id`, ...) only touches
+  one file. Three sites intentionally retained the `gin.H{"message": ...}`
+  contract because tests assert on that field; they are documented as
+  response-contract exceptions in `responses.go`.
+- refactor(go): extract `bindJSON(c, dst, context)` helper in
+  `backend/byteport/routes/bind.go` to deduplicate the
+  `var req X; if err := c.ShouldBindJSON(&req); err != nil { respondBadRequest; return }`
+  pattern repeated at 5 sites across `auth.go` (Login, Signup, UpdateUser)
+  and `deployment.go` (DeployProject, TerminateInstance). Returns false on
+  bind failure and writes a 400 of the form `"<context>: <bind error>"`
+  (or just the bare error when context is empty), so callers can shrink to
+  a single `if !bindJSON(c, &req, "") { return }` line.
+- test(go): merge `routes/auth_happy_test.go` (460 lines, 13 tests) and
+  `routes/auth_test.go` (153 lines, 7 tests) into a single
+  `routes/auth_test.go` (613 lines, 20 tests). The two files were duplicating
+  imports (`bytes`, `encoding/json`, `httptest`, `gin`, `lib`, `uuid`) and
+  the `authTestRouter` helper setup. Tests are now grouped by the handler
+  they exercise: currentUser (3), setAuthCookie (1), Login (4), Signup (3),
+  Authenticate (4), UpdateUser (2), LinkHandler + UpdateLink (3).
+- test(go): rename `routes/testfixtures_test.go` to `routes/helpers_test.go`
+  and add two new compound helpers. `setupAuthDB(t)` bundles the four-line
+  fixture prologue repeated at 14 sites across `auth_test.go`, `git_test.go`,
+  `misc_test.go`, and `projects_contract_test.go`
+  (`gin.SetMode(gin.TestMode)` + `resetMockKeyring(t)` + `seedAuthSystem(t)`
+  + `db := newRouteTestDB(t)`) into a single helper call. `seedOtherUser(t, db)`
+  replaces three copies of the inline `models.User{UUID, Email, Name, Password: "x"}`
+  literal that appeared in the ownership-scoping tests. The `seedUser` helper
+  moved from `misc_test.go` into the helpers file. Net 60 lines removed;
+  test call sites shrank from 4 setup lines + 1 use line to 1 line.
+
+>>>>>>> e0b4cf9 (test(go): consolidate test helpers into routes/helpers_test.go)
 ### Fixed
 
 - test(go): dedupe `backend/byteport/routes/loadtest_test.go` (201 → 160 lines)
