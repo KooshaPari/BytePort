@@ -13,6 +13,15 @@ import (
 	"time"
 )
 
+// Header and MIME constants. Defining them here removes the duplicated
+// string literals that SonarCloud flagged in this file (see issue #383).
+const (
+	headerAuthorization = "Authorization"
+	headerContentType   = "Content-Type"
+	mimeApplicationJSON = "application/json"
+	authBearerPrefix    = "Bearer "
+)
+
 // CredentialValidator provides validation for external service credentials.
 // All cloud provider validations use plain net/http — no vendor SDKs required
 // for credential checks (AWS STS is the exception; it uses the real SDK via
@@ -119,7 +128,7 @@ func (cv *CredentialValidator) ValidateOpenAICompatCredentials(ctx context.Conte
 	}
 
 	if apiKey != "" {
-		req.Header.Set("Authorization", "Bearer "+apiKey)
+		req.Header.Set(headerAuthorization, authBearerPrefix+apiKey)
 	}
 	req.Header.Set("User-Agent", "BytePort/1.0")
 
@@ -208,7 +217,7 @@ func (cv *CredentialValidator) ValidateAzureCredentials(ctx context.Context, ten
 	if err != nil {
 		return fmt.Errorf("failed to build Azure token request: %w", err)
 	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set(headerContentType, "application/x-www-form-urlencoded")
 
 	resp, err := cv.httpClient.Do(req)
 	if err != nil {
@@ -258,7 +267,7 @@ func (cv *CredentialValidator) ValidateVercelCredentials(ctx context.Context, to
 	if err != nil {
 		return fmt.Errorf("failed to build Vercel request: %w", err)
 	}
-	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set(headerAuthorization, authBearerPrefix+token)
 
 	resp, err := cv.httpClient.Do(req)
 	if err != nil {
@@ -285,7 +294,7 @@ func (cv *CredentialValidator) ValidateNetlifyCredentials(ctx context.Context, t
 	if err != nil {
 		return fmt.Errorf("failed to build Netlify request: %w", err)
 	}
-	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set(headerAuthorization, authBearerPrefix+token)
 
 	resp, err := cv.httpClient.Do(req)
 	if err != nil {
@@ -314,8 +323,8 @@ func (cv *CredentialValidator) ValidateRailwayCredentials(ctx context.Context, t
 	if err != nil {
 		return fmt.Errorf("failed to build Railway request: %w", err)
 	}
-	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(headerAuthorization, authBearerPrefix+token)
+	req.Header.Set(headerContentType, mimeApplicationJSON)
 
 	resp, err := cv.httpClient.Do(req)
 	if err != nil {
@@ -343,7 +352,7 @@ func (cv *CredentialValidator) ValidateFlyIOCredentials(ctx context.Context, tok
 	if err != nil {
 		return fmt.Errorf("failed to build Fly.io request: %w", err)
 	}
-	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set(headerAuthorization, authBearerPrefix+token)
 
 	resp, err := cv.httpClient.Do(req)
 	if err != nil {
@@ -372,7 +381,7 @@ func (cv *CredentialValidator) ValidateSupabaseCredentials(ctx context.Context, 
 	if err != nil {
 		return fmt.Errorf("failed to build Supabase request: %w", err)
 	}
-	req.Header.Set("Authorization", "Bearer "+managementToken)
+	req.Header.Set(headerAuthorization, authBearerPrefix+managementToken)
 
 	resp, err := cv.httpClient.Do(req)
 	if err != nil {
@@ -403,7 +412,7 @@ func (cv *CredentialValidator) ValidatePortfolioAPI(ctx context.Context, endpoin
 		return fmt.Errorf("failed to create request: %w", err)
 	}
 
-	req.Header.Set("Authorization", "Bearer "+apiKey)
+	req.Header.Set(headerAuthorization, authBearerPrefix+apiKey)
 	req.Header.Set("User-Agent", "BytePort/1.0")
 
 	resp, err := cv.httpClient.Do(req)
@@ -461,7 +470,7 @@ func (cv *CredentialValidator) OllamaGenerate(ctx context.Context, baseURL, mode
 	if err != nil {
 		return "", fmt.Errorf("failed to build Ollama generate request: %w", err)
 	}
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(headerContentType, mimeApplicationJSON)
 
 	resp, err := cv.httpClient.Do(req)
 	if err != nil {
@@ -572,9 +581,9 @@ func sendLLMChat(ctx context.Context, client httpDoer, baseURL, model, apiKey, p
 	if err != nil {
 		return "", fmt.Errorf("build LLM chat request: %w", err)
 	}
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(headerContentType, mimeApplicationJSON)
 	if apiKey != "" {
-		req.Header.Set("Authorization", "Bearer "+apiKey)
+		req.Header.Set(headerAuthorization, authBearerPrefix+apiKey)
 	}
 
 	resp, err := client.Do(req)

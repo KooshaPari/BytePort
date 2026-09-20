@@ -12,6 +12,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// deploymentsAPIPath is the canonical route prefix for the deployments API.
+// Defined here to remove the duplicated literal SonarCloud flagged in this
+// file (see issue #383).
+const deploymentsAPIPath = "/api/v1/deployments"
+
 // APIServer represents the HTTP API server
 type APIServer struct {
 	router    *gin.Engine

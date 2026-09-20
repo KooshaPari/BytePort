@@ -15,6 +15,11 @@ import (
 	vault "github.com/hashicorp/vault/api"
 )
 
+// defaultAWSRegion is the fallback AWS region when the caller passes an empty
+// string. Defined here to remove the duplicated literal SonarCloud flagged in
+// this file (see issue #383).
+const defaultAWSRegion = "us-east-1"
+
 // Manager provides production-ready secrets management with multiple backends
 type Manager struct {
 	providers map[string]Provider
