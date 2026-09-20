@@ -1409,18 +1409,12 @@ Go has become the dominant language for infrastructure tooling:
 **BytePort Backend Architecture**:
 ```
 backend/
-├── byteport/           # Core deployment engine
-│   ├── main.go         # Entry point
-│   ├── routes/         # HTTP route handlers
-│   ├── models/         # Data models
-│   └── lib/            # Shared libraries
-├── bytebridge/         # Bridge/integration layer
-└── nvms/               # NVMS manifest parser
-    ├── main.go
-    ├── Builder/        # Build orchestration
-    ├── Demonstrator/   # Portfolio generation
-    ├── Provisioner/    # AWS provisioning
-    └── projectManager/ # Project lifecycle
+├── byteport/           # Canonical deployment engine (Go module `byteport`)
+│   ├── application/    # Use cases
+│   ├── domain/         # Entities, value objects, repository interfaces
+│   ├── infrastructure/ # Adapters: auth, http, persistence, secrets, cloud
+│   ├── container/      # Dependency injection wiring
+│   └── routes/         # HTTP route handlers
 ```
 
 ### 18.2 SvelteKit for Frontend

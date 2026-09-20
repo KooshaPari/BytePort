@@ -1,7 +1,13 @@
 # Two Go backends under `backend/` — reconciliation analysis
 
-**Status:** analysis only. Nothing was deleted, moved, or refactored. This document
-is the deliverable.
+**Status:** RESOLVED 2026-09-20. The `github.com/byteport/api` module
+(`backend/{main.go,handlers.go,server.go,types.go,models/,internal/,lib/,testhelpers/,go.mod,go.sum,bytebridge/}`)
+was retired. Only `backend/byteport/` (Go module `byteport`) remains.
+See issue #382 and the resolution commit on `main`.
+
+**Original status:** analysis only at the time of writing. Nothing was deleted,
+moved, or refactored. This document is the deliverable for the historical analysis
+that motivated the eventual consolidation.
 **Date:** 2026-09-19
 **Repo:** `/Users/kooshapari/CodeProjects/Phenotype/repos/wt-byteport-tauri-20260911`
 **HEAD at end of run:** `2940412a` (`docs(coverage): measure the backend endpoint surface instead of assuming it`)

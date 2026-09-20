@@ -18,7 +18,7 @@ Three distinct build engines coexist in one repository:
 | Engine | Location | Role |
 |--------|----------|------|
 | Rust (Cargo workspace) | `crates/*`, `frontend/web/src-tauri` | Desktop shell, transport, DAG, telemetry |
-| Go modules | `backend/byteport`, `backend/bytebridge`, `ports/otel_rum.go` | Server-side domain logic, persistence, auth |
+| Go modules | `backend/byteport`, `ports/otel_rum.go` | Server-side domain logic, persistence, auth |
 | TypeScript (SvelteKit/Vite) | `frontend/web` | User-facing desktop/web UI and Tauri IPC surface |
 
 ## 2. Workspace / Component Inventory
@@ -46,13 +46,11 @@ A `Cargo.lock` is committed; shared Phenotype crates are pinned to a
 | Module | Responsibility |
 |--------|----------------|
 | `backend/byteport` | Domain service. Clean/dependency-inversion layout: `application/` (deployment use-cases), `domain/deployment` (entities, repos, services, status), `infrastructure/` (auth, clients, http, persistence, secrets), `container/` (wiring), `monitor/`. |
-| `backend/bytebridge` | Supporting Go module for bridging/transport concerns. |
-| `backend/lib` | Shared helpers: `auth.go`, `cloud/`. |
 | `ports/otel_rum.go` | OpenTelemetry RUM-side hooks exposed over Go ports. |
 
 Backend stack: **Gin** HTTP router, **GORM** (Postgres + SQLite drivers),
 **WorkOS** auth, **go-jose** JWT, **Hashicorp Vault** / **AWS Secrets Manager**
-secret backends, **godotenv** config, AWS SDK v2. Go module `github.com/byteport/api`.
+secret backends, **godotenv** config, AWS SDK v2. Go module `byteport`.
 
 ### 2.3 Frontend (`frontend/web`)
 

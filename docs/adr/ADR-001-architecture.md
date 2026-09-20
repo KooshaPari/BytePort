@@ -161,14 +161,12 @@ backend/
 │   │   ├── nvms/                # NVMS types and interfaces
 │   │   └── models/              # Shared data models
 │   └── main.go                  # Entry point
-├── bytebridge/                  # Bridge/integration layer
-│   └── ByteBridge/              # External service integrations
-└── nvms/                        # NVMS manifest parser (standalone)
-    ├── main.go
-    ├── Builder/                  # Build orchestration
-    ├── Demonstrator/             # Portfolio generation
-    ├── Provisioner/              # AWS provisioning
-    └── projectManager/           # Project lifecycle management
+└── byteport/                 # BytePort deployment engine (Go module `byteport`)
+    ├── application/          # Use cases (deployment, project, instance lifecycle)
+    ├── domain/               # Entities, value objects, repository interfaces
+    ├── infrastructure/       # Adapters: auth, http, persistence, secrets, cloud
+    ├── container/            # Dependency injection wiring
+    └── routes/               # HTTP route handlers
 ```
 
 ### Technology Choices

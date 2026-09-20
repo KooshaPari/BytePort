@@ -59,8 +59,7 @@ BytePort follows a **three-tier architecture**:
 
 | Module | Location |
 |--------|----------|
-| `byteport` (main) | `backend/byteport/` |
-| `bytebridge` (legacy) | `backend/bytebridge/ByteBridge/` |
+| `byteport` (only) | `backend/byteport/` |
 
 ### Frontend
 
@@ -132,9 +131,8 @@ The app will open automatically in Tauri dev mode.
 
 ```
 BytePort/
-├── backend/             # Go backend - TWO modules, see backend/README.md
-│   ├── byteport/       # CANONICAL Go module: what the app talks to, port 8081
-│   └── bytebridge/     # Legacy bridge components
+├── backend/             # Go backend - canonical module, see backend/README.md
+│   └── byteport/       # Go module: what the app talks to, port 8081
 ├── crates/             # Rust workspace crates
 │   ├── byteport-cli/   # CLI bindings
 │   ├── byteport-dag/   # DAG executor/scheduler

@@ -11,7 +11,7 @@ Toolchain requirements (pinned by repo config):
 | Tool | Version / Source | Notes |
 |------|------------------|-------|
 | Rust | `stable` (rust-toolchain.toml: rustfmt, clippy, rust-src) | `rustup` |
-| Go | `1.26.0` (`backend/byteport/go.mod`) | `go.mod` module `github.com/byteport/api` |
+| Go | `1.26.0` (`backend/byteport/go.mod`) | `go.mod` module `byteport` |
 | Node / npm | npm 10.8.2 (`packageManager` field, matches `mise.toml`) | used by `frontend/web` |
 | Task | See `Taskfile.yml` | optional orchestrator (also `make`/`just`) |
 | pre-commit | `pip install pre-commit` | `just precommit-install` |

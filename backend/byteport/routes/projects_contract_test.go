@@ -19,12 +19,14 @@ import (
 // decoded map on models.Project is a private field tagged `json:"-"` and so
 // never reaches the client.
 //
-// Nothing covered this before. The sibling module backend/models (module
-// github.com/byteport/api) tags the same field `json:"-"`, which means its
-// /projects response omits the key entirely and the UI would show no
-// deployments. That divergence is why this test exists: hiding the field here
-// would silently break the project list, so it has to be a deliberate,
-// coordinated change rather than a drive-by tag edit.
+// History: the sibling module backend/models (module `github.com/byteport/api`)
+// once tagged the same field `json:"-"`, which would have caused its
+// /projects response to omit the key entirely and the UI to show no
+// deployments. That divergent copy was retired in 2026-09-20 along with the
+// rest of the `github.com/byteport/api` module (see issue #382), so the
+// contract this test pins is now the only one in the repo. Keeping this
+// guard makes future re-introductions of `json:"-"` an immediate failure
+// rather than a silent regression.
 func TestGetProjectsResponseExposesDeploymentsJSON(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	resetMockKeyring(t)

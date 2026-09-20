@@ -55,7 +55,6 @@ cargo audit
 | Path | Purpose |
 |------|---------|
 | `backend/byteport/` | Go 1.25 deployment engine (Gin + GORM + SQLite, PASETO auth, AWS SDK) |
-| `backend/bytebridge/` | Bridge / integration layer (legacy; in-process glue) |
 | `backend/nvms/` | MicroVM runtime (Spin / `nvms` Go service) |
 | `frontend/web/` | SvelteKit 2 + Svelte 5 + Tailwind 4 web frontend |
 | `frontend/web/src-tauri/` | Tauri 2 desktop/mobile shell (Rust) |
@@ -107,8 +106,7 @@ the primary web frontend; Rust (Tauri) is the desktop/mobile shell.
 ## 4. Conventions
 
 - **Commit message format** — Conventional Commits, scope = engine or
-  concern: `feat(byteport): …`, `fix(bytebridge): …`,
-  `feat(frontend): …`, `chore(tauri): …`. The scope names the engine.
+  concern: `feat(byteport): …`, `feat(frontend): …`, `chore(tauri): …`. The scope names the engine.
 - **Branch naming** — `<prefix>/<TID>-<topic>-<date>` where prefix ∈
   `{feat, fix, chore, ci, docs, refactor, test, perf, build}` and
   TID is a V3 DAG task ID (e.g. `L1-005`, `CC2-005`, `SD4`). Examples:
