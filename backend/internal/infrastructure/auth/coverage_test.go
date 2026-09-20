@@ -84,6 +84,21 @@ func setupMockSecretsManager() *secrets.Manager {
 	return manager
 }
 
+// newServiceWithSecrets builds a *WorkOSAuthService whose secrets manager
+// is seeded with the given map. Use this for the "missing / incomplete
+// secrets" subtests that exercise the Initialize error path. The map is
+// copied so callers can mutate it freely.
+func newServiceWithSecrets(secretsMap map[string]string) *WorkOSAuthService {
+	manager := secrets.New(secrets.Config{CacheTTL: time.Minute})
+	copied := make(map[string]string, len(secretsMap))
+	for k, v := range secretsMap {
+		copied[k] = v
+	}
+	mock := &mockProvider{secrets: copied}
+	manager.RegisterProvider("mock", mock)
+	return NewWorkOSAuthService(manager)
+}
+
 // roundTripFunc lets a plain function act as an http.RoundTripper.
 type roundTripFunc func(*http.Request) (*http.Response, error)
 
@@ -198,14 +213,8 @@ func TestWorkOSAuthService_Initialize(t *testing.T) {
 	})
 
 	t.Run("fails with missing secrets", func(t *testing.T) {
-		manager := secrets.New(secrets.Config{CacheTTL: time.Minute})
-		mock := &mockProvider{secrets: map[string]string{}} // Empty secrets
-		manager.RegisterProvider("mock", mock)
-
-		service := NewWorkOSAuthService(manager)
-		ctx := context.Background()
-
-		err := service.Initialize(ctx)
+		service := newServiceWithSecrets(nil)
+		err := service.Initialize(context.Background())
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to get WorkOS configuration")
 	})
@@ -483,16 +492,10 @@ func TestWorkOSAuthService_GetAuthURL(t *testing.T) {
 	})
 
 	t.Run("fails when secrets config missing", func(t *testing.T) {
-		// Create service with incomplete secrets.
-		manager := secrets.New(secrets.Config{CacheTTL: time.Minute})
-		mock := &mockProvider{secrets: map[string]string{
+		service := newServiceWithSecrets(map[string]string{
 			secrets.SecretWorkOSAPIKey: "test-api-key",
 			// Missing client ID and secret.
-		}}
-		manager.RegisterProvider("mock", mock)
-
-		service := NewWorkOSAuthService(manager)
-		// Initialize will fail due to missing secrets.
+		})
 		err := service.Initialize(ctx)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to get WorkOS configuration")
