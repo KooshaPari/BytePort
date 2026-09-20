@@ -14,15 +14,14 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"sync"
 	"testing"
 	"time"
 )
 
 // mockNVMSLoadTest returns a mock NanoVMS server that simulates realistic latencies.
-func mockNVMSLoadTest(t *testing.T) *httptest.Server {
-	t.Helper()
+func mockNVMSLoadTest(tb testing.TB) *httptest.Server {
+	tb.Helper()
 	var mu sync.Mutex
 	count := 0
 
@@ -57,90 +56,52 @@ func mockNVMSLoadTest(t *testing.T) *httptest.Server {
 	}))
 }
 
-// BenchmarkDeployEndpoint measures deploy throughput.
-func BenchmarkDeployEndpoint(b *testing.B) {
-	mockNVMS := mockNVMSLoadTest(&testing.T{})
-	defer mockNVMS.Close()
+// benchScenario describes one request shape for the BenchmarkEndpoints table.
+type benchScenario struct {
+	name    string
+	method  string
+	path    string
+	body    []byte
+	extra   func(*http.Request)
+	wantEnv string // token, used to set NVMS_TOKEN
+}
 
-	os.Setenv("NVMS_URL", mockNVMS.URL)
-	os.Setenv("NVMS_TOKEN", "bench-token")
-	defer os.Unsetenv("NVMS_URL")
-	defer os.Unsetenv("NVMS_TOKEN")
-
-	cfg := nvmsSandboxConfig{
+// BenchmarkEndpoints measures throughput across the three NanoVMS contract
+// endpoints (deploy, list, stop). Each subbenchmark shares the same env
+// setup and request boilerplate via setupBenchEnv + runBenchRequest.
+func BenchmarkEndpoints(b *testing.B) {
+	jsonBody, _ := json.Marshal(nvmsSandboxConfig{
 		Name:        "bench-project",
 		Image:       "alpine:latest",
 		SandboxType: "native",
+	})
+	scenarios := []benchScenario{
+		{
+			name: "deploy", method: "POST", path: "/v1/deploy", body: jsonBody,
+			extra:   func(r *http.Request) { r.Header.Set("Content-Type", "application/json") },
+			wantEnv: "bench-token",
+		},
+		{
+			name: "list", method: "GET", path: "/v1/sandboxes", body: nil,
+			wantEnv: "bench-token",
+		},
+		{
+			name: "stop", method: "POST", path: "/v1/stop?id=bench-sb-1", body: nil,
+			wantEnv: "bench-token",
+		},
 	}
-	jsonBody, _ := json.Marshal(cfg)
 
-	b.ResetTimer()
-	b.RunParallel(func(pb *testing.PB) {
-		for pb.Next() {
-			req, _ := http.NewRequest("POST", mockNVMS.URL+"/v1/deploy", bytes.NewReader(jsonBody))
-			req.Header.Set("Authorization", "Bearer bench-token")
-			req.Header.Set("Content-Type", "application/json")
-
-			resp, err := (&http.Client{}).Do(req)
-			if err != nil {
-				b.Errorf("request failed: %v", err)
-				return
-			}
-			resp.Body.Close()
-		}
-	})
-}
-
-// BenchmarkListEndpoint measures list throughput.
-func BenchmarkListEndpoint(b *testing.B) {
-	mockNVMS := mockNVMSLoadTest(&testing.T{})
-	defer mockNVMS.Close()
-
-	os.Setenv("NVMS_URL", mockNVMS.URL)
-	os.Setenv("NVMS_TOKEN", "bench-token")
-	defer os.Unsetenv("NVMS_URL")
-	defer os.Unsetenv("NVMS_TOKEN")
-
-	b.ResetTimer()
-	b.RunParallel(func(pb *testing.PB) {
-		for pb.Next() {
-			req, _ := http.NewRequest("GET", mockNVMS.URL+"/v1/sandboxes", nil)
-			req.Header.Set("Authorization", "Bearer bench-token")
-
-			resp, err := (&http.Client{}).Do(req)
-			if err != nil {
-				b.Errorf("request failed: %v", err)
-				return
-			}
-			resp.Body.Close()
-		}
-	})
-}
-
-// BenchmarkStopEndpoint measures stop throughput.
-func BenchmarkStopEndpoint(b *testing.B) {
-	mockNVMS := mockNVMSLoadTest(&testing.T{})
-	defer mockNVMS.Close()
-
-	os.Setenv("NVMS_URL", mockNVMS.URL)
-	os.Setenv("NVMS_TOKEN", "bench-token")
-	defer os.Unsetenv("NVMS_URL")
-	defer os.Unsetenv("NVMS_TOKEN")
-
-	b.ResetTimer()
-	b.RunParallel(func(pb *testing.PB) {
-		for pb.Next() {
-			req, _ := http.NewRequest("POST", mockNVMS.URL+"/v1/stop?id=bench-sb-1", nil)
-			req.Header.Set("Authorization", "Bearer bench-token")
-
-			resp, err := (&http.Client{}).Do(req)
-			if err != nil {
-				b.Errorf("request failed: %v", err)
-				return
-			}
-			resp.Body.Close()
-		}
-	})
+	for _, sc := range scenarios {
+		b.Run(sc.name, func(b *testing.B) {
+			url := setupBenchEnv(b, sc.wantEnv)
+			b.ResetTimer()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					runBenchRequest(b, sc.method, url+sc.path, sc.wantEnv, sc.body, sc.extra)
+				}
+			})
+		})
+	}
 }
 
 // TestConcurrentDeployStress tests 50 concurrent deploys.
@@ -148,10 +109,8 @@ func TestConcurrentDeployStress(t *testing.T) {
 	mockNVMS := mockNVMSLoadTest(t)
 	defer mockNVMS.Close()
 
-	os.Setenv("NVMS_URL", mockNVMS.URL)
-	os.Setenv("NVMS_TOKEN", "stress-token")
-	defer os.Unsetenv("NVMS_URL")
-	defer os.Unsetenv("NVMS_TOKEN")
+	const token = "stress-token"
+	setupBenchEnv(t, token)
 
 	const concurrency = 50
 	var wg sync.WaitGroup
@@ -172,7 +131,7 @@ func TestConcurrentDeployStress(t *testing.T) {
 			jsonBody, _ := json.Marshal(cfg)
 
 			req, _ := http.NewRequest("POST", mockNVMS.URL+"/v1/deploy", bytes.NewReader(jsonBody))
-			req.Header.Set("Authorization", "Bearer stress-token")
+			req.Header.Set("Authorization", "Bearer "+token)
 			req.Header.Set("Content-Type", "application/json")
 
 			resp, err := (&http.Client{}).Do(req)
