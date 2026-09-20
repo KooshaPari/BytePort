@@ -32,6 +32,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   crash on a missing session even if the route is ever mounted outside the
   protected group.
 
+- refactor(go): extract `bindJSON(c, dst, context)` helper in
+  `backend/byteport/routes/bind.go` to deduplicate the
+  `var req X; if err := c.ShouldBindJSON(&req); err != nil { respondBadRequest; return }`
+  pattern repeated at 5 sites across `auth.go` (Login, Signup, UpdateUser)
+  and `deployment.go` (DeployProject, TerminateInstance). Returns false on
+  bind failure and writes a 400 of the form `"<context>: <bind error>"`
+  (or just the bare error when context is empty), so callers can shrink to
+  a single `if !bindJSON(c, &req, "") { return }` line.
+
+- test(go): merge `routes/auth_happy_test.go` (460 lines, 13 tests) and
+  `routes/auth_test.go` (153 lines, 7 tests) into a single
+  `routes/auth_test.go` (613 lines, 20 tests). The two files were duplicating
+  imports (`bytes`, `encoding/json`, `httptest`, `gin`, `lib`, `uuid`) and
+  the `authTestRouter` helper setup. Tests are now grouped by the handler
+  they exercise: currentUser (3), setAuthCookie (1), Login (4), Signup (3),
+  Authenticate (4), UpdateUser (2), LinkHandler + UpdateLink (3).
 - refactor(go): extract `nvmsRequest` helper in `backend/byteport/routes/deployment.go`
   to deduplicate the NanoVMS HTTP plumbing shared by `DeployProject` (POST
   `/v1/deploy`) and `TerminateInstance` (POST `/v1/stop?id=<uuid>`). The
