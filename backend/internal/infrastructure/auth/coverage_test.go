@@ -167,6 +167,25 @@ func assertBlocked(t *testing.T, w *httptest.ResponseRecorder, c *gin.Context) {
 	assert.True(t, c.IsAborted())
 }
 
+// saveHTTPGet saves the package-level httpGet var and registers a
+// t.Cleanup hook to restore it on test exit. Use at the top of any
+// subtest that monkey-patches httpGet.
+func saveHTTPGet(t *testing.T) {
+	t.Helper()
+	original := httpGet
+	t.Cleanup(func() { httpGet = original })
+}
+
+// saveHTTPClientFactory saves the package-level httpClientFactory var
+// and registers a t.Cleanup hook to restore it on test exit. Use at the
+// top of any subtest that monkey-patches httpClientFactory.
+func saveHTTPClientFactory(t *testing.T) {
+	t.Helper()
+	original := httpClientFactory
+	t.Cleanup(func() { httpClientFactory = original })
+}
+
+
 // assertAuthError asserts a call returned an error, the response value is
 // nil, and the error contains wantMsg. response can be any pointer type
 // (typically *UserInfo or *TokenResponse); the helper only checks for
@@ -370,8 +389,7 @@ func TestWorkOSAuthService_GetWorkOSPublicKey(t *testing.T) {
 
 	t.Run("handles successful JWKS fetch", func(t *testing.T) {
 		// Save and restore the package-level httpGet var.
-		original := httpGet
-		t.Cleanup(func() { httpGet = original })
+		saveHTTPGet(t)
 
 		jwks := JWKSResponse{
 			Keys: []jose.JSONWebKey{
@@ -400,8 +418,7 @@ func TestWorkOSAuthService_GetWorkOSPublicKey(t *testing.T) {
 	})
 
 	t.Run("handles JWKS fetch failure", func(t *testing.T) {
-		original := httpGet
-		t.Cleanup(func() { httpGet = original })
+		saveHTTPGet(t)
 
 		httpGet = func(url string) (*http.Response, error) {
 			return nil, fmt.Errorf("network error")
@@ -417,8 +434,7 @@ func TestWorkOSAuthService_ExchangeWithWorkOS(t *testing.T) {
 	service, ctx := newUninitializedService(t)
 
 	t.Run("handles successful token exchange", func(t *testing.T) {
-		originalFactory := httpClientFactory
-		t.Cleanup(func() { httpClientFactory = originalFactory })
+		saveHTTPClientFactory(t)
 
 		httpClientFactory = func() *http.Client {
 			return &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
@@ -450,8 +466,7 @@ func TestWorkOSAuthService_ExchangeWithWorkOS(t *testing.T) {
 	})
 
 	t.Run("handles invalid JSON payload", func(t *testing.T) {
-		originalFactory := httpClientFactory
-		t.Cleanup(func() { httpClientFactory = originalFactory })
+		saveHTTPClientFactory(t)
 
 		httpClientFactory = func() *http.Client {
 			return &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
