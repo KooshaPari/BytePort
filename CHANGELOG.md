@@ -32,6 +32,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   crash on a missing session even if the route is ever mounted outside the
   protected group.
 
+- refactor(go): extract `nvmsRequest` helper in `backend/byteport/routes/deployment.go`
+  to deduplicate the NanoVMS HTTP plumbing shared by `DeployProject` (POST
+  `/v1/deploy`) and `TerminateInstance` (POST `/v1/stop?id=<uuid>`). The
+  helper attaches the `Authorization: Bearer $NVMS_TOKEN` header when set,
+  sets `Content-Type: application/json` for non-empty bodies, and returns the
+  upstream status, full response body, and any transport error. Callers now
+  pass a path + body and translate non-2xx statuses into a 500 with the
+  upstream body surfaced via `respondErrorWithDetails`. Side benefit: a
+  package-level `nvmsHTTPClient` (with a 30 s timeout) replaces the
+  per-handler `(&http.Client{}).Do` anti-pattern, which previously allocated
+  a fresh client (and therefore a fresh transport) on every request,
+  defeating keep-alive connection reuse to NVMS and applying no timeout.
+
 ### Fixed
 
 - test(go): dedupe `backend/byteport/routes/loadtest_test.go` (201 → 160 lines)
