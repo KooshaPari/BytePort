@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- test(go): dedupe `backend/byteport/routes/loadtest_test.go` (201 → 160 lines)
+  by extracting two helpers into a new
+  `backend/byteport/routes/helpers_test.go` (43 lines):
+
+  | Helper | Replaces | Sites |
+  |---|---|---|
+  | `setupBenchEnv(tb, token)` | 6-line `mockNVMS := mockNVMSLoadTest(...) + defer Close + Setenv NVMS_URL + Setenv NVMS_TOKEN + defer Unsetenv×2` preamble | 4 |
+  | `runBenchRequest(b, method, url, token, body, extra)` | 6-line `http.NewRequest + Header.Set Authorization + resp, err := Client.Do + Body.Close` block | 3 |
+
+  Collapses `BenchmarkDeployEndpoint`, `BenchmarkListEndpoint`,
+  `BenchmarkStopEndpoint` (each ~30 lines, identical setup + ~6-line varying
+  request body) into one table-driven `BenchmarkEndpoints` (3 sub-benchmarks
+  named `deploy`, `list`, `stop`). The `mockNVMSLoadTest` helper is now
+  shared between `TestConcurrentDeployStress` and the benchmarks via
+  `setupBenchEnv`. `go test -bench=^BenchmarkEndpoints$ -benchtime=1x` runs all
+  three in ~5s; full `go test ./...` clean.
+
 - chore(deps): align `frontend/web` package manager with CI. The project
   declared `packageManager: yarn@1.22.21+sha1.*` but every CI workflow
   that touches `frontend/web` runs `npm ci --legacy-peer-deps`, which
