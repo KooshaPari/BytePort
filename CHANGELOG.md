@@ -34,6 +34,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- chore(lint): remove `respondConflict` from `backend/byteport/routes/
+  responses.go`. The helper was extracted in #401 as a shortcut for
+  `respondError(c, http.StatusConflict, msg)` but no route handler has
+  ever called it. The Go `unused` linter was catching this in every PR
+  built on top of #401's branch, so the function was paying a tax for no
+  value. If a future route genuinely needs a 409 response, the call site
+  can use `respondError(c, http.StatusConflict, msg)` directly;
+  re-introducing the shortcut when a second caller arrives will be a
+  one-line follow-up.
+- fix(ci): remove the `backend` matrix entry from `go-vet`, `go-build`,
+  and `go-test` in `.github/workflows/ci.yml`. The entry was added in
+  #385 to cover a `backend/` Go module that was retired in #382
+  (`backend/go.mod` and the rest of `backend/`'s divergent Go source were
+  removed), but the matrix reference was never cleaned up. Every PR has
+  been failing the `Go vet (backend)`, `Go build (backend)`, and
+  `Go test (backend)` jobs since #382 landed, blocking the Mergify queue.
+  The remaining `backend/byteport` matrix entry still covers the only
+  live Go module in the repository (verified via `find . -name go.mod`
+  returns exactly one file).
 - chore(deps): align `frontend/web` package manager with CI. The project
   declared `packageManager: yarn@1.22.21+sha1.*` but every CI workflow
   that touches `frontend/web` runs `npm ci --legacy-peer-deps`, which
