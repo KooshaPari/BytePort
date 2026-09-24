@@ -7,7 +7,6 @@ import (
 	"encoding/base64"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -24,262 +23,146 @@ func setupRouter() *gin.Engine {
 
 // --- Route handler registration tests ---
 
-// TestGetInstancesRequiresUser verifies that GetInstances returns 401 when
-// no user is present in the gin context.
-func TestGetInstancesRequiresUser(t *testing.T) {
-	router := setupRouter()
-	router.GET("/instances", bproutes.GetInstances)
-
-	req := httptest.NewRequest(http.MethodGet, "/instances", nil)
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
-
-	if w.Code != http.StatusUnauthorized {
-		t.Errorf("status = %d, want %d", w.Code, http.StatusUnauthorized)
+// TestProtectedHandlersRequireUser verifies that GetInstances and GetProjects
+// both return 401 with an "Unauthorized" body when no user is present in the
+// gin context.
+func TestProtectedHandlersRequireUser(t *testing.T) {
+	tests := []struct {
+		name    string
+		path    string
+		handler gin.HandlerFunc
+	}{
+		{"get instances", "/instances", bproutes.GetInstances},
+		{"get projects", "/projects", bproutes.GetProjects},
 	}
-	if !strings.Contains(w.Body.String(), "Unauthorized") {
-		t.Errorf("body = %q, want to contain 'Unauthorized'", w.Body.String())
-	}
-}
 
-// TestGetProjectsRequiresUser verifies that GetProjects returns 401 when
-// no user is present in the gin context.
-func TestGetProjectsRequiresUser(t *testing.T) {
-	router := setupRouter()
-	router.GET("/projects", bproutes.GetProjects)
-
-	req := httptest.NewRequest(http.MethodGet, "/projects", nil)
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
-
-	if w.Code != http.StatusUnauthorized {
-		t.Errorf("status = %d, want %d", w.Code, http.StatusUnauthorized)
-	}
-	if !strings.Contains(w.Body.String(), "Unauthorized") {
-		t.Errorf("body = %q, want to contain 'Unauthorized'", w.Body.String())
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			w := perform(t, http.MethodGet, tt.path, tt.handler)
+			assertStatus(t, w, http.StatusUnauthorized)
+			assertBodyContains(t, w, "Unauthorized")
+		})
 	}
 }
 
-// TestGetInstancesInvalidUserContext verifies that GetInstances returns 500
-// when the user context value is not of the expected type.
-func TestGetInstancesInvalidUserContext(t *testing.T) {
-	router := setupRouter()
-	// Middleware that sets a wrong type in the "user" context key
-	router.Use(func(c *gin.Context) {
-		c.Set("user", "not-a-user-struct")
-		c.Next()
-	})
-	router.GET("/instances", bproutes.GetInstances)
-
-	w := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/instances", nil)
-	router.ServeHTTP(w, req)
-
-	if w.Code != http.StatusInternalServerError {
-		t.Errorf("status = %d, want %d", w.Code, http.StatusInternalServerError)
+// TestProtectedHandlersRejectWrongUserType verifies that GetInstances and
+// GetProjects return 500 with "Invalid user context" when the gin context
+// carries a non-models.User value under the "user" key.
+func TestProtectedHandlersRejectWrongUserType(t *testing.T) {
+	tests := []struct {
+		name       string
+		path       string
+		handler    gin.HandlerFunc
+		wrongValue any
+	}{
+		{
+			name:       "get instances, string in user",
+			path:       "/instances",
+			handler:    bproutes.GetInstances,
+			wrongValue: "not-a-user-struct",
+		},
+		{
+			name:       "get projects, int in user",
+			path:       "/projects",
+			handler:    bproutes.GetProjects,
+			wrongValue: 12345,
+		},
 	}
-	if !strings.Contains(w.Body.String(), "Invalid user context") {
-		t.Errorf("body = %q, want to contain 'Invalid user context'", w.Body.String())
-	}
-}
 
-// TestGetProjectsInvalidUserContext verifies that GetProjects returns 500
-// when the user context value is not of the expected type.
-func TestGetProjectsInvalidUserContext(t *testing.T) {
-	router := setupRouter()
-	router.Use(func(c *gin.Context) {
-		c.Set("user", 12345) // wrong type
-		c.Next()
-	})
-	router.GET("/projects", bproutes.GetProjects)
-
-	req := httptest.NewRequest(http.MethodGet, "/projects", nil)
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
-
-	if w.Code != http.StatusInternalServerError {
-		t.Errorf("status = %d, want %d", w.Code, http.StatusInternalServerError)
-	}
-	if !strings.Contains(w.Body.String(), "Invalid user context") {
-		t.Errorf("body = %q, want to contain 'Invalid user context'", w.Body.String())
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mw := func(c *gin.Context) {
+				c.Set("user", tt.wrongValue)
+				c.Next()
+			}
+			w := performWithMiddleware(t, http.MethodGet, tt.path, tt.handler, mw)
+			assertStatus(t, w, http.StatusInternalServerError)
+			assertBodyContains(t, w, "Invalid user context")
+		})
 	}
 }
 
 // --- Auth middleware tests ---
 
-// TestAuthMiddlewareBlocksMissingCookie verifies that the auth middleware
-// returns 401 when no auth cookie is provided.
-func TestAuthMiddlewareBlocksMissingCookie(t *testing.T) {
-	router := setupRouter()
-	router.Use(lib.AuthMiddleware())
-	router.GET("/protected", func(c *gin.Context) {
+// TestAuthMiddlewareBlocksUnauthenticated verifies that the auth middleware
+// returns 401 for the various ways the request can lack a valid token.
+func TestAuthMiddlewareBlocksUnauthenticated(t *testing.T) {
+	okHandler := func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"ok": true})
-	})
+	}
 
-	req := httptest.NewRequest(http.MethodGet, "/protected", nil)
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
+	tests := []struct {
+		name             string
+		opts             []requestOpt
+		wantBodyContains string
+	}{
+		{name: "no cookie at all"},
+		{name: "empty cookie", opts: []requestOpt{withCookie("authToken", "")}},
+		{
+			name:             "garbage token",
+			opts:             []requestOpt{withCookie("authToken", "totally-invalid-token")},
+			wantBodyContains: "Invalid or expired token",
+		},
+	}
 
-	if w.Code != http.StatusUnauthorized {
-		t.Errorf("status = %d, want %d", w.Code, http.StatusUnauthorized)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			w := performWithMiddleware(t, http.MethodGet, "/protected", okHandler, lib.AuthMiddleware(), tt.opts...)
+			assertStatus(t, w, http.StatusUnauthorized)
+			if tt.wantBodyContains != "" {
+				assertBodyContains(t, w, tt.wantBodyContains)
+			}
+		})
 	}
 }
 
-// TestAuthMiddlewareBlocksEmptyCookie verifies that the auth middleware
-// returns 401 when the auth cookie is empty.
-func TestAuthMiddlewareBlocksEmptyCookie(t *testing.T) {
-	router := setupRouter()
-	router.Use(lib.AuthMiddleware())
-	router.GET("/protected", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"ok": true})
-	})
-
-	req := httptest.NewRequest(http.MethodGet, "/protected", nil)
-	req.AddCookie(&http.Cookie{Name: "authToken", Value: ""})
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
-
-	if w.Code != http.StatusUnauthorized {
-		t.Errorf("status = %d, want %d", w.Code, http.StatusUnauthorized)
-	}
-}
-
-// TestAuthMiddlewareBlocksInvalidToken verifies that the auth middleware
-// returns 401 when the auth cookie contains a garbage token.
-func TestAuthMiddlewareBlocksInvalidToken(t *testing.T) {
-	router := setupRouter()
-	router.Use(lib.AuthMiddleware())
-	router.GET("/protected", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"ok": true})
-	})
-
-	req := httptest.NewRequest(http.MethodGet, "/protected", nil)
-	req.AddCookie(&http.Cookie{Name: "authToken", Value: "totally-invalid-token"})
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
-
-	if w.Code != http.StatusUnauthorized {
-		t.Errorf("status = %d, want %d", w.Code, http.StatusUnauthorized)
-	}
-	if !strings.Contains(w.Body.String(), "Invalid or expired token") {
-		t.Errorf("body = %q, want to contain 'Invalid or expired token'", w.Body.String())
-	}
-}
-
-// TestAuthMiddlewareWithMockValidToken verifies that when a valid PASETO
-// token is set as the cookie, the middleware attempts decryption. When
-// the keyring is unavailable (test env), it returns 401 from the token
-// validation path rather than the "missing header" path.
+// TestAuthMiddlewareWithMockValidToken verifies that when a valid PASETO-shaped
+// token is set as the cookie, the middleware reaches the validation step
+// rather than short-circuiting on the missing-header path. When the keyring is
+// unavailable (test env), it still returns 401 from the token validation path.
 func TestAuthMiddlewareWithMockValidToken(t *testing.T) {
-	router := setupRouter()
-	router.Use(lib.AuthMiddleware())
-	router.GET("/protected", func(c *gin.Context) {
+	okHandler := func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"ok": true})
-	})
-
-	// Set a PASETO-formatted token string as cookie — will fail at
-	// keyring/token validation, but proves the middleware reached
-	// the validation step (not the "missing header" short-circuit).
-	req := httptest.NewRequest(http.MethodGet, "/protected", nil)
-	req.AddCookie(&http.Cookie{
-		Name:  "authToken",
-		Value: "v4.local." + base64.StdEncoding.EncodeToString([]byte("fake-paseto-token")),
-	})
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
-
-	if w.Code != http.StatusUnauthorized {
-		t.Errorf("status = %d, want %d", w.Code, http.StatusUnauthorized)
 	}
-	body := w.Body.String()
-	if strings.Contains(body, "Authorization header missing") {
-		t.Error("should not return 'Authorization header missing' when cookie is present")
-	}
+	token := "v4.local." + base64.StdEncoding.EncodeToString([]byte("fake-paseto-token"))
+	w := performWithMiddleware(t, http.MethodGet, "/protected", okHandler, lib.AuthMiddleware(),
+		withCookie("authToken", token))
+
+	assertStatus(t, w, http.StatusUnauthorized)
+	assertBodyLacks(t, w, "Authorization header missing")
 }
 
 // --- Error response status code tests ---
 
-// TestLoginReturnsBadRequestForInvalidJSON verifies that Login returns 400
-// when the request body is not valid JSON.
-func TestLoginReturnsBadRequestForInvalidJSON(t *testing.T) {
-	router := setupRouter()
-	router.POST("/login", bproutes.Login)
-
-	body := strings.NewReader("not-json{{{")
-	req := httptest.NewRequest(http.MethodPost, "/login", body)
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
-
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("status = %d, want %d", w.Code, http.StatusBadRequest)
+// TestAuthEndpointsReturnBadRequestForInvalidJSON verifies that Login and
+// Signup both return 400 for the various ways the request body can fail to
+// bind as a JSON object.
+func TestAuthEndpointsReturnBadRequestForInvalidJSON(t *testing.T) {
+	tests := []struct {
+		name    string
+		path    string
+		handler gin.HandlerFunc
+		body    string
+	}{
+		{name: "login: garbage body", path: "/login", handler: bproutes.Login, body: "not-json{{{"},
+		{name: "login: empty body", path: "/login", handler: bproutes.Login, body: ""},
+		{name: "signup: garbage body", path: "/signup", handler: bproutes.Signup, body: "{invalid"},
+		{name: "signup: array not object", path: "/signup", handler: bproutes.Signup, body: `["name","email"]`},
 	}
-}
 
-// TestLoginReturnsBadRequestForEmptyBody verifies that Login returns 400
-// when the request body is empty.
-func TestLoginReturnsBadRequestForEmptyBody(t *testing.T) {
-	router := setupRouter()
-	router.POST("/login", bproutes.Login)
-
-	req := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(""))
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
-
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("status = %d, want %d", w.Code, http.StatusBadRequest)
-	}
-}
-
-// TestSignupReturnsBadRequestForInvalidJSON verifies that Signup returns 400
-// when the request body is not valid JSON.
-func TestSignupReturnsBadRequestForInvalidJSON(t *testing.T) {
-	router := setupRouter()
-	router.POST("/signup", bproutes.Signup)
-
-	body := strings.NewReader("{invalid")
-	req := httptest.NewRequest(http.MethodPost, "/signup", body)
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
-
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("status = %d, want %d", w.Code, http.StatusBadRequest)
-	}
-}
-
-// TestSignupReturnsBadRequestForMalformedJSON verifies that Signup returns
-// 400 when the JSON body is a valid JSON value but not an object.
-func TestSignupReturnsBadRequestForMalformedJSON(t *testing.T) {
-	router := setupRouter()
-	router.POST("/signup", bproutes.Signup)
-
-	// JSON array — valid JSON but wrong shape for struct binding
-	body := strings.NewReader(`["name","email"]`)
-	req := httptest.NewRequest(http.MethodPost, "/signup", body)
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
-
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("status = %d, want %d", w.Code, http.StatusBadRequest)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			w := perform(t, http.MethodPost, tt.path, tt.handler, withJSONBody(tt.body))
+			assertStatus(t, w, http.StatusBadRequest)
+		})
 	}
 }
 
 // TestAuthenticateReturnsUnauthorizedWithoutCookie verifies that the
 // Authenticate handler returns 401 when no auth cookie is provided.
 func TestAuthenticateReturnsUnauthorizedWithoutCookie(t *testing.T) {
-	router := setupRouter()
-	router.GET("/authenticate", bproutes.Authenticate)
-
-	req := httptest.NewRequest(http.MethodGet, "/authenticate", nil)
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
-
-	if w.Code != http.StatusUnauthorized {
-		t.Errorf("status = %d, want %d", w.Code, http.StatusUnauthorized)
-	}
+	w := perform(t, http.MethodGet, "/authenticate", bproutes.Authenticate)
+	assertStatus(t, w, http.StatusUnauthorized)
 }
 
 // TestRouteRegistration verifies that all expected routes are registered
@@ -287,7 +170,6 @@ func TestAuthenticateReturnsUnauthorizedWithoutCookie(t *testing.T) {
 func TestRouteRegistration(t *testing.T) {
 	router := setupRouter()
 
-	// Register routes matching main.go's protected group
 	protected := router.Group("/")
 	protected.Use(lib.AuthMiddleware())
 	{
@@ -301,12 +183,10 @@ func TestRouteRegistration(t *testing.T) {
 	router.POST("/login", bproutes.Login)
 	router.POST("/signup", bproutes.Signup)
 
-	// Collect registered routes
 	routes := router.Routes()
-	routeMap := make(map[string]bool)
+	routeMap := make(map[string]bool, len(routes))
 	for _, r := range routes {
-		key := r.Method + " " + r.Path
-		routeMap[key] = true
+		routeMap[r.Method+" "+r.Path] = true
 	}
 
 	expected := []string{
@@ -325,8 +205,6 @@ func TestRouteRegistration(t *testing.T) {
 			t.Errorf("expected route %q not found in registered routes", route)
 		}
 	}
-
-	// Verify total count (at least the expected routes)
 	if len(routes) < len(expected) {
 		t.Errorf("registered %d routes, want at least %d", len(routes), len(expected))
 	}
@@ -344,68 +222,36 @@ func TestRouteRegistrationMethodMismatch(t *testing.T) {
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
-	if w.Code != http.StatusMethodNotAllowed {
-		t.Errorf("status = %d, want %d (Method Not Allowed)", w.Code, http.StatusMethodNotAllowed)
-	}
+	assertStatus(t, w, http.StatusMethodNotAllowed)
 }
 
 // TestAuthMiddlewareResponseFormat verifies that the auth middleware returns
 // a JSON response with the correct structure.
 func TestAuthMiddlewareResponseFormat(t *testing.T) {
-	router := setupRouter()
-	router.Use(lib.AuthMiddleware())
-	router.GET("/protected", func(c *gin.Context) {
+	okHandler := func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"ok": true})
-	})
-
-	req := httptest.NewRequest(http.MethodGet, "/protected", nil)
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
-
-	if w.Code != http.StatusUnauthorized {
-		t.Errorf("status = %d, want %d", w.Code, http.StatusUnauthorized)
 	}
+	w := performWithMiddleware(t, http.MethodGet, "/protected", okHandler, lib.AuthMiddleware())
 
-	// Verify response contains JSON with "error" field
-	body := w.Body.String()
-	if !strings.Contains(body, "error") {
-		t.Errorf("response body %q should contain 'error' key", body)
-	}
-
-	// Verify Content-Type is JSON
-	ct := w.Header().Get("Content-Type")
-	if !strings.Contains(ct, "application/json") {
-		t.Errorf("Content-Type = %q, want application/json", ct)
-	}
+	assertStatus(t, w, http.StatusUnauthorized)
+	assertBodyContains(t, w, "error")
+	assertHeaderContains(t, w, "Content-Type", "application/json")
 }
 
 // TestGetInstancesReturnsJSON verifies that the handler returns valid JSON
 // with the correct Content-Type header even on error paths.
 func TestGetInstancesReturnsJSON(t *testing.T) {
-	router := setupRouter()
-	router.GET("/instances", bproutes.GetInstances)
+	w := perform(t, http.MethodGet, "/instances", bproutes.GetInstances)
 
-	req := httptest.NewRequest(http.MethodGet, "/instances", nil)
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
-
-	ct := w.Header().Get("Content-Type")
-	if !strings.Contains(ct, "application/json") {
-		t.Errorf("Content-Type = %q, want application/json", ct)
-	}
-
-	body := w.Body.String()
-	if !strings.Contains(body, "error") {
-		t.Errorf("response body %q should contain 'error' key", body)
-	}
+	assertHeaderContains(t, w, "Content-Type", "application/json")
+	assertBodyContains(t, w, "error")
 }
 
-// TestUserContextPropagatedToHandler verifies that when the auth middleware
-// sets a user in the context, the handler can retrieve it.
+// TestUserContextPropagatedToHandler verifies that when a middleware sets a
+// models.User in the gin context, the handler can retrieve it via c.Get.
 func TestUserContextPropagatedToHandler(t *testing.T) {
 	router := setupRouter()
 
-	// Simulate successful auth by setting user in context
 	router.Use(func(c *gin.Context) {
 		c.Set("user", models.User{
 			UUID:  "test-uuid-123",
