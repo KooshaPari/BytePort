@@ -48,7 +48,7 @@ jobs:
       - name: Install lefthook
         run: |
           mkdir -p "$HOME/.local/bin"
-          curl -fsSL -o /tmp/lefthook.gz https://github.com/evilmartians/lefthook/releases/download/v2.1.14/lefthook_2.1.14_Linux_x86_64.gz
+          curl -fsSL --proto '=https' --proto-redir '=https' -o /tmp/lefthook.gz https://github.com/evilmartians/lefthook/releases/download/v2.1.14/lefthook_2.1.14_Linux_x86_64.gz
           gunzip -c /tmp/lefthook.gz > "$HOME/.local/bin/lefthook"
           chmod +x "$HOME/.local/bin/lefthook"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
@@ -94,7 +94,7 @@ jobs:
       - name: Install lefthook
         run: |
           mkdir -p "$HOME/.local/bin"
-          curl -fsSL -o /tmp/lefthook.gz https://github.com/evilmartians/lefthook/releases/download/v2.1.14/lefthook_2.1.14_Linux_x86_64.gz
+          curl -fsSL --proto '=https' --proto-redir '=https' -o /tmp/lefthook.gz https://github.com/evilmartians/lefthook/releases/download/v2.1.14/lefthook_2.1.14_Linux_x86_64.gz
           gunzip -c /tmp/lefthook.gz > "$HOME/.local/bin/lefthook"
           chmod +x "$HOME/.local/bin/lefthook"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
@@ -119,7 +119,7 @@ jobs:
       - name: Install lefthook
         run: |
           mkdir -p "$HOME/.local/bin"
-          curl -fsSL -o /tmp/lefthook.gz https://github.com/evilmartians/lefthook/releases/download/v2.1.14/lefthook_2.1.14_Linux_x86_64.gz
+          curl -fsSL --proto '=https' --proto-redir '=https' -o /tmp/lefthook.gz https://github.com/evilmartians/lefthook/releases/download/v2.1.14/lefthook_2.1.14_Linux_x86_64.gz
           gunzip -c /tmp/lefthook.gz > "$HOME/.local/bin/lefthook"
           chmod +x "$HOME/.local/bin/lefthook"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"

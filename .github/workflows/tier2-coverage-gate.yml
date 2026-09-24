@@ -26,7 +26,6 @@ concurrency:
 
 permissions:
   contents: read
-  pull-requests: write
 
 env:
   RUSTFLAGS: -Cinstrument-coverage
@@ -158,10 +157,18 @@ jobs:
           cache-dependency-path: frontend/web/package-lock.json
 
       - name: Install dependencies
-        run: npm ci --no-audit --no-fund --legacy-peer-deps
+        run: npm ci --ignore-scripts --no-audit --no-fund --legacy-peer-deps
 
       - name: Run service tests with coverage
-        run: npx vitest run --coverage --reporter=json --outputFile=target/coverage-service.json || true
+        run: |
+          # vitest is not a dependency yet (no service unit-test suite), so only
+          # run it from a local install — never fetch an unpinned copy at CI time.
+          if [ -x node_modules/.bin/vitest ]; then
+            ./node_modules/.bin/vitest run --coverage --reporter=json \
+              --outputFile=target/coverage-service.json || true
+          else
+            echo "vitest not installed locally; no service unit tests to run."
+          fi
 
       - name: Check coverage threshold (≥60%)
         run: |

@@ -42,14 +42,17 @@ func setupRouter() *gin.Engine {
 	// from tauri://localhost, so it is admitted through AllowOriginFunc instead.
 	// Omitting it made every preflight from the packaged desktop app fail with
 	// 403, so the app could not reach this backend at all.
+	// The 0.0.0.0 origins below are dev-only CORS allowlist entries: the vite
+	// and Tauri dev servers speak plain HTTP by design, so S5332 cannot be
+	// satisfied by switching them to TLS.
 	httpOrigins := []string{
 		"http://localhost:5173",
-		"http://0.0.0.0:5173",
+		"http://0.0.0.0:5173", // NOSONAR (dev-only origin; HTTP by design)
 		// Windows/Linux Tauri webview origin.
 		"http://tauri.localhost",
-		"http://tauri.0.0.0.0:5173",
+		"http://tauri.0.0.0.0:5173", // NOSONAR (dev-only origin; HTTP by design)
 		"http://localhost:8081",
-		"http://0.0.0.0:8081",
+		"http://0.0.0.0:8081", // NOSONAR (dev-only origin; HTTP by design)
 		"http://10.0.2.2:5173",
 		"http://10.0.2.2:8081",
 		// Add other needed origins

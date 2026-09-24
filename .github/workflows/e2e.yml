@@ -33,16 +33,16 @@ jobs:
           cache-dependency-path: frontend/web/package-lock.json
 
       - name: Install
-        run: npm ci --legacy-peer-deps
+        run: npm ci --ignore-scripts --legacy-peer-deps
 
       - name: Install Playwright
-        run: npx playwright install --with-deps chromium
+        run: ./node_modules/.bin/playwright install --with-deps chromium
 
       - name: Build
         run: npm run build
 
       - name: Run E2E tests
-        run: npx playwright test
+        run: ./node_modules/.bin/playwright test
 
       - name: Upload report on failure
         if: failure()

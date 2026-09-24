@@ -54,7 +54,7 @@ get_latest_version() {
     fi
 
     local version
-    version=$(curl -fsSL "https://api.github.com/repos/${GITHUB_REPO}/releases/latest" \
+    version=$(curl -fsSL --proto '=https' --proto-redir '=https' "https://api.github.com/repos/${GITHUB_REPO}/releases/latest" \
         | grep '"tag_name"' | sed -E 's/.*"tag_name": *"([^"]+)".*/\1/')
 
     if [ -z "$version" ]; then
@@ -88,7 +88,7 @@ main() {
             local dmg_url="https://github.com/${GITHUB_REPO}/releases/download/${version}/BytePort_${version}_aarch64.dmg"
             local dmg_file="/tmp/byteport-${version}.dmg"
 
-            curl -fSL "$dmg_url" -o "$dmg_file" || {
+            curl -fSL --proto '=https' --proto-redir '=https' "$dmg_url" -o "$dmg_file" || {
                 # Fallback to tar.gz binary
                 warn ".dmg not found, installing CLI binary instead..."
                 install_binary "$platform" "$version"
@@ -112,9 +112,9 @@ main() {
             info "Linux detected — checking for .deb package..."
             local deb_url="https://github.com/${GITHUB_REPO}/releases/download/${version}/BytePort_${version}_amd64.deb"
 
-            if curl -fsSL --head "$deb_url" >/dev/null 2>&1; then
+            if curl -fsSL --proto '=https' --proto-redir '=https' --head "$deb_url" >/dev/null 2>&1; then
                 local deb_file="/tmp/byteport-${version}.deb"
-                curl -fSL "$deb_url" -o "$deb_file"
+                curl -fSL --proto '=https' --proto-redir '=https' "$deb_url" -o "$deb_file"
                 sudo dpkg -i "$deb_file" || sudo apt-get install -f -y
                 rm -f "$deb_file"
                 ok "BytePort installed via .deb"
@@ -128,7 +128,7 @@ main() {
             local msi_url="https://github.com/${GITHUB_REPO}/releases/download/${version}/BytePort_${version}_x64-setup.msi"
             local msi_file="/tmp/byteport-${version}.msi"
 
-            curl -fSL "$msi_url" -o "$msi_file" || {
+            curl -fSL --proto '=https' --proto-redir '=https' "$msi_url" -o "$msi_file" || {
                 warn ".msi not found, installing CLI binary instead..."
                 install_binary "$platform" "$version"
                 return
@@ -160,7 +160,7 @@ install_binary() {
     tmp_dir=$(mktemp -d)
 
     info "Downloading binary..."
-    curl -fSL "$archive_url" | tar xz -C "$tmp_dir"
+    curl -fSL --proto '=https' --proto-redir '=https' "$archive_url" | tar xz -C "$tmp_dir"
 
     mkdir -p "$INSTALL_DIR"
     mv "${tmp_dir}/${BINARY_NAME}${ext}" "${INSTALL_DIR}/${BINARY_NAME}${ext}"

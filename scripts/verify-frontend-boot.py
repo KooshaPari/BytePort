@@ -7,10 +7,15 @@ onMount logic executed.
 """
 
 import json
+import os
 import sys
+import tempfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-LOG = "/tmp/byteport-boot-probe.log"
+# S5443: never write to a fixed path in a shared temp dir — mkstemp creates
+# this log with mode 0600 in a private, unpredictable name.
+_fd, LOG = tempfile.mkstemp(prefix="byteport-boot-probe-", suffix=".log")
+os.close(_fd)
 
 
 def record(line: str) -> None:
@@ -56,4 +61,4 @@ if __name__ == "__main__":
     with open(LOG, "w", encoding="utf-8") as fh:
         fh.write("")
     print(f"probe server listening on {port}", flush=True)
-    ThreadingHTTPServer(("127.0.0.1", port), Handler).serve_forever()
+    ThreadingHTTPServer(("127.0.0.1", port), Handler).serve_forever()  # NOSONAR (loopback-only probe; plain HTTP is the protocol under test)

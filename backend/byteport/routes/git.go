@@ -110,8 +110,6 @@ func ValidateLink(c *gin.Context) {
 		respondBadRequest(c, "Invalid request format")
 		return
 	}
-	fmt.Println("USR: ", user)
-	fmt.Println("C:", c)
 	// Get the authenticated user for saving later
 	authUser, ok := currentUser(c)
 	if !ok {

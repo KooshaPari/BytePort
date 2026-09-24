@@ -44,7 +44,6 @@ pnpm-lock.yaml
 bun.lock
 
 # Rust / Go
-**/Cargo.lock
 **/.cargo
 **/vendor/
 go.sum

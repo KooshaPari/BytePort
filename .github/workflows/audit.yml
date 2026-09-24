@@ -28,7 +28,6 @@ concurrency:
 permissions:
   contents: read
   actions: read
-  security-events: write
 
 jobs:
   # ---------- CodeQL ----------
@@ -147,7 +146,7 @@ jobs:
           cache-dependency-path: frontend/web/package-lock.json
       - name: Install dependencies (npm ci)
         working-directory: frontend/web
-        run: npm ci --no-audit --no-fund --legacy-peer-deps
+        run: npm ci --ignore-scripts --no-audit --no-fund --legacy-peer-deps
       - name: Run npm audit (high+ only)
         working-directory: frontend/web
         run: npm audit --audit-level=high
@@ -171,7 +170,7 @@ jobs:
       - name: Run govulncheck (byteport)
         working-directory: backend/byteport
         run: |
-          go install golang.org/x/vuln/cmd/govulncheck@v1.5.0
+          go install golang.org/x/vuln/cmd/govulncheck
           govulncheck ./...
 
   # ---------- SonarCloud ----------
@@ -225,7 +224,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install dependencies
-        run: pip install pyyaml
+        run: 'pip install --only-binary :all: pyyaml==6.0.2'
       - name: Run legacy tooling scanner (WARN mode)
         if: ${{ steps.checkout-legacy-tools.outcome == 'success' }}
         run: |

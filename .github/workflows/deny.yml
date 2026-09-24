@@ -39,7 +39,6 @@ concurrency:
 
 permissions:
   contents: read
-  actions: read
 
 jobs:
   cargo-deny:
@@ -82,5 +81,5 @@ jobs:
       - name: Run govulncheck
         working-directory: backend/byteport
         run: |
-          go install golang.org/x/vuln/cmd/govulncheck@v1.5.0
+          go install golang.org/x/vuln/cmd/govulncheck
           govulncheck ./...
