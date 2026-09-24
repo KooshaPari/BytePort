@@ -45,6 +45,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   a fresh client (and therefore a fresh transport) on every request,
   defeating keep-alive connection reuse to NVMS and applying no timeout.
 
+- refactor(go): extract `bindJSON(c, dst, context)` helper in
+  `backend/byteport/routes/bind.go` to deduplicate the
+  `var req X; if err := c.ShouldBindJSON(&req); err != nil { respondBadRequest; return }`
+  pattern repeated at 5 sites across `auth.go` (Login, Signup, UpdateUser)
+  and `deployment.go` (DeployProject, TerminateInstance). Returns false on
+  bind failure and writes a 400 of the form `"<context>: <bind error>"`
+  (or just the bare error when context is empty), so callers can shrink to
+  a single `if !bindJSON(c, &req, "") { return }` line.
 ### Fixed
 
 - test(go): dedupe `backend/byteport/routes/loadtest_test.go` (201 → 160 lines)
