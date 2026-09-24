@@ -46,4 +46,3 @@ func respondNotFound(c *gin.Context, msg string) {
 func respondInternalError(c *gin.Context, msg string) {
 	respondError(c, http.StatusInternalServerError, msg)
 }
-
