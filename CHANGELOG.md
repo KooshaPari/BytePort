@@ -34,6 +34,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- fix(ci): remove the `backend` matrix entry from `go-vet`, `go-build`, and
+  `go-test` in `.github/workflows/ci.yml`. The entry was added in #385 to
+  cover a `backend/` Go module that was retired in #382 (`backend/go.mod`
+  and the rest of `backend/`'s divergent Go source were removed), but the
+  matrix reference was never cleaned up. Every PR has been failing the
+  `Go vet (backend)`, `Go build (backend)`, and `Go test (backend)` jobs
+  since #382 landed, blocking the Mergify queue. The remaining
+  `backend/byteport` matrix entry still covers the only live Go module in
+  the repository (verified via `find . -name go.mod`).
 - chore(deps): align `frontend/web` package manager with CI. The project
   declared `packageManager: yarn@1.22.21+sha1.*` but every CI workflow
   that touches `frontend/web` runs `npm ci --legacy-peer-deps`, which
