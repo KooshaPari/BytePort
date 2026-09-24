@@ -15,7 +15,7 @@ func GetInstances(c *gin.Context) {
 
 	var instances []models.Instance
 	if err := models.DB.Where("owner = ?", user.UUID).Find(&instances).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch instances"})
+		respondInternalError(c, "Failed to fetch instances")
 		return
 	}
 	c.JSON(http.StatusOK, instances)

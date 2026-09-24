@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- refactor(go): extract `respondError`, `respondBadRequest`, `respondUnauthorized`,
+  `respondNotFound`, `respondInternalError`, `respondConflict`, and
+  `respondErrorWithDetails` into `backend/byteport/routes/responses.go` and
+  sweep `routes/{auth,deployment,git,instances,projects}.go` to use them. The
+  inline `c.JSON(http.StatusXxx, gin.H{"error": "..."})` shape was repeated
+  across 64 call sites (62 single-field + 2 multi-field in
+  `deployment.go:DeployProject` and `TerminateInstance` that carry upstream
+  status + body). After the refactor the response shape has a single home, so
+  any future change to error envelope (`code`, `request_id`, ...) only touches
+  one file. Three sites intentionally retained the `gin.H{"message": ...}`
+  contract because tests assert on that field; they are documented as
+  response-contract exceptions in `responses.go`.
+- refactor(go): sweep 5 sites that called `c.MustGet("user").(models.User)`
+  directly to use the existing `currentUser(c) (models.User, bool)` helper.
+  Three sites in `routes/auth.go` (`LinkHandler`, `UpdateLink`, `UpdateUser`)
+  and two in `routes/git.go` (`RetrieveRepositories`, `ValidateLink`) now
+  share the same defensive lookup the `instances.go` and `projects.go`
+  handlers already used. The previous `MustGet` form would panic if the
+  context were ever missing the user; `currentUser` writes a 401 envelope
+  and returns `(zero, false)` instead, so protected handlers can no longer
+  crash on a missing session even if the route is ever mounted outside the
+  protected group.
+
 ### Fixed
 
 - test(go): dedupe `backend/byteport/routes/loadtest_test.go` (201 → 160 lines)

@@ -18,12 +18,12 @@ import (
 func currentUser(c *gin.Context) (models.User, bool) {
 	value, exists := c.Get("user")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		respondUnauthorized(c, "Unauthorized")
 		return models.User{}, false
 	}
 	user, ok := value.(models.User)
 	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user context"})
+		respondInternalError(c, "Invalid user context")
 		return models.User{}, false
 	}
 	return user, true
@@ -39,14 +39,14 @@ func Authenticate(c *gin.Context) {
 
 	token, err := c.Cookie("authToken")
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		respondUnauthorized(c, "Unauthorized")
 		return
 	}
 
 	// validate token and get user
 	user, err := lib.AuthenticateRequest(token)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		respondUnauthorized(c, "Unauthorized")
 		return
 	}
 	c.Set("user", *user)
@@ -58,7 +58,10 @@ func Authenticate(c *gin.Context) {
 }
 func LinkHandler(c *gin.Context) {
 	// Retrieve the authenticated user object
-	user := c.MustGet("user").(models.User)
+	user, ok := currentUser(c)
+	if !ok {
+		return
+	}
 	fmt.Println("Linking with Github: ", user)
 
 	lib.LinkWithGithub(c, user)
@@ -68,7 +71,7 @@ func LinkHandler(c *gin.Context) {
 func Login(c *gin.Context) {
 	var req models.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		respondBadRequest(c, err.Error())
 		return
 	}
 
@@ -83,7 +86,7 @@ func Login(c *gin.Context) {
 		token, err := lib.GenerateToken(user)
 		if err != nil {
 			log.Printf("Error generating token: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate authentication token."})
+			respondInternalError(c, "Failed to generate authentication token.")
 			return
 		}
 		setAuthCookie(c, token)
@@ -102,7 +105,7 @@ func Login(c *gin.Context) {
 func Signup(c *gin.Context) {
 	var req models.SignupRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		respondBadRequest(c, err.Error())
 		return
 	}
 
@@ -138,7 +141,7 @@ func Signup(c *gin.Context) {
 	token, err := lib.GenerateToken(newUser)
 	if err != nil {
 		log.Printf("Error generating token: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate authentication token."})
+		respondInternalError(c, "Failed to generate authentication token.")
 		return
 	}
 	setAuthCookie(c, token)
@@ -147,7 +150,10 @@ func Signup(c *gin.Context) {
 }
 
 func UpdateLink(c *gin.Context) {
-	user := c.MustGet("user").(models.User)
+	user, ok := currentUser(c)
+	if !ok {
+		return
+	}
 
 	if user.LLMConfig.Provider == "" {
 		user.LLMConfig = models.LLM{
@@ -166,36 +172,35 @@ func UpdateLink(c *gin.Context) {
 	providerKey, provider, providerFound := user.LLMConfig.ProviderEntry(user.LLMConfig.Provider)
 	if user.LLMConfig.Provider != "local" {
 		if !providerFound {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error":   "Failed to decrypt OAI",
+			respondErrorWithDetails(c, http.StatusInternalServerError, "Failed to decrypt OAI", gin.H{
 				"details": fmt.Sprintf("no provider entry for %q", user.LLMConfig.Provider),
 			})
 			return
 		}
 		decryptedOAI, err = lib.DecryptSecret(provider.APIKey)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to decrypt OAI"})
+			respondInternalError(c, "Failed to decrypt OAI")
 			return
 		}
 	}
 	decryptedAWSAccess, err := lib.DecryptSecret(user.AwsCreds.AccessKeyID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to decrypt AWS Access"})
+		respondInternalError(c, "Failed to decrypt AWS Access")
 		return
 	}
 	decryptedAWSSecret, err := lib.DecryptSecret(user.AwsCreds.SecretAccessKey)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to decrypt AWS Secret"})
+		respondInternalError(c, "Failed to decrypt AWS Secret")
 		return
 	}
 	decryptedPortfolioURL, err := lib.DecryptSecret(user.Portfolio.RootEndpoint)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to decrypt Portfolio URL"})
+		respondInternalError(c, "Failed to decrypt Portfolio URL")
 		return
 	}
 	decryptedPortfolioKey, err := lib.DecryptSecret(user.Portfolio.APIKey)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to decrypt Portfolio Key "})
+		respondInternalError(c, "Failed to decrypt Portfolio Key ")
 		return
 	}
 	user.AwsCreds = models.AwsCreds{
@@ -219,10 +224,13 @@ func UpdateLink(c *gin.Context) {
 
 }
 func UpdateUser(c *gin.Context) {
-	user := c.MustGet("user").(models.User)
+	user, ok := currentUser(c)
+	if !ok {
+		return
+	}
 	var req models.User
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		respondBadRequest(c, err.Error())
 		return
 	}
 	if req.Name != "" {
