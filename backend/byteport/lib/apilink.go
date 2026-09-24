@@ -281,10 +281,10 @@ var ValidateGit = func(user models.User) error {
 func ValidateGitRepo(repoURL, installationToken string) error {
 	log.Println("Validating GitHub repository...")
 
-	cmd := exec.Command("git", "ls-remote", repoURL)
-	// S4036: cmd.Env starts empty, so give the child a literal PATH made only
-	// of fixed, non-user-writable system directories.
-	cmd.Env = append(cmd.Env, "PATH=/usr/local/bin:/usr/bin:/bin", "GIT_ASKPASS=echo "+installationToken)
+	// S4036: exec through a fixed, non-user-writable system path instead of
+	// resolving "git" via the ambient PATH; the child also gets a literal PATH.
+	cmd := exec.Command("/usr/bin/git", "ls-remote", repoURL)
+	cmd.Env = append(cmd.Env, "PATH=/usr/bin:/bin", "GIT_ASKPASS=echo "+installationToken)
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout

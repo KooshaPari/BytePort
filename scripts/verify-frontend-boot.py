@@ -61,4 +61,5 @@ if __name__ == "__main__":
     with open(LOG, "w", encoding="utf-8") as fh:
         fh.write("")
     print(f"probe server listening on {port}", flush=True)
-    ThreadingHTTPServer(("127.0.0.1", port), Handler).serve_forever()  # NOSONAR (loopback-only probe; plain HTTP is the protocol under test)
+    # Loopback-only probe: plain HTTP is the protocol under test.
+    ThreadingHTTPServer(("127.0.0.1", port), Handler).serve_forever()  # NOSONAR
