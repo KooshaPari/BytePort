@@ -47,7 +47,3 @@ func respondInternalError(c *gin.Context, msg string) {
 	respondError(c, http.StatusInternalServerError, msg)
 }
 
-// respondConflict is a shortcut for respondError(c, http.StatusConflict, msg).
-func respondConflict(c *gin.Context, msg string) {
-	respondError(c, http.StatusConflict, msg)
-}
