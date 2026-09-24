@@ -33,6 +33,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   SSRF-safe client keeps its own dialer-cloned transport because DNS
   resolution must be intercepted for the host allow-list check; reusing
   a shared `*http.Client` here would let a redirect bypass that check.
+
+- refactor(go): extract `decryptUserPlatformSecrets` and
+  `encryptUserPlatformSecrets` into `backend/byteport/routes/secrets.go`
+  and call them from `routes/auth.go:UpdateLink` and
+  `routes/git.go:ValidateLink`. Both handlers previously ran a 4-stage
+  `lib.DecryptSecret` ladder inline (UpdateLink: 4 decrypts; ValidateLink:
+  4 decrypts + 4 encrypts) with eight `respondInternalError("Failed to
+  <op> <field>")` envelopes between them. After the refactor adding or
+  removing a secret field is a single edit in `secrets.go`. The
+  `platformSecretError` type carries the field name and operation verb
+  (decrypt / encrypt) so the route handlers can render the same envelope
+  title they emitted before ("Failed to decrypt AWS Access Key ID", etc.)
+  via `platformSecretErrorMessage(err)`. The error string is wrapped with
+  `%v` so the underlying crypto error is preserved for log inspection.
+  The LLM/OpenAI credential stays inline at each handler because the two
+  call sites have different lookup semantics (`ProviderEntry` with no
+  fallback in UpdateLink vs `ProviderKey` with canonical-provider fallback
+  in ValidateLink).
+
 - refactor(go): sweep 5 sites that called `c.MustGet("user").(models.User)`
   directly to use the existing `currentUser(c) (models.User, bool)` helper.
   Three sites in `routes/auth.go` (`LinkHandler`, `UpdateLink`, `UpdateUser`)

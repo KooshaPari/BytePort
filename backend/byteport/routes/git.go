@@ -166,41 +166,26 @@ func ValidateLink(c *gin.Context) {
 	}
 
 	// Encrypt credentials after validation
-	encryptedAccessKeyID, err := lib.EncryptSecret(user.AwsCreds.AccessKeyID)
+	encryptedAWS, encryptedPortfolio, err := encryptUserPlatformSecrets(models.AwsCreds{
+		AccessKeyID:     user.AwsCreds.AccessKeyID,
+		SecretAccessKey: user.AwsCreds.SecretAccessKey,
+	}, models.Portfolio{
+		RootEndpoint: user.Portfolio.RootEndpoint,
+		APIKey:       user.Portfolio.APIKey,
+	})
 	if err != nil {
-		respondInternalError(c, "Failed to encrypt AWS Access Key ID")
+		respondInternalError(c, platformSecretErrorMessage(err))
 		return
 	}
-
-	encryptedSecretAccessKey, err := lib.EncryptSecret(user.AwsCreds.SecretAccessKey)
-	if err != nil {
-		respondInternalError(c, "Failed to encrypt AWS Secret Access Key")
-		return
-	}
-
 	encryptedApiKey, err := lib.EncryptSecret(provider.APIKey)
 	if err != nil {
 		respondInternalError(c, "Failed to encrypt OpenAI API Key")
 		return
 	}
 
-	encryptedPortfolioURL, err := lib.EncryptSecret(user.Portfolio.RootEndpoint)
-	if err != nil {
-		respondInternalError(c, "Failed to encrypt Portfolio Root Endpoint")
-		return
-	}
-
-	encryptedPortfolioAPIKey, err := lib.EncryptSecret(user.Portfolio.APIKey)
-	if err != nil {
-		respondInternalError(c, "Failed to encrypt Portfolio API Key")
-		return
-	}
-
 	// Update the auth user with encrypted credentials
-	authUser.AwsCreds = models.AwsCreds{
-		AccessKeyID:     encryptedAccessKeyID,
-		SecretAccessKey: encryptedSecretAccessKey,
-	}
+	authUser.AwsCreds = encryptedAWS
+	authUser.Portfolio = encryptedPortfolio
 
 	// Always persist under the canonical provider name, regardless of the
 	// spelling the client used on the way in.
@@ -216,11 +201,6 @@ func ValidateLink(c *gin.Context) {
 				APIKey: encryptedApiKey,
 			},
 		}}
-
-	authUser.Portfolio = models.Portfolio{
-		RootEndpoint: encryptedPortfolioURL,
-		APIKey:       encryptedPortfolioAPIKey,
-	}
 
 	// Save the updated user
 	if err := models.DB.Save(&authUser).Error; err != nil {
