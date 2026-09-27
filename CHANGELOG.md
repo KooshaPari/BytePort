@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- ci: scope the Tier-0 `Go fmt` check and the `pre-commit` (auto + manual)
+  jobs to the PR diff (`git diff --name-only $BASE...$HEAD`) on `pull_request`
+  events. On `push` events to `main` (or any branch fallback) they still run
+  against the whole tree, so legacy drift cannot land on `main` even though
+  the PR-only diff scope is the new normal. Prior to this change every PR
+  failed those gates on pre-existing drift and had to be merged with the
+  Mergify `strict false` / `--admin` override; future PRs against the
+  reformatted tree will pass without the override. Affects
+  `.github/workflows/tier-0-gate.yml` and `.github/workflows/ci.yml`.
+
 - refactor(go): extract `respondError`, `respondBadRequest`, `respondUnauthorized`,
   `respondNotFound`, `respondInternalError`, `respondConflict`, and
   `respondErrorWithDetails` into `backend/byteport/routes/responses.go` and
