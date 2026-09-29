@@ -187,7 +187,17 @@ jobs:
         run: |
           mkdir -p frontend/web/build
           [ -f frontend/web/build/index.html ] || printf '<!doctype html><title>ci</title>\n' > frontend/web/build/index.html
-      - name: Run pre-commit
+      # Split into two conditional steps so we can scope pre-commit to the PR
+      # diff on pull_request events (legacy whole-repo drift would otherwise
+      # fail the gate for any PR that doesn't touch those files). Push-to-main
+      # still runs the full --all-files check so drift cannot land on main.
+      - name: Run pre-commit (PR diff)
+        if: github.event_name == 'pull_request'
+        uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd # v3.0.1
+        with:
+          extra_args: --hook-stage manual --from-ref ${{ github.event.pull_request.base.sha }} --to-ref HEAD
+      - name: Run pre-commit (full repo)
+        if: github.event_name != 'pull_request'
         uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd # v3.0.1
         with:
           extra_args: --hook-stage manual --all-files

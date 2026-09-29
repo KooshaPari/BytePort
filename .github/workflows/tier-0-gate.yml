@@ -98,8 +98,22 @@ jobs:
         with:
           go-version: stable
       - name: Check formatting
+        # On pull_request: scope to the PR's diff so legacy whole-tree drift
+        # in the existing codebase does not block a PR whose changes are clean.
+        # On push to main (no base_ref): fall back to the whole tree so drift
+        # cannot land on the protected branch.
         run: |
-          unformatted=$(gofmt -l backend/byteport 2>/dev/null || true)
+          if [ -n "${{ github.event.pull_request.base.sha }}" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+            FILES=$(git diff --name-only "$BASE"...HEAD -- 'backend/byteport/*.go' | grep -E '\.go$' || true)
+            if [ -z "$FILES" ]; then
+              echo "No Go files changed in PR; skipping gofmt check."
+              exit 0
+            fi
+            unformatted=$(echo "$FILES" | xargs gofmt -l 2>/dev/null || true)
+          else
+            unformatted=$(gofmt -l backend/byteport 2>/dev/null || true)
+          fi
           if [ -n "$unformatted" ]; then
             echo "::error::The following files are not gofmt-clean:"
             echo "$unformatted"
