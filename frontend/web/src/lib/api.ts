@@ -49,7 +49,8 @@ export function getApiBaseUrl(): string {
 
 /** Absolute URL for a backend path, tolerating a leading slash or not. */
 export function apiUrl(path: string): string {
-	return `${getApiBaseUrl()}${path.startsWith('/') ? path : `/${path}`}`;
+	const normalized = path.startsWith('/') ? path : `/${path}`;
+	return `${getApiBaseUrl()}${normalized}`;
 }
 
 export class ApiError extends Error {

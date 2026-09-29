@@ -42,17 +42,16 @@ export const user = writable<UserStore>({
 	status: 'pending',
 	data: null
 });
-export function setUser(authenticated: boolean, userData: User | null = null) {
-	if (authenticated && userData) {
-		console.log('setting store: ', userData);
-		user.set({
-			status: 'authenticated',
-			data: userData
-		});
-	} else {
-		console.log('setting store fail: ', userData);
-		user.set({ status: 'unauthenticated', data: null });
-	}
+export function setAuthenticatedUser(userData: User) {
+	console.log('setting store: ', userData);
+	user.set({
+		status: 'authenticated',
+		data: userData
+	});
+}
+export function setUnauthenticatedUser() {
+	console.log('setting store fail');
+	user.set({ status: 'unauthenticated', data: null });
 }
 export async function initializeUser() {
 	try {
@@ -61,10 +60,10 @@ export async function initializeUser() {
 		console.log('JS: ', data);
 		const authenticatedUser: User = data.User; // Adjust based on backend response structure
 		console.log('Authenticated user:', authenticatedUser);
-		setUser(true, authenticatedUser);
+		setAuthenticatedUser(authenticatedUser);
 	} catch (error) {
 		console.error('Error validating token:', error);
-		setUser(false);
+		setUnauthenticatedUser();
 		localStorage.removeItem('authToken');
 	}
 }

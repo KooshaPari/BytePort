@@ -9,7 +9,7 @@
 }
 .storybook-button--primary {
 	background-color: #1ea7fd;
-	color: white;
+	color: #333;
 }
 .storybook-button--secondary {
 	box-shadow: rgba(0, 0, 0, 0.15) 0px 0px 0px 1px inset;

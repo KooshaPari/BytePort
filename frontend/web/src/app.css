@@ -93,6 +93,9 @@
 
 	* {
 		@apply border-border;
+		/* Slim scrollbars so panes do not look like a web page. */
+		scrollbar-width: thin;
+		scrollbar-color: hsl(var(--border)) transparent;
 	}
 
 	html,
@@ -119,11 +122,6 @@
 		outline-offset: 2px;
 	}
 
-	/* Slim scrollbars so panes do not look like a web page. */
-	* {
-		scrollbar-width: thin;
-		scrollbar-color: hsl(var(--border)) transparent;
-	}
 	*::-webkit-scrollbar {
 		width: 10px;
 		height: 10px;

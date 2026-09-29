@@ -40,7 +40,7 @@ fi
 #    arrival in a fresh checkout. We do NOT fail if `npm ci`
 #    itself is slow -- we just report the reason and exit 3 so
 #    the orchestrator can mark not_run.
-if ! [ -d node_modules ] || ! [ -x node_modules/.bin/jest ]; then
+if [[ ! -d node_modules || ! -x node_modules/.bin/jest ]]; then
     echo "[coverage-ts] jest not installed locally; attempting npm ci (120s budget)..." >&2
     if ! timeout 120 npm ci --no-audit --no-fund --silent; then
         echo "[coverage-ts] npm ci timed out or failed; mark not_run" >&2
@@ -60,7 +60,7 @@ timeout 300 npx jest --coverage --colors=false
 rc=$?
 
 # 124 == GNU coreutils `timeout` exit when the deadline expires.
-if [ "${rc}" -eq 124 ]; then
+if [[ "${rc}" -eq 124 ]]; then
     echo "[coverage-ts] jest timed out after 300s; mark not_run" >&2
     exit 3
 fi

@@ -87,7 +87,7 @@ echo "  ts:   ${ts_status} (rc=${ts_rc})"
 
 # Exit 0 only if both halves are `pass`. Any other combination
 # (fail / missing_tool / timeout) fails the gate.
-if [ "${rust_status}" = "pass" ] && [ "${ts_status}" = "pass" ]; then
+if [[ "${rust_status}" = "pass" && "${ts_status}" = "pass" ]]; then
     echo "  result: PASS"
     exit 0
 else

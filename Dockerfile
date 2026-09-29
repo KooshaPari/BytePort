@@ -1,7 +1,8 @@
 FROM golang:1.27-bookworm AS backend
 WORKDIR /app
 COPY backend/ ./backend/
-RUN cd backend/byteport && go build -o /byteport-server
+WORKDIR /app/backend/byteport
+RUN go build -o /byteport-server
 
 FROM rust:1.98-slim AS desktop
 WORKDIR /app

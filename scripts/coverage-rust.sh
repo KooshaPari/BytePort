@@ -58,7 +58,7 @@ timeout 600 cargo llvm-cov --workspace --lcov --output-path coverage-rust.lcov
 rc=$?
 
 # 124 == GNU coreutils `timeout` exit when the deadline expires.
-if [ "${rc}" -eq 124 ]; then
+if [[ "${rc}" -eq 124 ]]; then
     echo "[coverage-rust] cargo llvm-cov timed out after 600s; mark not_run" >&2
     exit 3
 fi

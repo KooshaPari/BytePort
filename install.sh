@@ -48,7 +48,7 @@ detect_platform() {
 
 # ── Version detection ────────────────────────────────────────
 get_latest_version() {
-    if [ -n "$LATEST_VERSION" ]; then
+    if [[ -n "$LATEST_VERSION" ]]; then
         echo "$LATEST_VERSION"
         return
     fi
@@ -57,7 +57,7 @@ get_latest_version() {
     version=$(curl -fsSL --proto '=https' --proto-redir '=https' "https://api.github.com/repos/${GITHUB_REPO}/releases/latest" \
         | grep '"tag_name"' | sed -E 's/.*"tag_name": *"([^"]+)".*/\1/')
 
-    if [ -z "$version" ]; then
+    if [[ -z "$version" ]]; then
         err "Failed to detect latest version"
         exit 1
     fi

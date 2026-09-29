@@ -123,7 +123,7 @@ def parse_taskfile_targets() -> list[tuple[str, str]]:
     if not text:
         return []
     # Match `  target_name:` at the top level (no leading dot).
-    target_re = re.compile(r"^(  )([a-zA-Z][a-zA-Z0-9_-]*):\s*$", re.MULTILINE)
+    target_re = re.compile(r"^( {2})([a-zA-Z][a-zA-Z0-9_-]*):\s*$", re.MULTILINE)
     matches = list(target_re.finditer(text))
     out: list[tuple[str, str]] = []
     for i, m in enumerate(matches):
