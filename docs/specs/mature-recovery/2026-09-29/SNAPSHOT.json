@@ -1,0 +1,20 @@
+{
+  "program": "mature-recovery-2026-09-29",
+  "product": "KooshaPari/BytePort",
+  "repository_id": 861430079,
+  "source_snapshot": "0232cca16fedb7963a8c6f556dc5eee5c8c1674e",
+  "source_tree": "7b2086211ba08212b836a1e1b9993402a598ab09",
+  "registry": "KooshaPari/PhenoRegistry",
+  "registry_source_snapshot": "85d7cd00cf59c379c05b740e8130a85b0d5bd31b",
+  "specification_branch": "spec/mature-recovery-2026-09-29",
+  "implementation_candidate": null,
+  "observed_on": "2026-09-29",
+  "scope_products": ["KooshaPari/ShareCLI", "KooshaPari/BytePort"],
+  "internal_dependency_sources_inspected": [],
+  "dependency_revision_audit": "OPEN: NanoVMS and shared-crate pointers are not inspected dependency snapshots",
+  "history_extent": "current source plus historical design and retirement records; full Git ancestry not inspected",
+  "native_product_suites": "NOT_RUN",
+  "environment_limits": ["local git clone failed DNS resolution", "Rust toolchain unavailable", "no native desktop/runtime acceptance environment established"],
+  "source_coverage_denominator": "OPEN",
+  "specification_design_complete": false
+}
