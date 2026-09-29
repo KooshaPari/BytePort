@@ -10,6 +10,9 @@ import json
 import argparse
 from pathlib import Path
 
+WORKFLOWS_DIR = ".github/workflows"
+ISSUE_TEMPLATES_DIR = ".github/ISSUE_TEMPLATE"
+
 PILLARS = [
     {
         "id": 1,
@@ -76,8 +79,8 @@ PILLARS = [
         "id": 19,
         "name": "CI_WORKFLOW",
         "check": lambda p: (
-            len(list((p / ".github/workflows").glob("*.yml"))) > 0
-            if (p / ".github/workflows").exists()
+            len(list((p / WORKFLOWS_DIR).glob("*.yml"))) > 0
+            if (p / WORKFLOWS_DIR).exists()
             else False
         ),
     },
@@ -97,9 +100,9 @@ PILLARS = [
         "id": 22,
         "name": "ISSUE_TEMPLATE",
         "check": lambda p: (
-            (p / ".github/ISSUE_TEMPLATE").exists()
-            and any((p / ".github/ISSUE_TEMPLATE").iterdir())
-            if (p / ".github/ISSUE_TEMPLATE").exists()
+            (p / ISSUE_TEMPLATES_DIR).exists()
+            and any((p / ISSUE_TEMPLATES_DIR).iterdir())
+            if (p / ISSUE_TEMPLATES_DIR).exists()
             else False
         ),
     },
@@ -167,11 +170,11 @@ PILLARS = [
         "id": 33,
         "name": "SECURITY_SCANNING",
         "check": lambda p: (
-            (p / ".github/workflows" / "codeql.yml").exists()
-            or (p / ".github/workflows" / "security.yml").exists()
-            or (p / ".github/workflows" / "trivy.yml").exists()
-            or any((p / ".github/workflows").glob("*secur*.yml"))
-            if (p / ".github/workflows").exists()
+            (p / WORKFLOWS_DIR / "codeql.yml").exists()
+            or (p / WORKFLOWS_DIR / "security.yml").exists()
+            or (p / WORKFLOWS_DIR / "trivy.yml").exists()
+            or any((p / WORKFLOWS_DIR).glob("*secur*.yml"))
+            if (p / WORKFLOWS_DIR).exists()
             else False
         ),
     },

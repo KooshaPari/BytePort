@@ -139,6 +139,11 @@ main() {
             rm -f "$msi_file"
             ok "BytePort installed via .msi"
             ;;
+        *)
+            warn "Unexpected platform '$os_type'; falling back to CLI binary..."
+            install_binary "$platform" "$version"
+            return
+            ;;
     esac
 }
 

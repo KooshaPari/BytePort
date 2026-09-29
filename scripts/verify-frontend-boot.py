@@ -53,6 +53,8 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def log_message(self, *args) -> None:
+        # Override: silence BaseHTTPRequestHandler's default stderr access
+        # log so probe output stays the single readiness line.
         pass
 
 

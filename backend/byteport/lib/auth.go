@@ -15,6 +15,7 @@ import (
 )
 
 const (
+	claimUserID       = "user-id"
 	tokenKeyService   = "BytePortTokenKeyService"
 	secretsKeyService = "BytePortSecretsKeyService"
 	keyringUser       = "BytePortUser"
@@ -129,7 +130,7 @@ func GenerateToken(user models.User) (string, error) {
 	token.SetIssuer("BytePort")
 	token.SetIssuedAt(time.Now())
 	token.SetNotBefore(time.Now())
-	token.SetString("user-id", user.UUID)
+	token.SetString(claimUserID, user.UUID)
 	keyHex, err := getSymmetricKey()
 	if err != nil {
 		log.Fatal(err)
@@ -151,7 +152,7 @@ func GenerateNVMSToken(project models.Project) (string, error) {
 	token.SetIssuer("BytePort")
 	token.SetIssuedAt(time.Now())
 	token.SetNotBefore(time.Now())
-	token.SetString("user-id", project.User.UUID)
+	token.SetString(claimUserID, project.User.UUID)
 	token.SetString("project-id", project.UUID)
 	keyHex, err := keyringGet(serviceKeyService, keyringUser)
 	if err != nil {
@@ -174,7 +175,7 @@ func AuthenticateRequest(encryptedToken string) (*models.User, error) {
 	}
 
 	// Extract user ID from the token
-	userID, err := token.GetString("user-id")
+	userID, err := token.GetString(claimUserID)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -264,7 +265,7 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		userID, _ := token.GetString("user-id")
+		userID, _ := token.GetString(claimUserID)
 		if userID == "" {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "User ID not found in token"})
 			c.Abort()

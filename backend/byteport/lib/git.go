@@ -13,6 +13,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// contentTypeJSON is the canonical GitHub API content type; a named
+// constant instead of repeating the literal (S1192).
+const contentTypeJSON = "application/json"
+
 // httpGitHubDoer performs outbound GitHub API requests for the helpers in
 // this file. Declared as a function value (not a func) so tests can
 // substitute a stub: the real implementation performs an outbound HTTP
@@ -121,8 +125,8 @@ var GetUserAccessToken = func(pasetoToken, code string) (models.Git, error) {
 	if err != nil {
 		return models.Git{}, fmt.Errorf("failed to create request: %v", err)
 	}
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", contentTypeJSON)
+	req.Header.Set("Content-Type", contentTypeJSON)
 
 	resp, err := httpGitHubDoer(req)
 	if err != nil {
@@ -198,8 +202,8 @@ func refreshToken(user models.User, pasetoToken string) (models.Git, error) {
 	if err != nil {
 		return models.Git{}, fmt.Errorf("failed to create request: %v", err)
 	}
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", contentTypeJSON)
+	req.Header.Set("Content-Type", contentTypeJSON)
 
 	log.Println("Refreshing Token - Send")
 	resp, err := httpGitHubDoer(req)
