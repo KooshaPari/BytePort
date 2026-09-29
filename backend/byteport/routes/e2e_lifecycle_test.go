@@ -30,94 +30,106 @@ func newLifecycleMock() *httptest.Server {
 		nextID:    1,
 	}
 
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
+	return httptest.NewServer(mock)
+}
 
-		switch {
-		// POST /v1/deploy
-		case r.Method == "POST" && r.URL.Path == "/v1/deploy":
-			mock.mu.Lock()
-			id := fmt.Sprintf("e2e-%d", mock.nextID)
-			mock.nextID++
-			mock.sandboxes[id] = "running"
-			mock.mu.Unlock()
+// ServeHTTP routes mock NanoVMS requests to one handler per route so each
+// handler stays cognitively simple.
+func (m *lifecycleMockServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 
-			w.WriteHeader(http.StatusCreated)
-			json.NewEncoder(w).Encode(map[string]interface{}{
-				"id":     id,
-				"name":   "e2e-sandbox",
-				"status": "running",
-			})
+	switch {
+	case r.Method == "POST" && r.URL.Path == "/v1/deploy":
+		m.handleDeploy(w, r)
+	case r.Method == "GET" && r.URL.Path == "/v1/sandboxes":
+		m.handleList(w, r)
+	case r.Method == "GET" && len(r.URL.Path) > len("/v1/sandboxes/"):
+		m.handleSandboxGet(w, r)
+	case r.Method == "POST" && r.URL.Path == "/v1/stop":
+		m.handleStop(w, r)
+	case r.Method == "DELETE" && len(r.URL.Path) > len("/v1/sandboxes/"):
+		m.handleSandboxDelete(w, r)
+	default:
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(map[string]string{"error": "method not allowed"})
+	}
+}
 
-		// GET /v1/sandboxes (list)
-		case r.Method == "GET" && r.URL.Path == "/v1/sandboxes":
-			mock.mu.Lock()
-			var data []map[string]interface{}
-			for id, status := range mock.sandboxes {
-				data = append(data, map[string]interface{}{
-					"id":     id,
-					"name":   "e2e-sandbox",
-					"status": status,
-				})
-			}
-			mock.mu.Unlock()
+func (m *lifecycleMockServer) handleDeploy(w http.ResponseWriter, _ *http.Request) {
+	m.mu.Lock()
+	id := fmt.Sprintf("e2e-%d", m.nextID)
+	m.nextID++
+	m.sandboxes[id] = "running"
+	m.mu.Unlock()
 
-			if data == nil {
-				data = []map[string]interface{}{}
-			}
-			json.NewEncoder(w).Encode(map[string]interface{}{"data": data})
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"id":     id,
+		"name":   "e2e-sandbox",
+		"status": "running",
+	})
+}
 
-		// GET /v1/sandboxes/<id>
-		case r.Method == "GET" && len(r.URL.Path) > len("/v1/sandboxes/"):
-			id := r.URL.Path[len("/v1/sandboxes/"):]
-			mock.mu.Lock()
-			status, ok := mock.sandboxes[id]
-			mock.mu.Unlock()
+func (m *lifecycleMockServer) handleList(w http.ResponseWriter, _ *http.Request) {
+	m.mu.Lock()
+	var data []map[string]interface{}
+	for id, status := range m.sandboxes {
+		data = append(data, map[string]interface{}{
+			"id":     id,
+			"name":   "e2e-sandbox",
+			"status": status,
+		})
+	}
+	m.mu.Unlock()
 
-			if !ok {
-				w.WriteHeader(http.StatusNotFound)
-				json.NewEncoder(w).Encode(map[string]string{"error": "not found"})
-				return
-			}
-			json.NewEncoder(w).Encode(map[string]interface{}{
-				"id":     id,
-				"name":   "e2e-sandbox",
-				"status": status,
-			})
+	if data == nil {
+		data = []map[string]interface{}{}
+	}
+	json.NewEncoder(w).Encode(map[string]interface{}{"data": data})
+}
 
-		// POST /v1/stop?id=<id>
-		case r.Method == "POST" && r.URL.Path == "/v1/stop":
-			id := r.URL.Query().Get("id")
-			mock.mu.Lock()
-			if _, ok := mock.sandboxes[id]; ok {
-				mock.sandboxes[id] = "stopped"
-				mock.mu.Unlock()
-				json.NewEncoder(w).Encode(map[string]string{"status": "stopped"})
-			} else {
-				mock.mu.Unlock()
-				w.WriteHeader(http.StatusNotFound)
-				json.NewEncoder(w).Encode(map[string]string{"error": "not found"})
-			}
+func (m *lifecycleMockServer) handleSandboxGet(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Path[len("/v1/sandboxes/"):]
+	m.mu.Lock()
+	status, ok := m.sandboxes[id]
+	m.mu.Unlock()
 
-		// DELETE /v1/sandboxes/<id>
-		case r.Method == "DELETE" && len(r.URL.Path) > len("/v1/sandboxes/"):
-			id := r.URL.Path[len("/v1/sandboxes/"):]
-			mock.mu.Lock()
-			if _, ok := mock.sandboxes[id]; ok {
-				delete(mock.sandboxes, id)
-				mock.mu.Unlock()
-				json.NewEncoder(w).Encode(map[string]string{"status": "deleted"})
-			} else {
-				mock.mu.Unlock()
-				w.WriteHeader(http.StatusNotFound)
-				json.NewEncoder(w).Encode(map[string]string{"error": "not found"})
-			}
+	if !ok {
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]string{"error": "not found"})
+		return
+	}
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"id":     id,
+		"name":   "e2e-sandbox",
+		"status": status,
+	})
+}
 
-		default:
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			json.NewEncoder(w).Encode(map[string]string{"error": "method not allowed"})
-		}
-	}))
+func (m *lifecycleMockServer) handleStop(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("id")
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if _, ok := m.sandboxes[id]; ok {
+		m.sandboxes[id] = "stopped"
+		json.NewEncoder(w).Encode(map[string]string{"status": "stopped"})
+		return
+	}
+	w.WriteHeader(http.StatusNotFound)
+	json.NewEncoder(w).Encode(map[string]string{"error": "not found"})
+}
+
+func (m *lifecycleMockServer) handleSandboxDelete(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Path[len("/v1/sandboxes/"):]
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if _, ok := m.sandboxes[id]; ok {
+		delete(m.sandboxes, id)
+		json.NewEncoder(w).Encode(map[string]string{"status": "deleted"})
+		return
+	}
+	w.WriteHeader(http.StatusNotFound)
+	json.NewEncoder(w).Encode(map[string]string{"error": "not found"})
 }
 
 // TestE2EFullLifecycle tests: deploy → list → get → stop → delete → verify empty.

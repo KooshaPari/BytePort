@@ -112,6 +112,31 @@ func stubValidators(t *testing.T) *string {
 	return gotOpenAIKey
 }
 
+// assertStoredOpenAIKey verifies the OpenAI credential was persisted
+// encrypted under the canonical provider key and decrypts to want. Split out
+// of TestValidateLinkCredentialsSurviveFieldCasing for cognitive simplicity.
+func assertStoredOpenAIKey(t *testing.T, db *gorm.DB, uuid, want string) {
+	t.Helper()
+	var stored models.User
+	if err := db.Where("uuid = ?", uuid).First(&stored).Error; err != nil {
+		t.Fatalf("reload user: %v", err)
+	}
+	provider, ok := stored.LLMConfig.Providers["openai"]
+	if !ok {
+		t.Fatalf("stored providers = %v, want a canonical \"openai\" entry", stored.LLMConfig.Providers)
+	}
+	if provider.APIKey == "" {
+		t.Fatal("stored api_key is empty: the credential was never persisted")
+	}
+	plain, err := lib.DecryptSecret(provider.APIKey)
+	if err != nil {
+		t.Fatalf("decrypt stored key: %v", err)
+	}
+	if plain != want {
+		t.Fatalf("stored key decrypts to %q, want %q", plain, want)
+	}
+}
+
 // TestValidateLinkCredentialsSurviveFieldCasing is the regression test for the
 // api_key casing bug: the frontend sent `apiKey`/`openAI`, the backend expected
 // `api_key`/`openai`, so the OpenAI credential silently validated as empty and
@@ -165,24 +190,7 @@ func TestValidateLinkCredentialsSurviveFieldCasing(t *testing.T) {
 			// The credential must also be persisted (encrypted) under the
 			// canonical provider key, which is what the old UI silently failed
 			// to do.
-			var stored models.User
-			if err := db.Where("uuid = ?", "user-casing-1").First(&stored).Error; err != nil {
-				t.Fatalf("reload user: %v", err)
-			}
-			provider, ok := stored.LLMConfig.Providers["openai"]
-			if !ok {
-				t.Fatalf("stored providers = %v, want a canonical \"openai\" entry", stored.LLMConfig.Providers)
-			}
-			if provider.APIKey == "" {
-				t.Fatal("stored api_key is empty: the credential was never persisted")
-			}
-			plain, err := lib.DecryptSecret(provider.APIKey)
-			if err != nil {
-				t.Fatalf("decrypt stored key: %v", err)
-			}
-			if plain != tc.key {
-				t.Fatalf("stored key decrypts to %q, want %q", plain, tc.key)
-			}
+			assertStoredOpenAIKey(t, db, user.UUID, tc.key)
 		})
 	}
 }

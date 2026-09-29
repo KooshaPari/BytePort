@@ -510,7 +510,58 @@ def audit_repo(repo_path, exclude=None):
     }
 
 
+def _render_markdown(report, threshold) -> None:
+    print("# 88-Pillar Scorecard Report (v2)\n")
+    print(
+        f"**Score:** {report['score']}/{report['total']} ({report['percentage']:.1f}%)\n"
+    )
+    if report["skipped"]:
+        print(
+            f"**Skipped:** {report['skipped']} enterprise pillars (excluded)\n"
+        )
+    print(f"**Threshold:** {threshold}\n")
+    print(
+        f"**Status:** {'PASS' if report['score'] >= threshold else 'FAIL'}\n"
+    )
+    print("## Results\n| ID | Pillar | Status |\n|---|--------|--------|")
+    for r in report["results"]:
+        if r.get("excluded"):
+            print(f"| {r['id']} | {r['name']} | SKIP (enterprise) |")
+        else:
+            print(
+                f"| {r['id']} | {r['name']} | {'PASS' if r['passed'] else 'FAIL'} |"
+            )
+
+
+def _render_text(report, threshold) -> None:
+    print(
+        f"Scorecard v2: {report['score']}/{report['total']} ({report['percentage']:.1f}%)"
+    )
+    if report["skipped"]:
+        print(f"Excluded: {report['skipped']} enterprise pillars")
+    print(f"Threshold: {threshold}")
+    if report["score"] >= threshold:
+        print("Status: PASS")
+    else:
+        failed = [
+            r["name"]
+            for r in report["results"]
+            if not r.get("excluded") and not r["passed"]
+        ]
+        print(f"Status: FAIL\nFailed: {', '.join(failed)}")
+
+
+def _render_report(report, args) -> None:
+    if args.output == "json":
+        print(json.dumps(report, indent=2))
+    elif args.output == "markdown":
+        _render_markdown(report, args.threshold)
+    else:
+        _render_text(report, args.threshold)
+
+
 def main():
+
     parser = argparse.ArgumentParser(description="88-Pillar Scorecard Audit v2")
     parser.add_argument("path", help="Path to repository")
     parser.add_argument(
@@ -540,47 +591,11 @@ def main():
     if args.exclude_enterprise:
         exclude.extend(ENTERPRISE_EXCLUDE)
 
+
+
     try:
         report = audit_repo(args.path, exclude=exclude)
-        if args.output == "json":
-            print(json.dumps(report, indent=2))
-        elif args.output == "markdown":
-            print("# 88-Pillar Scorecard Report (v2)\n")
-            print(
-                f"**Score:** {report['score']}/{report['total']} ({report['percentage']:.1f}%)\n"
-            )
-            if report["skipped"]:
-                print(
-                    f"**Skipped:** {report['skipped']} enterprise pillars (excluded)\n"
-                )
-            print(f"**Threshold:** {args.threshold}\n")
-            print(
-                f"**Status:** {'PASS' if report['score'] >= args.threshold else 'FAIL'}\n"
-            )
-            print("## Results\n| ID | Pillar | Status |\n|---|--------|--------|")
-            for r in report["results"]:
-                if r.get("excluded"):
-                    print(f"| {r['id']} | {r['name']} | SKIP (enterprise) |")
-                else:
-                    print(
-                        f"| {r['id']} | {r['name']} | {'PASS' if r['passed'] else 'FAIL'} |"
-                    )
-        else:
-            print(
-                f"Scorecard v2: {report['score']}/{report['total']} ({report['percentage']:.1f}%)"
-            )
-            if report["skipped"]:
-                print(f"Excluded: {report['skipped']} enterprise pillars")
-            print(f"Threshold: {args.threshold}")
-            if report["score"] >= args.threshold:
-                print("Status: PASS")
-            else:
-                failed = [
-                    r["name"]
-                    for r in report["results"]
-                    if not r.get("excluded") and not r["passed"]
-                ]
-                print(f"Status: FAIL\nFailed: {', '.join(failed)}")
+        _render_report(report, args)
         if args.fail_on_drop and report["score"] < args.threshold:
             sys.exit(1)
     except Exception as e:

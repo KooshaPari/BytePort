@@ -186,16 +186,9 @@ KNOWN_TARGETS: set[str] = {
 # --- doctor -----------------------------------------------------------------
 
 
-def doctor() -> int:
+def _check_rust_versions(versions) -> tuple:
     failures: list[str] = []
     warnings: list[str] = []
-
-    versions = parse_mise_versions()
-    if not versions:
-        warnings.append(f"no toolchain versions found in {MISE_TOML.name}")
-    else:
-        for k, v in versions.items():
-            print(f"  mise: {k} = {v}")
 
     # Cross-file consistency
     msrv = cargo_msrv()
@@ -213,6 +206,13 @@ def doctor() -> int:
             f"mise.toml pins RUST_VERSION {mise_rust} but Cargo.toml has no rust-version"
         )
 
+    return failures, warnings
+
+
+def _check_go_versions(versions) -> tuple:
+    failures: list[str] = []
+    warnings: list[str] = []
+
     go_dir = go_mod_version()
     mise_go = versions.get("GO_VERSION")
     if go_dir and mise_go and not go_dir.startswith(mise_go):
@@ -226,6 +226,13 @@ def doctor() -> int:
             f"mise.toml pins GO_VERSION {mise_go} but no go.mod go directive"
         )
 
+    return failures, warnings
+
+
+def _check_node_versions(versions) -> tuple:
+    failures: list[str] = []
+    warnings: list[str] = []
+
     pkg_eng = package_engines()
     pkg_node = pkg_eng.get("node")
     mise_node = versions.get("NODE_VERSION")
@@ -238,6 +245,25 @@ def doctor() -> int:
             f"package.json engines.node {pkg_node} but no NODE_VERSION in mise.toml"
         )
 
+    return failures, warnings
+
+
+def _taskfile_binary_warnings(targets) -> list:
+    warnings: list[str] = []
+    # Check binary references are either on PATH or annotated
+    for name, body in targets:
+        for binary in set(BINARY_RE.findall(body)):
+            if shutil.which(binary) is None:
+                warnings.append(
+                    f"Taskfile target {name!r} references binary {binary!r} "
+                    f"which is not on PATH (likely provided via mise)"
+                )
+    return warnings
+
+
+def _check_taskfile() -> list:
+    warnings: list[str] = []
+
     # Taskfile target coverage
     if TASKFILE.exists():
         targets = parse_taskfile_targets()
@@ -248,30 +274,16 @@ def doctor() -> int:
                     f"Taskfile target {name!r} is not in the known-targets allowlist "
                     f"(add to KNOWN_TARGETS in scripts/doctor.py if intentional)"
                 )
-        # Check binary references are either on PATH or annotated
-        for name, body in targets:
-            for binary in set(BINARY_RE.findall(body)):
-                if shutil.which(binary) is None:
-                    warnings.append(
-                        f"Taskfile target {name!r} references binary {binary!r} "
-                        f"which is not on PATH (likely provided via mise)"
-                    )
+        warnings.extend(_taskfile_binary_warnings(targets))
         print(
             f"  Taskfile: {len(targets)} top-level targets, "
             f"{len(target_names & KNOWN_TARGETS)} in allowlist"
         )
 
-    # Live tool check (best-effort)
-    live = {
-        "cargo": shutil.which("cargo"),
-        "go": shutil.which("go"),
-        "node": shutil.which("node"),
-        "npm": shutil.which("npm"),
-        "task": shutil.which("task"),
-    }
-    for tool, path in live.items():
-        print(f"  {tool}: {'on PATH at ' + path if path else 'NOT on PATH'}")
+    return warnings
 
+
+def _report_results(failures, warnings) -> int:
     if failures:
         print("\nFAIL: toolchain convergence issues:", file=sys.stderr)
         for f in failures:
@@ -287,6 +299,40 @@ def doctor() -> int:
         + (f" ({len(warnings)} warning(s))" if warnings else "")
     )
     return 0
+
+
+
+
+def doctor() -> int:
+    failures: list[str] = []
+    warnings: list[str] = []
+
+    versions = parse_mise_versions()
+    if not versions:
+        warnings.append(f"no toolchain versions found in {MISE_TOML.name}")
+    else:
+        for k, v in versions.items():
+            print(f"  mise: {k} = {v}")
+
+    for check in (_check_rust_versions, _check_go_versions, _check_node_versions):
+        check_failures, check_warnings = check(versions)
+        failures.extend(check_failures)
+        warnings.extend(check_warnings)
+
+    warnings.extend(_check_taskfile())
+
+    # Live tool check (best-effort)
+    live = {
+        "cargo": shutil.which("cargo"),
+        "go": shutil.which("go"),
+        "node": shutil.which("node"),
+        "npm": shutil.which("npm"),
+        "task": shutil.which("task"),
+    }
+    for tool, path in live.items():
+        print(f"  {tool}: {'on PATH at ' + path if path else 'NOT on PATH'}")
+
+    return _report_results(failures, warnings)
 
 
 def main() -> int:

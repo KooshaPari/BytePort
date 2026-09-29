@@ -138,6 +138,56 @@ def draw_shadow(base_img, bbox, offset=(6, 6), blur_radius=10):
     return Image.alpha_composite(shadow_layer, base_img)
 
 
+def _corner_clips_out(x, y, size, r) -> bool:
+    """True when (x, y) falls outside the rounded-corner clip region."""
+    if x < r and y < r:
+        return (x - r) ** 2 + (y - r) ** 2 > r * r
+    if x > size - r and y < r:
+        return (x - (size - r)) ** 2 + (y - r) ** 2 > r * r
+    if x < r and y > size - r:
+        return (x - r) ** 2 + (y - (size - r)) ** 2 > r * r
+    if x > size - r and y > size - r:
+        return (x - (size - r)) ** 2 + (y - (size - r)) ** 2 > r * r
+    return False
+
+
+def _paint_gradient(size, bg_top, bg_bottom, corner_r):
+    """Vertical gradient clipped to the rounded-corner background."""
+    overlay = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(overlay)
+    for y in range(size):
+        for x in range(size):
+            if _corner_clips_out(x, y, size, corner_r):
+                continue
+            t = (x + y) / (2 * size)
+            color = lerp_color(bg_top, bg_bottom, t)
+            draw.point((x, y), fill=color + (255,))
+    return overlay
+
+
+def _load_font(px):
+    """First available system font, falling back to the built-in default."""
+    for path in (
+        "/System/Library/Fonts/SFNSMono.ttf",
+        "/System/Library/Fonts/Monospaced.ttf",
+    ):
+        try:
+            return ImageFont.truetype(path, px)
+        except OSError:
+            continue
+    return ImageFont.load_default()
+
+
+def _draw_dotted_line():
+    layer = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(layer)
+    for i in range(14):
+        if i % 2 == 0:
+            x = 208 + i * 8
+            draw.ellipse([x - 1, 309, x + 1, 311], fill=ORANGE + (128,))
+    return layer
+
+
 def main():
     # Create base image with alpha channel
     img = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
@@ -151,39 +201,7 @@ def main():
     )
 
     # Apply gradient on background
-    bg_overlay = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
-    bg_draw = ImageDraw.Draw(bg_overlay)
-    for y in range(SIZE):
-        for x in range(SIZE):
-            # Only fill within rounded rect area (approximate)
-            if (
-                x < corner_r
-                and y < corner_r
-                and (x - corner_r) ** 2 + (y - corner_r) ** 2 > corner_r**2
-            ):
-                continue
-            if (
-                x > SIZE - corner_r
-                and y < corner_r
-                and (x - (SIZE - corner_r)) ** 2 + (y - corner_r) ** 2 > corner_r**2
-            ):
-                continue
-            if (
-                x < corner_r
-                and y > SIZE - corner_r
-                and (x - corner_r) ** 2 + (y - (SIZE - corner_r)) ** 2 > corner_r**2
-            ):
-                continue
-            if (
-                x > SIZE - corner_r
-                and y > SIZE - corner_r
-                and (x - (SIZE - corner_r)) ** 2 + (y - (SIZE - corner_r)) ** 2
-                > corner_r**2
-            ):
-                continue
-            t = (x + y) / (2 * SIZE)
-            color = lerp_color(BG_TOP, BG_BOTTOM, t)
-            bg_draw.point((x, y), fill=color + (255,))
+    bg_overlay = _paint_gradient(SIZE, BG_TOP, BG_BOTTOM, corner_r)
     img = Image.alpha_composite(img, bg_overlay)
 
     # --- Glow effect ---
@@ -227,12 +245,7 @@ def main():
     img = Image.alpha_composite(img, dot_layer)
 
     # --- Dotted connection line ---
-    line_layer = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
-    line_draw = ImageDraw.Draw(line_layer)
-    for i in range(14):
-        x = 208 + i * 8
-        if i % 2 == 0:
-            line_draw.ellipse([x - 1, 309, x + 1, 311], fill=ORANGE + (128,))
+    line_layer = _draw_dotted_line()
     img = Image.alpha_composite(img, line_layer)
 
     # --- Gradient lighting overlay ---
@@ -241,13 +254,7 @@ def main():
     # --- Text: BYTEPORT ---
     text_layer = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
     text_draw = ImageDraw.Draw(text_layer)
-    try:
-        font_large = ImageFont.truetype("/System/Library/Fonts/SFNSMono.ttf", 48)
-    except OSError:
-        try:
-            font_large = ImageFont.truetype("/System/Library/Fonts/Monospaced.ttf", 48)
-        except OSError:
-            font_large = ImageFont.load_default()
+    font_large = _load_font(48)
 
     text = "BYTEPORT"
     bbox_text = text_draw.textbbox((0, 0), text, font=font_large)
@@ -259,13 +266,7 @@ def main():
     # --- Tagline ---
     tag_layer = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
     tag_draw = ImageDraw.Draw(tag_layer)
-    try:
-        font_small = ImageFont.truetype("/System/Library/Fonts/SFNSMono.ttf", 14)
-    except OSError:
-        try:
-            font_small = ImageFont.truetype("/System/Library/Fonts/Monospaced.ttf", 14)
-        except OSError:
-            font_small = ImageFont.load_default()
+    font_small = _load_font(14)
 
     tagline = "SECURE DATA TRANSPORT"
     tag_bbox = tag_draw.textbbox((0, 0), tagline, font=font_small)
