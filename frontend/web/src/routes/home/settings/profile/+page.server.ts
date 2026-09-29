@@ -11,4 +11,4 @@ import type { PageServerLoad } from './$types.js';
  * pretending to have data it cannot have. The page seeds itself from the
  * session store and saves through PUT /user/:id/creds.
  */
-export const load: PageServerLoad = async () => ({});
+export const load: PageServerLoad = () => ({});

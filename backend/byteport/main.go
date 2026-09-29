@@ -52,9 +52,9 @@ func setupRouter() *gin.Engine {
 		"http://tauri.localhost",
 		"http://tauri.0.0.0.0:5173", // NOSONAR (dev-only origin; HTTP by design)
 		"http://localhost:8081",
-		"http://0.0.0.0:8081", // NOSONAR (dev-only origin; HTTP by design)
-		"http://10.0.2.2:5173",
-		"http://10.0.2.2:8081",
+		"http://0.0.0.0:8081",  // NOSONAR (dev-only origin; HTTP by design)
+		"http://10.0.2.2:5173", // NOSONAR (Android emulator host loopback; dev-only origin)
+		"http://10.0.2.2:8081", // NOSONAR (Android emulator host loopback; dev-only origin)
 		// Add other needed origins
 	}
 	r.Use(cors.New(cors.Config{

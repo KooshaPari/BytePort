@@ -45,7 +45,7 @@ def _read_text(path: Path) -> str:
 
 # --- mise.toml parser (very small, covers what we need) --------------------
 
-MISE_KEY_RE = re.compile(r'^\s*([A-Za-z0-9_]+)\s*=\s*"([^"]*)"\s*$', re.MULTILINE)
+MISE_KEY_RE = re.compile(r'^\s*(\w+)\s*=\s*"([^"]*)"\s*$', re.MULTILINE)
 
 
 def parse_mise_versions() -> dict[str, str]:

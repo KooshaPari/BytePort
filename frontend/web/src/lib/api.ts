@@ -84,7 +84,7 @@ export async function apiFetch<T = unknown>(
 	try {
 		const response = await fetch(apiUrl(path), {
 			credentials: 'include',
-			headers: { 'Content-Type': 'application/json', ...(headers ?? {}) },
+			headers: { 'Content-Type': 'application/json', ...headers },
 			signal: controller.signal,
 			...rest
 		});

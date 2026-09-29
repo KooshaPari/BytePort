@@ -22,14 +22,14 @@ $directories = @(
 )
 
 foreach ($dir in $directories) {
-    if (!(Test-Path $dir)) {
+    if (-not (Test-Path $dir)) {
         New-Item -ItemType Directory -Path $dir -Force
         Write-Host "Created: $dir" -ForegroundColor Gray
     }
 }
 
 # Require Chocolatey if not present
-if (!(Get-Command choco -ErrorAction SilentlyContinue)) {
+if (-not (Get-Command choco -ErrorAction SilentlyContinue)) {
     Write-Host "📦 Chocolatey is required before continuing." -ForegroundColor Yellow
     Write-Host "Install it from https://chocolatey.org/install, reopen PowerShell, then rerun this script." -ForegroundColor White
     exit 1
@@ -43,17 +43,17 @@ $tools = @(
     "nodejs"
 )
 
-if (!$SkipDocker) {
+if (-not $SkipDocker) {
     $tools += "docker-desktop"
 }
 
-if (!$SkipCloudflare) {
+if (-not $SkipCloudflare) {
     # Install cloudflared manually since it's not in chocolatey
     Write-Host "Installing cloudflared..." -ForegroundColor Gray
     $cloudflaredUrl = "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe"
     $cloudflaredPath = "$env:ProgramFiles\cloudflared\cloudflared.exe"
 
-    if (!(Test-Path $cloudflaredPath)) {
+    if (-not (Test-Path $cloudflaredPath)) {
         New-Item -ItemType Directory -Path "$env:ProgramFiles\cloudflared" -Force
         Invoke-WebRequest -Uri $cloudflaredUrl -OutFile $cloudflaredPath
 
@@ -71,7 +71,7 @@ foreach ($tool in $tools) {
 }
 
 # Configure Docker (if not skipped)
-if (!$SkipDocker) {
+if (-not $SkipDocker) {
     Write-Host "🐳 Configuring Docker..." -ForegroundColor Yellow
 
     # Wait for Docker Desktop to start
@@ -85,7 +85,8 @@ if (!$SkipDocker) {
             $dockerStatus = docker version 2>$null
             if ($dockerStatus) { break }
         } catch {
-            # Continue waiting
+            # Docker not up yet: clear status and keep polling until timeout.
+            $dockerStatus = $null
         }
     } while ($elapsed -lt $timeout)
 
@@ -135,7 +136,7 @@ PROJECTS_PATH=$ProjectsPath\projects
 $envContent | Out-File -FilePath "$ProjectsPath\.env" -Encoding UTF8
 
 # Configure Cloudflare Tunnel (if not skipped)
-if (!$SkipCloudflare) {
+if (-not $SkipCloudflare) {
     Write-Host "☁️ Configuring Cloudflare Tunnel..." -ForegroundColor Yellow
 
     Write-Host "Please run the following commands manually after this script completes:" -ForegroundColor Red

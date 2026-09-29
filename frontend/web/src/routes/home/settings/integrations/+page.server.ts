@@ -12,4 +12,4 @@ import type { PageServerLoad } from './$types.js';
  * through POST /link, so this load only has to exist to keep the route's
  * server surface explicit.
  */
-export const load: PageServerLoad = async () => ({});
+export const load: PageServerLoad = () => ({});

@@ -46,7 +46,7 @@ func EncryptPass(password string) string {
 
 	return hash
 }
-func ValidatePass(password string, hash string) bool {
+func ValidatePass(password, hash string) bool {
 	match, err := comparePasswordAndHash(password, hash)
 	if err != nil {
 		log.Fatal(err)

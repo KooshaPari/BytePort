@@ -75,15 +75,15 @@ export const config = {
 
 		// Tunnel settings
 		tunnel: {
-			configPath: 'C:\\BytePort\\tunnels',
-			logPath: 'C:\\BytePort\\logs',
+			configPath: String.raw`C:\BytePort\tunnels`,
+			logPath: String.raw`C:\BytePort\logs`,
 			defaultDomain: 'yourdomain.com'
 		},
 
 		// Storage settings
 		storage: {
-			projectsPath: 'C:\\BytePort\\projects',
-			backupsPath: 'C:\\BytePort\\backups'
+			projectsPath: String.raw`C:\BytePort\projects`,
+			backupsPath: String.raw`C:\BytePort\backups`
 		}
 	}
 };
