@@ -9,33 +9,49 @@
   "specification_design_complete": false,
   "completion_percent": null,
   "source_denominator": "OPEN",
-  "native_product_runs": 0,
+  "native_product_runs": 1,
+  "native_oracle_results": {
+    "BP_F03": "NATIVE_COUNTEREXAMPLE_REPRODUCED"
+  },
   "architectural_risks_experimentally_closed": 0,
-  "blocking_findings": ["BP-F01", "BP-F02", "BP-F03", "BP-F04", "BP-F05", "BP-F06"],
+  "blocking_findings": [
+    "BP-F01",
+    "BP-F02",
+    "BP-F03",
+    "BP-F04",
+    "BP-F05",
+    "BP-F06"
+  ],
   "gates": {
     "source_ledger_resolved": "OPEN",
     "history_alias_falsification": "OPEN",
-    "sota_research": "PASS_1_ONLY",
+    "sota_research": "MULTI_PASS_OPEN",
     "best_alternative_stack": "PROPOSED_NOT_VALIDATED",
     "bootstrap_decisions": "PROVISIONAL",
     "differentiation_survives_attack": "OPEN",
-    "ontology_review": "DRAFT",
+    "ontology_review": "DRAFT_REFINED_IDENTITY_CHAIN_REQUIRED",
     "all_accepted_obligations": "OPEN",
     "quality_overlays": "PARTIAL",
     "journeys": "DRAFT_NOT_VERIFIED",
     "stage_projections": "PROPOSED",
     "oracle_design_complete": "PARTIAL",
-    "high_risk_experiments": "BLOCKED",
-    "implementation_mapping": "PARTIAL",
+    "high_risk_experiments": "BP_F03_REPRODUCED_OTHERS_OPEN",
+    "implementation_mapping": "PARTIAL_PROVIDER_IDENTITY_PATH_VERIFIED",
     "bidirectional_trace_validity": "NOT_VALIDATED",
-    "registry_repo_agreement": "BLOCKING_SCOPE_CONFLICT",
+    "registry_repo_agreement": "SCOPE_CONFLICT_SUBSTANTIALLY_NARROWED_NOT_CLOSED",
     "catalog_exclusion": "POLICY_DEFINED_NOT_ENFORCED",
     "no_orphans": "NOT_VALIDATED",
     "no_contradictions": "BLOCKED",
     "no_blocking_findings": "BLOCKED",
     "independent_fresh_review": "NOT_RUN"
   },
-  "evidence_policy": "SOURCE_FINDINGS_ARE_NOT_NATIVE_PRODUCT_ACCEPTANCE",
-  "next_minimal_context": ["BP-S02/03/10/13 authority reconciliation", "BP-S05/06/11/12 exact provider-ID and selected-artifact fixture", "crash-window operation persistence experiment", "registry SOTA bootstrap dossier"],
+  "evidence_policy": "SOURCE_FINDINGS_REQUIRE_EXACT_NATIVE_RECEIPTS; BP-F03 HAS_ONE",
+  "next_minimal_context": [
+    "SourceSnapshot→ManifestRevision→BuildArtifact contract",
+    "selected-application native fixture",
+    "crash-window operation persistence experiment",
+    "CLI-first vs desktop-first authority resolution",
+    "portfolio/Slickport lineage recovery"
+  ],
   "pilot": "DEFERRED_UNTIL_BUILT_STAGE; not a substitute for design gate"
 }
