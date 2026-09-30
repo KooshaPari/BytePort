@@ -3,6 +3,8 @@ package routes
 import (
 	"byteport/models"
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -96,6 +98,7 @@ type nvmsSandboxResponse struct {
 // so a caller cannot attribute a deployment to another account (or adopt an
 // existing row) by putting `user`, `owner` or `uuid` in the body.
 type deployRequest struct {
+	OperationID  string             `json:"operation_id"`
 	Name         string             `json:"name" binding:"required"`
 	Description  string             `json:"description"`
 	Type         string             `json:"type"`
@@ -108,6 +111,15 @@ type deployRequest struct {
 // repositoryID resolves the repository link, preferring the explicit
 // `repository_id` and falling back to the id of an embedded `repository`
 // object, which is the shape the web client posts.
+func (r deployRequest) fingerprint() (string, error) {
+	copy := r
+	copy.OperationID = ""
+	raw, err := json.Marshal(copy)
+	if err != nil { return "", err }
+	sum := sha256.Sum256(raw)
+	return hex.EncodeToString(sum[:]), nil
+}
+
 func (r deployRequest) repositoryID() string {
 	if r.RepositoryID != "" {
 		return r.RepositoryID
@@ -137,6 +149,38 @@ func DeployProject(c *gin.Context) {
 
 	var req deployRequest
 	if !bindJSON(c, &req, "Invalid deploy request") {
+		return
+	}
+
+	if req.OperationID == "" {
+		req.OperationID = uuid.New().String()
+	}
+	fingerprint, err := req.fingerprint()
+	if err != nil {
+		respondInternalError(c, "Failed to fingerprint deploy request")
+		return
+	}
+
+	var existing models.RuntimeOperationRecord
+	if err := models.DB.Where("id = ? AND owner = ?", req.OperationID, user.UUID).First(&existing).Error; err == nil {
+		if existing.Fingerprint != fingerprint {
+			respondErrorWithDetails(c, http.StatusConflict, "Operation ID already exists with different request", gin.H{"operation_id": req.OperationID})
+			return
+		}
+		if existing.State == models.RuntimeOperationRealized && existing.ProviderResourceID != "" {
+			c.JSON(http.StatusOK, gin.H{"message":"Success","operation_id":existing.ID,"sandbox_id":existing.ProviderResourceID,"status":"replayed"})
+			return
+		}
+		c.JSON(http.StatusAccepted, gin.H{"message":"Operation already exists and requires observation/reconciliation","operation_id":existing.ID,"state":existing.State})
+		return
+	}
+
+	journal := models.RuntimeOperationRecord{
+		ID:req.OperationID, Owner:user.UUID, Fingerprint:fingerprint,
+		State:models.RuntimeOperationApplying, Target:req.Platform,
+	}
+	if err := models.DB.Create(&journal).Error; err != nil {
+		respondInternalError(c, "Failed to persist deployment operation")
 		return
 	}
 
@@ -174,12 +218,14 @@ func DeployProject(c *gin.Context) {
 
 	status, body, err := nvmsRequest("/v1/deploy", jsonBody)
 	if err != nil {
+		models.DB.Model(&journal).Updates(map[string]any{"state":models.RuntimeOperationUnknown,"last_error":err.Error()})
 		log.Printf("deploy: sandbox provisioning failed for project %s: %v", project.UUID, err)
 		respondInternalError(c, "Failed to deploy project: "+err.Error())
 		return
 	}
 
 	if status != http.StatusOK && status != http.StatusCreated {
+		models.DB.Model(&journal).Updates(map[string]any{"state":models.RuntimeOperationFailed,"last_error":fmt.Sprintf("provider status %d",status)})
 		log.Printf("deploy: sandbox provisioning rejected project %s with status %d", project.UUID, status)
 		respondErrorWithDetails(c, http.StatusInternalServerError, "Failed to deploy project", gin.H{
 			"status": status,
@@ -194,6 +240,11 @@ func DeployProject(c *gin.Context) {
 		respondInternalError(c, "Failed to parse sandbox response")
 		return
 	}
+
+	journal.ProviderResourceID = sandboxResp.ID
+	journal.ProjectUUID = project.UUID
+	journal.State = models.RuntimeOperationUnknown
+	_ = models.DB.Save(&journal).Error
 
 	project.SetDeploy(map[string]models.Instance{
 		"default": {
@@ -214,10 +265,14 @@ func DeployProject(c *gin.Context) {
 		return
 	}
 
+	journal.State = models.RuntimeOperationRealized
+	journal.LastError = ""
+	_ = models.DB.Save(&journal).Error
 	recordDeploy()
 	log.Printf("deploy: project %s provisioned sandbox %s (%s)", project.UUID, sandboxResp.ID, sandboxResp.Status)
 	c.JSON(http.StatusOK, gin.H{
 		"message":    "Success",
+		"operation_id": journal.ID,
 		"sandbox_id": sandboxResp.ID,
 		"status":     sandboxResp.Status,
 	})
