@@ -129,3 +129,18 @@ jobs:
           cache-dependency-path: backend/byteport/go.sum
       - name: Lost response delayed visibility and retry
         run: go test ./models -run '^(TestRecoveryLostCreateResponseReconcilesWithoutSecondMutation|TestRecoveryDelayedVisibilityStaysUnknownUntilObserved|TestRecoveryRetryUsesSameOperationIdentity)$' -count=1 -v
+
+  production-operation-journal:
+    name: B02 production journal integration
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend/byteport
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: backend/byteport/go.mod
+          cache-dependency-path: backend/byteport/go.sum
+      - name: Stable retry conflict and lost-response controls
+        run: go test ./routes -run '^(TestDeployOperationIDReplaysRealizedResourceWithoutSecondProviderCall|TestDeployOperationIDRejectsDifferentFingerprintBeforeProviderMutation|TestDeployPersistsApplyingOperationBeforeProviderTransportFailure)$' -count=1 -v
