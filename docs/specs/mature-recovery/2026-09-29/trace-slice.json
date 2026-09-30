@@ -1,0 +1,1 @@
+{"schema":"mature-recovery-trace/v1","traces":[{"trace_id":"BP-T04","obligation":"stop exact provider resource","decision":"BP-AD-01","implementation":"TerminateInstance legacy path","oracle":"TestTerminateInstanceUsesPersistedProviderSandboxID","evidence_state":"FAIL","authority":"native_observation","satisfies":false}]}
