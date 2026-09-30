@@ -67,3 +67,18 @@ jobs:
           cache-dependency-path: backend/byteport/go.sum
       - name: Observe repeated request behavior
         run: go test ./routes -run '^TestRecoveryProbeRepeatedDeployCreatesTwoRemoteOperations$' -count=1 -v
+
+  operation-journal-model:
+    name: BP-AD-01 operation journal executable model
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend/byteport
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: backend/byteport/go.mod
+          cache-dependency-path: backend/byteport/go.sum
+      - name: Validate retry and restart semantics
+        run: go test ./routes -run '^TestRecoveryOperation' -count=1 -v
