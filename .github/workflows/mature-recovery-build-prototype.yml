@@ -40,6 +40,14 @@ jobs:
           docker build             --build-arg SOURCE_COMMIT="${{ steps.identity.outputs.source_commit }}"             --build-arg MANIFEST_DIGEST="${{ steps.identity.outputs.manifest_digest }}"             -t byteport-selected-app:recovery             "$FIXTURE"
           docker image inspect byteport-selected-app:recovery --format '{{.Id}}' > /tmp/artifact-id
 
+      - name: Export portable image archive and digest
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker image save byteport-selected-app:recovery -o /tmp/byteport-image.tar
+          sha256sum /tmp/byteport-image.tar | awk '{print $1}' > /tmp/portable-artifact-digest
+          docker buildx version > /tmp/builder-version
+
       - name: Run immutable built subject and observe application identity
         shell: bash
         run: |
@@ -61,12 +69,17 @@ jobs:
         run: |
           set -euo pipefail
           ARTIFACT_ID="$(cat /tmp/artifact-id)"
-          jq -n             --arg source_commit "${{ steps.identity.outputs.source_commit }}"             --arg manifest_digest "${{ steps.identity.outputs.manifest_digest }}"             --arg artifact_id "$ARTIFACT_ID"             --slurpfile probe /tmp/probe.json             '{
+          PORTABLE_DIGEST="$(cat /tmp/portable-artifact-digest)"
+          BUILDER="$(head -n1 /tmp/builder-version)"
+          jq -n             --arg source_commit "${{ steps.identity.outputs.source_commit }}"             --arg manifest_digest "${{ steps.identity.outputs.manifest_digest }}"             --arg artifact_id "$ARTIFACT_ID"             --arg portable_digest "$PORTABLE_DIGEST"             --arg builder "$BUILDER"             --slurpfile probe /tmp/probe.json             '{
               classification:"ARCHITECTURE_PROTOTYPE_NOT_PRODUCT_ACCEPTANCE",
               source_snapshot:$source_commit,
               manifest_digest:$manifest_digest,
               build_engine:"docker",
               immutable_local_artifact_id:$artifact_id,
+              portable_archive_sha256:$portable_digest,
+              builder:$builder,
+              provenance_status:"BUILDER_CAPABILITY_OBSERVED_NOT_YET_ATTESTATION_VERIFIED",
               live_probe:$probe[0]
             }' > /tmp/byteport-build-receipt.json
           cat /tmp/byteport-build-receipt.json
