@@ -19,7 +19,8 @@
     "BP_SESSION_TOKEN_EXPIRY": "STATIC_CONCERN_FALSIFIED_EXPIRED_SESSION_REJECTED_RUN_36738216973_JOB_109966848889",
     "BP_F03_REMEDIATION": "QUALIFIED_RUN_36749551929_JOB_110004908919",
     "BP_RUNTIME_RECONCILIATION_MODEL": "PASS_RUN_36749551929_JOB_110004909035",
-    "BP_B02_PRODUCTION_JOURNAL": "QUALIFIED_RUN_36749551929_JOB_110004908884"
+    "BP_B02_PRODUCTION_JOURNAL": "QUALIFIED_RUN_36749551929_JOB_110004908884",
+    "BP_B03_SOURCE_MANIFEST": "PROTOTYPE_IMPLEMENTED_BRANCH_MOVE_IMMUTABLE_SHA_STRICT_MANIFEST_QUALIFICATION_PENDING"
   },
   "blocking_findings": [
     "BP-F01",
@@ -42,7 +43,7 @@
     "journeys": "DRAFT_IMPLEMENTATION_MAPPING_STARTED",
     "stage_projections": "PROPOSED",
     "oracle_design_complete": "PARTIAL",
-    "high_risk_experiments": "B01 QUALIFIED; B02 DESIGN MODEL QUALIFIED; DUPLICATE DEPLOY CURRENT RISK REPRODUCED; B04 PORTABLE SUBJECT PASS BUT PROVENANCE ATTESTATION OPEN; NETWORK/PUBLICATION OPEN",
+    "high_risk_experiments": "B01 QUALIFIED; B02 PRODUCTION JOURNAL QUALIFIED; B03 SOURCE/MANIFEST PROTOTYPE IMPLEMENTED PENDING QUALIFICATION; B04 PORTABLE SUBJECT PASS PROVENANCE OPEN; NETWORK/PUBLICATION OPEN",
     "implementation_mapping": "PASS_2_MOUNTED_API_CLI_NETWORK_PLUS_TRACE_SLICE_01",
     "bidirectional_trace_validity": "SLICE_01_DRAFT_NOT_FULLY_VALIDATED",
     "registry_repo_agreement": "MATURE_SCOPE_SUBSTANTIALLY_RECONCILED_CANONICAL_UPDATE_DEFERRED",
@@ -54,11 +55,11 @@
   },
   "evidence_policy": "BP-F03/BP-F04 HAVE EXACT NATIVE RECEIPTS; CURRENT QUEUED/CANCELLED DUPLICATE/JOURNAL/BUILD/AUTH RUNS ARE NOT EVIDENCE",
   "next_minimal_context": [
-    "Prototype B03 source-ref resolver and minimal manifest parser against recovered fixture",
+    "Qualify B03 source/manifest prototype",
+    "If B03 passes, integrate SourceSnapshot/ManifestRevision before build/runtime mutation",
     "Add BuildKit provenance attestation verification before opening B04",
-    "Close explicit network mode and health/metrics exposure",
-    "Advance portfolio projection/publisher experiment",
-    "Re-run full vertical selected-app chain after B03/B04 integration"
+    "Close network mode/health metrics exposure",
+    "Prototype portfolio projection/publisher independently"
   ],
   "pilot": "DEFERRED_UNTIL_BUILT_STAGE; not a substitute for design gate"
 }
