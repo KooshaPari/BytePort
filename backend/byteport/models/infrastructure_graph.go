@@ -32,6 +32,7 @@ type DesiredResource struct {
 	Artifact *BuildArtifactID `json:"artifact_id,omitempty"`
 	Target string `json:"target"`
 	Lifecycle LifecyclePolicy `json:"lifecycle"`
+	ReplaceOnChange bool `json:"replace_on_change,omitempty"`
 }
 
 type DesiredResourceGraph struct {
