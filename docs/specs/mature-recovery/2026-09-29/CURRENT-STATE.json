@@ -1,6 +1,6 @@
 {
   "product": "KooshaPari/BytePort",
-  "observed_on": "2026-09-29",
+  "observed_on": "2026-09-30",
   "source_snapshot": "0232cca16fedb7963a8c6f556dc5eee5c8c1674e",
   "registry_source_snapshot": "85d7cd00cf59c379c05b740e8130a85b0d5bd31b",
   "specification_branch": "spec/mature-recovery-2026-09-29",
@@ -9,9 +9,10 @@
   "specification_design_complete": false,
   "completion_percent": null,
   "source_denominator": "OPEN",
-  "native_product_runs": 1,
+  "native_product_runs": 2,
   "native_oracle_results": {
-    "BP_F03": "NATIVE_COUNTEREXAMPLE_REPRODUCED"
+    "BP_F03": "NATIVE_COUNTEREXAMPLE_REPRODUCED",
+    "BP_F04": "NATIVE_RISK_REPRODUCED_REMOTE_SUCCESS_LOCAL_PERSISTENCE_FAILURE_NO_COMPENSATION"
   },
   "architectural_risks_experimentally_closed": 0,
   "blocking_findings": [
@@ -27,7 +28,7 @@
     "history_alias_falsification": "OPEN",
     "sota_research": "MULTI_PASS_OPEN",
     "best_alternative_stack": "PROPOSED_NOT_VALIDATED",
-    "bootstrap_decisions": "PROVISIONAL",
+    "bootstrap_decisions": "DELEGATED_BUILD_PLUS_VERIFIED_ARTIFACT_LEADING; NOT_FROZEN",
     "differentiation_survives_attack": "OPEN",
     "ontology_review": "DRAFT_REFINED_IDENTITY_CHAIN_REQUIRED",
     "all_accepted_obligations": "OPEN",
@@ -35,8 +36,8 @@
     "journeys": "DRAFT_NOT_VERIFIED",
     "stage_projections": "PROPOSED",
     "oracle_design_complete": "PARTIAL",
-    "high_risk_experiments": "BP_F03_REPRODUCED_OTHERS_OPEN",
-    "implementation_mapping": "PARTIAL_PROVIDER_IDENTITY_PATH_VERIFIED",
+    "high_risk_experiments": "BP_F03_AND_BP_F04_NATIVE_REPRODUCED; SELECTED_ARTIFACT_AND_RECOVERY_REPLACEMENT_OPEN",
+    "implementation_mapping": "PARTIAL_PROVIDER_IDENTITY_AND_PERSISTENCE_WINDOW_VERIFIED",
     "bidirectional_trace_validity": "NOT_VALIDATED",
     "registry_repo_agreement": "SCOPE_CONFLICT_SUBSTANTIALLY_NARROWED_NOT_CLOSED",
     "catalog_exclusion": "POLICY_DEFINED_NOT_ENFORCED",
@@ -45,11 +46,11 @@
     "no_blocking_findings": "BLOCKED",
     "independent_fresh_review": "NOT_RUN"
   },
-  "evidence_policy": "SOURCE_FINDINGS_REQUIRE_EXACT_NATIVE_RECEIPTS; BP-F03 HAS_ONE",
+  "evidence_policy": "BP-F03 AND BP-F04 HAVE EXACT NATIVE RECEIPTS; REPRODUCED RISK IS NOT REMEDIATION OR ARCHITECTURE CLOSURE",
   "next_minimal_context": [
-    "SourceSnapshot→ManifestRevision→BuildArtifact contract",
+    "Prototype SourceSnapshot→ManifestRevision→BuildArtifact through delegated build path",
     "selected-application native fixture",
-    "crash-window operation persistence experiment",
+    "choose operation journal/reconcile/adopt/compensate semantics",
     "CLI-first vs desktop-first authority resolution",
     "portfolio/Slickport lineage recovery"
   ],
