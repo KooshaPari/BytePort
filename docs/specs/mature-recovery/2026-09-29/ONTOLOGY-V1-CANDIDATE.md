@@ -1,6 +1,6 @@
 # BytePort ontology v1.0 candidate — source-to-realized-product contract
 
-Status: **CANDIDATE FREEZE / architecture-risk experiments still gate final acceptance**  
+Status: **V1.1 CANDIDATE / adversarial-review refinements incorporated; experiments still gate freeze**  
 Date: 2026-09-30.  
 Frozen implementation source: `0232cca16fedb7963a8c6f556dc5eee5c8c1674e`.
 
@@ -61,6 +61,12 @@ Immutable resolved source identity. A mutable ref is resolved once per intent.
 ### ManifestRevision
 Exact validated deployment/productization configuration bytes + schema/version/content digest.
 
+### Component
+A desired service/resource node in the manifest graph. Components may be runnable services, jobs, managed databases or other provider resources.
+
+### ArtifactResolution
+Per-component resolution stating whether the component uses a verified prebuilt BuildArtifact, a BuildOperation-produced artifact, or no runnable artifact because the component is provider-managed/non-artifact.
+
 ### BuildPlan
 Normalized build request independent of builder brand.
 
@@ -68,7 +74,7 @@ Normalized build request independent of builder brand.
 Durable build transition identity including request fingerprint and BuildEngine adapter/version.
 
 ### BuildArtifact
-Immutable runnable output identity plus provenance. OCI digest is canonical for OCI targets where available; mutable tag alone is invalid evidence.
+Immutable runnable output identity plus provenance, media kind and supported platform set. OCI digest is canonical for OCI targets where available; mutable tag alone is invalid evidence. Runtime evidence records the exact selected platform artifact where relevant.
 
 ### Target
 Desired environment/provider/runtime/account/region/platform identity.
@@ -79,17 +85,23 @@ Immutable desired binding of Project + SourceSnapshot + ManifestRevision + Build
 ### RuntimeOperation
 Durable retry/reconciliation identity established before uncertain externally visible mutation.
 
+### ExternalOperationRef
+Exact provider/engine-owned operation identity when the adapter supplies durable state. BytePort references rather than duplicates that state while retaining its cross-stage product Operation.
+
 ### ProviderResource
 Exact externally assigned/observed resource identity. Never ProjectID by convenience.
 
 ### Observation
 Fresh independently obtained provider/runtime/application fact with subject and timestamp/provenance.
 
+### DeploymentGeneration
+One realized/attempted rollout generation with predecessor/supersedes/rollback-of relations and roles such as desired, current, candidate or retiring. Multiple generations may coexist during blue/green or rolling update.
+
 ### RealizedDeployment
-Accepted binding between one DeploymentIntent and the exact ProviderResources whose selected application identity/readiness has been independently observed.
+Accepted binding between one DeploymentIntent/DeploymentGeneration and the exact ProviderResources whose required component/application identities/readiness have been independently observed. It may include non-artifact managed resources.
 
 ### PortfolioProjection
-Evidence-derived representation separating verified facts, generated content, manual content and freshness/provenance.
+Evidence-derived representation separating verified facts, generated content, manual content and freshness/provenance. Projection mode is explicit, e.g. draft/planned/realized; live verified facts require corresponding observations.
 
 ### PublicationOperation
 Independent durable operation for API/Git/other PortfolioPublisher output.
@@ -136,6 +148,12 @@ Publishes PortfolioProjection through configured API/template integration or aut
 18. Publication retry is idempotent/reconcilable.
 19. Local-first control plane does not imply local-only deployment target.
 20. Evidence binds exact source, dependency, adapter/provider and candidate identity.
+21. DeploymentIntent represents a component/resource graph, not one mandatory artifact.
+22. Each component has explicit ArtifactResolution; provider-managed resources may have no BuildArtifact.
+23. Rollout generations preserve predecessor/supersedes/rollback relations and may coexist.
+24. Engine-owned durable operations are represented by ExternalOperationRef rather than copied as BytePort-owned truth.
+25. Multi-platform artifacts record media/platform identity and runtime-selected subject.
+26. Draft/planned portfolio projections cannot present unobserved live facts as verified.
 
 ## Current mechanism disposition
 
