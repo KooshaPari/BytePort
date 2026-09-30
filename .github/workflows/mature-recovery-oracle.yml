@@ -84,3 +84,18 @@ jobs:
         run: go test ./routes -run '^TestRecoveryOperation' -count=1 -v
 
 # execution-freeze-trigger: 2026-09-30T13
+
+  session-token-expiry:
+    name: Session token expiration oracle
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: backend/byteport
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: backend/byteport/go.mod
+          cache-dependency-path: backend/byteport/go.sum
+      - name: Verify expired session tokens are rejected
+        run: go test ./lib -run '^TestRecoverySessionTokenRejectsExpiredToken$' -count=1 -v
