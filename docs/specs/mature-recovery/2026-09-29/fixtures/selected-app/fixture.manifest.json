@@ -1,0 +1,9 @@
+{
+  "schema": "byteport-recovery-fixture/v1",
+  "service": {
+    "name": "selected-app-fixture",
+    "runtime": "container",
+    "port": 8080,
+    "source": "."
+  }
+}
