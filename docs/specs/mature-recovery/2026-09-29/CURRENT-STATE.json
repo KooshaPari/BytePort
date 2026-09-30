@@ -12,7 +12,10 @@
   "native_product_runs": 2,
   "native_oracle_results": {
     "BP_F03": "NATIVE_COUNTEREXAMPLE_REPRODUCED",
-    "BP_F04": "NATIVE_RISK_REPRODUCED_REMOTE_SUCCESS_LOCAL_PERSISTENCE_FAILURE_NO_COMPENSATION"
+    "BP_F04": "NATIVE_RISK_REPRODUCED_REMOTE_SUCCESS_LOCAL_PERSISTENCE_FAILURE_NO_COMPENSATION",
+    "BP_DUPLICATE_DEPLOY": "PENDING_EXECUTION_NOT_EVIDENCE",
+    "BP_OPERATION_JOURNAL_MODEL": "PENDING_EXECUTION_NOT_EVIDENCE",
+    "BP_DELEGATED_BUILD_PROTOTYPE": "PENDING_EXECUTION_NOT_EVIDENCE"
   },
   "architectural_risks_experimentally_closed": 0,
   "blocking_findings": [
@@ -28,31 +31,31 @@
     "history_alias_falsification": "OPEN",
     "sota_research": "MULTI_PASS_OPEN",
     "best_alternative_stack": "PROPOSED_NOT_VALIDATED",
-    "bootstrap_decisions": "DELEGATED_BUILD_PLUS_VERIFIED_ARTIFACT_LEADING; NOT_FROZEN",
+    "bootstrap_decisions": "DELEGATED_BUILD_VERIFIED_ARTIFACT_LEADING; BUILDENGINE_CAPABILITY_ADAPTER_DEFINED; OPERATION_JOURNAL_RECONCILIATION_LEADING; NOT_FROZEN",
     "differentiation_survives_attack": "OPEN",
-    "ontology_review": "DRAFT_REFINED_IDENTITY_CHAIN_REQUIRED",
+    "ontology_review": "DRAFT_REFINED_MULTIPLE_SLICES",
     "all_accepted_obligations": "OPEN",
     "quality_overlays": "PARTIAL",
     "journeys": "DRAFT_NOT_VERIFIED",
     "stage_projections": "PROPOSED",
     "oracle_design_complete": "PARTIAL",
-    "high_risk_experiments": "BP_F03_AND_BP_F04_NATIVE_REPRODUCED; SELECTED_ARTIFACT_AND_RECOVERY_REPLACEMENT_OPEN",
-    "implementation_mapping": "PARTIAL_PROVIDER_IDENTITY_AND_PERSISTENCE_WINDOW_VERIFIED",
-    "bidirectional_trace_validity": "NOT_VALIDATED",
-    "registry_repo_agreement": "SCOPE_CONFLICT_SUBSTANTIALLY_NARROWED_NOT_CLOSED",
+    "high_risk_experiments": "BP_F03_F04_NATIVE_REPRODUCED; DUPLICATE_OPERATION_JOURNAL_BUILD_PROTOTYPE_OPEN",
+    "implementation_mapping": "PARTIAL_SEMANTIC_TRACE_SLICE_01_AND_LIVE_SURFACE_MAP",
+    "bidirectional_trace_validity": "SLICE_01_DRAFT_NOT_FULLY_VALIDATED",
+    "registry_repo_agreement": "MATURE_SCOPE_SUBSTANTIALLY_RECONCILED; CANONICAL_REGISTRY_UPDATE_DEFERRED_PENDING_FRESH_REVIEW",
     "catalog_exclusion": "POLICY_DEFINED_NOT_ENFORCED",
     "no_orphans": "NOT_VALIDATED",
-    "no_contradictions": "BLOCKED",
+    "no_contradictions": "OPEN",
     "no_blocking_findings": "BLOCKED",
     "independent_fresh_review": "NOT_RUN"
   },
-  "evidence_policy": "BP-F03 AND BP-F04 HAVE EXACT NATIVE RECEIPTS; REPRODUCED RISK IS NOT REMEDIATION OR ARCHITECTURE CLOSURE",
+  "evidence_policy": "BP-F03/BP-F04 HAVE EXACT NATIVE RECEIPTS; CURRENT QUEUED/CANCELLED DUPLICATE/JOURNAL/BUILD RUNS ARE NOT EVIDENCE",
   "next_minimal_context": [
-    "Prototype SourceSnapshot→ManifestRevision→BuildArtifact through delegated build path",
-    "selected-application native fixture",
-    "choose operation journal/reconcile/adopt/compensate semantics",
-    "CLI-first vs desktop-first authority resolution",
-    "portfolio/Slickport lineage recovery"
+    "Execute isolated duplicate-deploy and operation-journal-model controls",
+    "Execute delegated-build selected-app prototype then upgrade to OCI digest/provenance",
+    "Prototype BuildKit vs CNB adapter capabilities",
+    "Prototype RuntimeAdapter reconciliation against exact ProviderResource identity",
+    "Expand mature obligation and trace denominator including portfolio publication"
   ],
   "pilot": "DEFERRED_UNTIL_BUILT_STAGE; not a substitute for design gate"
 }
