@@ -156,7 +156,7 @@
         "UNKNOWN/RECONCILING survives restart",
         "Retry cannot blindly duplicate provider mutation"
       ],
-      "qualification": "DESIGN_GATE_QUALIFIED run 36745277093 jobs 109995492782 and 109995492863; production integration still requires package acceptance"
+      "qualification": "QUALIFIED mounted handler run 36749551929 job 110004908884 plus model jobs 110004909157/110004909035"
     },
     {
       "id": "BP-WP-B03",
@@ -169,16 +169,26 @@
       ],
       "merge_gate": "BLOCKED",
       "blocked_by": [
-        "ref resolver",
-        "manifest schema decision"
+        "B03 source/manifest prototype exact CI receipt"
       ],
       "evidence_required": [
         "branch move",
-        "invalid manifest"
+        "mutable resolver rejection",
+        "strict valid manifest",
+        "missing name/services",
+        "duplicate names",
+        "path escape",
+        "invalid port",
+        "unknown key",
+        "malformed YAML"
       ],
       "critical": [
-        "Preserve Source and manifest integration mature identity/invariants; do not bypass the documented merge gate"
-      ]
+        "Mutable ref resolves once to immutable commit",
+        "Manifest exact bytes are digested before parsing",
+        "Invalid/unknown/path-escape/port errors stop before runtime mutation",
+        "BUILD/ENV parsing does not authorize execution or secret use"
+      ],
+      "qualification": "PROTOTYPE_IMPLEMENTED_PENDING"
     },
     {
       "id": "BP-WP-B04",
