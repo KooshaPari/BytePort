@@ -87,5 +87,5 @@ jobs:
         with:
           python-version: "3.13"
       - name: Validate semantic trace fixture
-        working-directory: ../..
+        working-directory: .
         run: python scripts/recovery/validate_trace.py docs/specs/mature-recovery/2026-09-29/trace-slice.json
