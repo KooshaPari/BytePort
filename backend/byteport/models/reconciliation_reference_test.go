@@ -21,14 +21,14 @@ func TestReconciliationCreatesUpdatesAndNoopsExplicitly(t *testing.T){
 func TestStaleObservationProducesUnknownNotDestruction(t *testing.T){
 	g:=DesiredResourceGraph{ID:"g"}
 	obs:=[]ObservedResourceState{{DesiredResourceID:"old",RealizedResourceID:"r1",Fresh:false}}
-	p:=PlanReconciliation(g,obs,ReconciliationPolicy{AllowDelete:true})
+	p:=PlanReconciliation(g,obs,ReconciliationPolicy{DestructionIntents:[]DestructionIntent{{DesiredResourceID:"old",RealizedResourceID:"r1",Authorized:true,Reason:"explicit cleanup"}}})
 	if p.Actions[0].Action!=ReconcileUnknown {t.Fatal(p.Actions[0])}
 }
 
 func TestMissingDesiredResourceDoesNotDeleteWithoutAuthorization(t *testing.T){
 	g:=DesiredResourceGraph{ID:"g"}
-	obs:=[]ObservedResourceState{{DesiredResourceID:"old",RealizedResourceID:"r1",Fresh:true}}
-	p:=PlanReconciliation(g,obs,ReconciliationPolicy{AllowDelete:false})
+	obs:=[]ObservedResourceState{{DesiredResourceID:"old",RealizedResourceID:"r1",Fresh:true,Lifecycle:LifecycleDestroyOnExplicitIntent}}
+	p:=PlanReconciliation(g,obs,ReconciliationPolicy{})
 	if p.Actions[0].Action==ReconcileDelete {t.Fatal("destruction occurred without explicit authorization")}
 	if p.Actions[0].Action!=ReconcileRead {t.Fatal(p.Actions[0])}
 }
@@ -39,4 +39,12 @@ func TestExplicitDestructionCanPlanExactDelete(t *testing.T){
 	p:=PlanReconciliation(g,obs,ReconciliationPolicy{AllowDelete:true})
 	if p.Actions[0].Action!=ReconcileDelete {t.Fatal(p.Actions[0])}
 	if p.Actions[0].RealizedResourceID!="r1" {t.Fatal("delete lost exact realized-resource identity")}
+}
+
+
+func TestObserveOnlyResourceCannotDeleteEvenWithIntent(t *testing.T){
+	g:=DesiredResourceGraph{ID:"g"}
+	obs:=[]ObservedResourceState{{DesiredResourceID:"old",RealizedResourceID:"r1",Fresh:true,Lifecycle:LifecycleObserveOnly}}
+	p:=PlanReconciliation(g,obs,ReconciliationPolicy{DestructionIntents:[]DestructionIntent{{DesiredResourceID:"old",RealizedResourceID:"r1",Authorized:true,Reason:"requested"}}})
+	if p.Actions[0].Action==ReconcileDelete { t.Fatal("observe-only lifecycle allowed deletion") }
 }
