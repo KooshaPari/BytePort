@@ -8,6 +8,9 @@ import (
 	"testing"
 )
 
+type recoveryRoundTripperFunc func(*http.Request) (*http.Response,error)
+func (f recoveryRoundTripperFunc) RoundTrip(r *http.Request)(*http.Response,error){ return f(r) }
+
 func TestDeployOperationIDReplaysRealizedResourceWithoutSecondProviderCall(t *testing.T) {
 	testDB(t)
 	stub:=newNVMSStub(t)
@@ -47,7 +50,7 @@ func TestDeployPersistsApplyingOperationBeforeProviderTransportFailure(t *testin
 	testDB(t)
 	alice:=models.User{UUID:"alice-uuid"}
 	old:=nvmsHTTPClient
-	nvmsHTTPClient=&http.Client{Transport:roundTripperFunc(func(*http.Request)(*http.Response,error){return nil,fmt.Errorf("lost response")})}
+	nvmsHTTPClient=&http.Client{Transport:recoveryRoundTripperFunc(func(*http.Request)(*http.Response,error){return nil,fmt.Errorf("lost response")})}
 	t.Cleanup(func(){nvmsHTTPClient=old})
 
 	w:=httptest.NewRecorder()
