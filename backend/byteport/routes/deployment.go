@@ -245,10 +245,25 @@ func TerminateInstance(c *gin.Context) {
 		return
 	}
 
-	// NanoVMS stop expects POST /v1/stop?id=<sandbox_id> with query param.
-	sandboxID := project.UUID
+	// Legacy Project storage may contain zero, one, or multiple provider
+	// instances. This route has no generation/resource selector yet, so it is
+	// only safe to stop when exactly one persisted provider resource exists.
+	// Never fall back to Project UUID: Project identity is not runtime identity.
+	deployments := project.GetDeploy()
+	if len(deployments) == 0 {
+		respondBadRequest(c, "project has no persisted provider resource")
+		return
+	}
+	if len(deployments) != 1 {
+		respondBadRequest(c, "project has multiple provider resources; explicit resource selection required")
+		return
+	}
+	var sandboxID string
+	for _, instance := range deployments {
+		sandboxID = instance.UUID
+	}
 	if sandboxID == "" {
-		respondBadRequest(c, "missing sandbox ID")
+		respondBadRequest(c, "persisted provider resource is missing sandbox ID")
 		return
 	}
 
