@@ -1,0 +1,117 @@
+name: Mature Recovery Artifact Chain
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "tests/fixtures/mature-recovery-app/**"
+      - ".github/workflows/mature-recovery-artifact.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: byteport-mature-recovery-artifact-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  source-artifact-runtime:
+    name: source manifest artifact runtime chain
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Compute immutable experiment inputs
+        id: inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          SRC="${GITHUB_SHA}"
+          MANIFEST="tests/fixtures/mature-recovery-app/experiment.manifest.yaml"
+          MDIGEST="sha256:$(sha256sum "$MANIFEST" | awk '{print $1}')"
+          NONCE_A="run-${GITHUB_RUN_ID}-a"
+          NONCE_B="run-${GITHUB_RUN_ID}-b"
+          {
+            echo "source_commit=$SRC"
+            echo "manifest_digest=$MDIGEST"
+            echo "nonce_a=$NONCE_A"
+            echo "nonce_b=$NONCE_B"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build fixture A through established local OCI builder
+        id: build_a
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker build             --build-arg SOURCE_COMMIT="${{ steps.inputs.outputs.source_commit }}"             --build-arg MANIFEST_DIGEST="${{ steps.inputs.outputs.manifest_digest }}"             --build-arg FIXTURE_NONCE="${{ steps.inputs.outputs.nonce_a }}"             -t byteport-recovery:mutable             tests/fixtures/mature-recovery-app
+          ID_A="$(docker image inspect byteport-recovery:mutable --format '{{.Id}}')"
+          echo "image_id_a=$ID_A" >> "$GITHUB_OUTPUT"
+          echo "Immutable local artifact A: $ID_A"
+
+      - name: Run immutable artifact A and verify application subject
+        shell: bash
+        run: |
+          set -euo pipefail
+          CID="$(docker run -d -p 127.0.0.1:18080:80 "${{ steps.build_a.outputs.image_id_a }}")"
+          trap 'docker rm -f "$CID" >/dev/null 2>&1 || true' EXIT
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:18080/__byteport_probe -o /tmp/probe-a.json; then break; fi
+            sleep 1
+          done
+          python3 - <<'PY'
+          import json, os
+          p=json.load(open('/tmp/probe-a.json'))
+          assert p['fixture']=='byteport-mature-recovery'
+          assert p['source_commit']==os.environ['SOURCE']
+          assert p['manifest_digest']==os.environ['MANIFEST']
+          assert p['fixture_nonce']==os.environ['NONCE']
+          print(json.dumps(p, sort_keys=True))
+          PY
+        env:
+          SOURCE: ${{ steps.inputs.outputs.source_commit }}
+          MANIFEST: ${{ steps.inputs.outputs.manifest_digest }}
+          NONCE: ${{ steps.inputs.outputs.nonce_a }}
+
+      - name: Replace mutable tag with fixture B
+        id: build_b
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker build             --build-arg SOURCE_COMMIT="${{ steps.inputs.outputs.source_commit }}"             --build-arg MANIFEST_DIGEST="${{ steps.inputs.outputs.manifest_digest }}"             --build-arg FIXTURE_NONCE="${{ steps.inputs.outputs.nonce_b }}"             -t byteport-recovery:mutable             tests/fixtures/mature-recovery-app
+          ID_B="$(docker image inspect byteport-recovery:mutable --format '{{.Id}}')"
+          echo "image_id_b=$ID_B" >> "$GITHUB_OUTPUT"
+          test "$ID_B" != "${{ steps.build_a.outputs.image_id_a }}"
+          test "$(docker image inspect byteport-recovery:mutable --format '{{.Id}}')" = "$ID_B"
+          echo "Mutable tag now resolves to B: $ID_B"
+
+      - name: Prove immutable A identity survives mutable-tag replacement
+        shell: bash
+        run: |
+          set -euo pipefail
+          CID="$(docker run -d -p 127.0.0.1:18081:80 "${{ steps.build_a.outputs.image_id_a }}")"
+          trap 'docker rm -f "$CID" >/dev/null 2>&1 || true' EXIT
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:18081/__byteport_probe -o /tmp/probe-old.json; then break; fi
+            sleep 1
+          done
+          python3 - <<'PY'
+          import json, os
+          p=json.load(open('/tmp/probe-old.json'))
+          assert p['fixture_nonce']==os.environ['NONCE_A']
+          print('immutable A still identifies original artifact:', p['fixture_nonce'])
+          PY
+        env:
+          NONCE_A: ${{ steps.inputs.outputs.nonce_a }}
+
+      - name: Write evidence summary
+        shell: bash
+        run: |
+          echo "## BytePort mature-recovery artifact chain" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "SourceSnapshot: ${{ steps.inputs.outputs.source_commit }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "ManifestRevision: ${{ steps.inputs.outputs.manifest_digest }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "BuildArtifact A: ${{ steps.build_a.outputs.image_id_a }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Mutable-tag replacement B: ${{ steps.build_b.outputs.image_id_b }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Runtime probe matched source/manifest/nonce for artifact A." >> "$GITHUB_STEP_SUMMARY"
+          echo "Immutable A remained runnable after mutable tag moved to B." >> "$GITHUB_STEP_SUMMARY"
