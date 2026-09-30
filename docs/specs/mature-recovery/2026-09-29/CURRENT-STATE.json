@@ -13,10 +13,10 @@
   "native_oracle_results": {
     "BP_F03": "NATIVE_COUNTEREXAMPLE_REPRODUCED",
     "BP_F04": "NATIVE_RISK_REPRODUCED_REMOTE_SUCCESS_LOCAL_PERSISTENCE_FAILURE_NO_COMPENSATION",
-    "BP_DUPLICATE_DEPLOY": "PENDING_EXECUTION_NOT_EVIDENCE",
-    "BP_OPERATION_JOURNAL_MODEL": "PENDING_EXECUTION_NOT_EVIDENCE",
-    "BP_DELEGATED_BUILD_PROTOTYPE": "PENDING_EXECUTION_NOT_EVIDENCE",
-    "BP_SESSION_TOKEN_EXPIRY": "ORACLE_COMMITTED_EXECUTION_PENDING_NOT_EVIDENCE"
+    "BP_DUPLICATE_DEPLOY": "NATIVE_CURRENT_BEHAVIOR_REPRODUCED_TWO_PROVIDER_CALLS_TWO_PROJECT_ROWS_RUN_36738216973_JOB_109966848952",
+    "BP_OPERATION_JOURNAL_MODEL": "PARTIAL_MODEL_PASS_SAME_ID_RETRY_AND_FINGERPRINT_CONFLICT_ONLY_RESTART_CASES_NOT_EXECUTED_DUE_REGEX",
+    "BP_DELEGATED_BUILD_PROTOTYPE": "ARCHITECTURE_PROTOTYPE_PASS_RUN_36738217349_JOB_109967208724_LOCAL_IMMUTABLE_IMAGE_ID_AND_LIVE_SOURCE_MANIFEST_PROBE",
+    "BP_SESSION_TOKEN_EXPIRY": "STATIC_CONCERN_FALSIFIED_EXPIRED_SESSION_REJECTED_RUN_36738216973_JOB_109966848889"
   },
   "blocking_findings": [
     "BP-F01",
@@ -39,7 +39,7 @@
     "journeys": "DRAFT_IMPLEMENTATION_MAPPING_STARTED",
     "stage_projections": "PROPOSED",
     "oracle_design_complete": "PARTIAL",
-    "high_risk_experiments": "BP_F03_F04_NATIVE_REPRODUCED; DUPLICATE_JOURNAL_BUILD_AUTH_REACHABILITY_OPEN",
+    "high_risk_experiments": "BP_F03_F04_NATIVE_REPRODUCED; DUPLICATE_DEPLOY_NATIVE_REPRODUCED; EXPIRED_SESSION_CONCERN_FALSIFIED; DELEGATED_BUILD_P0_PASS; JOURNAL_RESTART/PORTABLE_ARTIFACT/NETWORK_RECONCILIATION_OPEN",
     "implementation_mapping": "PASS_2_MOUNTED_API_CLI_NETWORK_PLUS_TRACE_SLICE_01",
     "bidirectional_trace_validity": "SLICE_01_DRAFT_NOT_FULLY_VALIDATED",
     "registry_repo_agreement": "MATURE_SCOPE_SUBSTANTIALLY_RECONCILED_CANONICAL_UPDATE_DEFERRED",
@@ -51,13 +51,12 @@
   },
   "evidence_policy": "BP-F03/BP-F04 HAVE EXACT NATIVE RECEIPTS; CURRENT QUEUED/CANCELLED DUPLICATE/JOURNAL/BUILD/AUTH RUNS ARE NOT EVIDENCE",
   "next_minimal_context": [
-    "Execute isolated duplicate/journal/build/auth controls",
-    "Prototype explicit control-plane network modes",
-    "Complete SourceSnapshot/Manifest/BuildArtifact vertical fixture",
-    "Prototype lost-response/restart reconciliation",
-    "Map PortfolioPublisher and transport-lineage disposition",
-    "Implement catalog/trace qualification validator",
-    "Run fresh independent review after denominator closes"
+    "Execute corrected full operation-journal reference model",
+    "Upgrade delegated build P0 local image identity to portable OCI digest/provenance",
+    "Prototype lost-response/restart/delayed-visibility reconciliation",
+    "Close explicit network-mode and health/metrics exposure decision",
+    "Qualify A04-A06 contract workflow after working-directory repair",
+    "Begin BP-WP-B01 exact provider-stop remediation behind multi-resource semantics"
   ],
   "pilot": "DEFERRED_UNTIL_BUILT_STAGE; not a substitute for design gate"
 }
