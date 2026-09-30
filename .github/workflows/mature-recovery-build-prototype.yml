@@ -1,0 +1,78 @@
+name: BytePort Mature Recovery Build Prototype
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "docs/specs/mature-recovery/2026-09-29/fixtures/selected-app/**"
+      - ".github/workflows/mature-recovery-build-prototype.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: byteport-mature-recovery-build-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  delegated-build-selected-app:
+    name: Delegated build + selected app identity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Resolve exact source and manifest identity
+        id: identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          FIXTURE="docs/specs/mature-recovery/2026-09-29/fixtures/selected-app"
+          MANIFEST_DIGEST="$(sha256sum "$FIXTURE/fixture.manifest.json" | awk '{print $1}')"
+          echo "source_commit=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
+          echo "manifest_digest=$MANIFEST_DIGEST" >> "$GITHUB_OUTPUT"
+
+      - name: Delegate build to Docker engine
+        shell: bash
+        run: |
+          set -euo pipefail
+          FIXTURE="docs/specs/mature-recovery/2026-09-29/fixtures/selected-app"
+          docker build             --build-arg SOURCE_COMMIT="${{ steps.identity.outputs.source_commit }}"             --build-arg MANIFEST_DIGEST="${{ steps.identity.outputs.manifest_digest }}"             -t byteport-selected-app:recovery             "$FIXTURE"
+          docker image inspect byteport-selected-app:recovery --format '{{.Id}}' > /tmp/artifact-id
+
+      - name: Run immutable built subject and observe application identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          CID="$(docker run -d -p 127.0.0.1:18080:8080 byteport-selected-app:recovery)"
+          trap 'docker rm -f "$CID" >/dev/null 2>&1 || true' EXIT
+          for _ in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:18080/__byteport_probe -o /tmp/probe.json; then
+              break
+            fi
+            sleep 1
+          done
+          test -s /tmp/probe.json
+          test "$(jq -r .source_commit /tmp/probe.json)" = "${{ steps.identity.outputs.source_commit }}"
+          test "$(jq -r .manifest_digest /tmp/probe.json)" = "${{ steps.identity.outputs.manifest_digest }}"
+
+      - name: Emit evidence receipt
+        shell: bash
+        run: |
+          set -euo pipefail
+          ARTIFACT_ID="$(cat /tmp/artifact-id)"
+          jq -n             --arg source_commit "${{ steps.identity.outputs.source_commit }}"             --arg manifest_digest "${{ steps.identity.outputs.manifest_digest }}"             --arg artifact_id "$ARTIFACT_ID"             --slurpfile probe /tmp/probe.json             '{
+              classification:"ARCHITECTURE_PROTOTYPE_NOT_PRODUCT_ACCEPTANCE",
+              source_snapshot:$source_commit,
+              manifest_digest:$manifest_digest,
+              build_engine:"docker",
+              immutable_local_artifact_id:$artifact_id,
+              live_probe:$probe[0]
+            }' > /tmp/byteport-build-receipt.json
+          cat /tmp/byteport-build-receipt.json
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: byteport-mature-recovery-build-receipt
+          path: /tmp/byteport-build-receipt.json
+          retention-days: 30
