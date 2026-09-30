@@ -81,7 +81,7 @@ jobs:
           go-version-file: backend/byteport/go.mod
           cache-dependency-path: backend/byteport/go.sum
       - name: Validate retry and restart semantics
-        run: go test ./routes -run '^TestRecoveryOperation' -count=1 -v
+        run: go test ./routes -run '^(TestRecoveryOperation|TestRecoveryApplying|TestRecoveryProviderIdentity)' -count=1 -v
 
 # execution-freeze-trigger: 2026-09-30T13
 
