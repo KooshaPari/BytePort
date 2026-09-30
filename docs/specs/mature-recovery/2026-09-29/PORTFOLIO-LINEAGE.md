@@ -89,3 +89,73 @@ Current portfolio credential/settings remnants are lineage evidence, but existen
 - test a generic static/content adapter before any custom portfolio backend work.
 
 No Slickport code is imported and no third-repository branch is created.
+
+
+## Last live pre-ejection implementation
+
+The final directly inspected pre-ejection source at `7b1d5ec942c0ffff73625edbccf082d9ac5ab378` contains a functioning historical portfolio path.
+
+### Deployment coupling
+
+`backend/nvms/projectManager/deploy.go`:
+- provisions source/AWS resources and computes `Project.AccessURL`;
+- after deployment calls `addToDemo(project)`;
+- `addToDemo` dispatches the project object to the Demonstrator `/generate` path.
+
+This is historical implementation evidence that portfolio projectization followed deployment rather than being a separate unrelated application feature.
+
+### Template → LLM → publication pipeline
+
+`backend/nvms/Demonstrator/main.go`:
+1. receives a Project including User integration state;
+2. decrypts portfolio endpoint/API key;
+3. GETs `<root>/byteport` to obtain the portfolio template/sample structure;
+4. builds a prompt from template + project name/description/platform/type/AccessURL/README/user;
+5. invokes the configured LLM provider through `lib.RequestCompletion`;
+6. POSTs the filled JSON object back to `<root>/byteport` with Bearer authorization.
+
+`backend/nvms/lib/llm.go` dispatched OpenAI, Anthropic, Gemini or local providers by configuration at that historical snapshot.
+
+### What this establishes
+
+This materially corroborates the direct-user portfolio integration contract:
+- external template/API ownership;
+- project/deployment data as generation input;
+- generated structured object;
+- authenticated API publication;
+- multi-provider/local LLM direction.
+
+### What it does not establish
+
+The historical path must **not** be restored wholesale:
+- it passed decrypted credentials and broad Project/User state through an old runtime boundary;
+- generated and verified fields were not authority-separated;
+- publication was coupled directly to deployment failure handling;
+- no durable PortfolioPublication operation/retry/idempotency model is evident;
+- no secret-redaction/evidence identity contract is established;
+- the user-authorized Git/server-side fallback is not implemented in this inspected path;
+- this implementation lived inside the ejected `backend/nvms` ownership boundary.
+
+### Recovery disposition
+
+Recover/adapt:
+- template contract retrieval;
+- structured project projection;
+- provider-pluggable generation where still desired;
+- authenticated external publication;
+- AccessURL/deployment evidence as projection inputs.
+
+Replace:
+- direct deployment→Demonstrator coupling;
+- broad Project/User object handoff;
+- implicit generated-vs-verified authority;
+- publication-as-deployment-success coupling.
+
+Build separately:
+- PortfolioProjection;
+- PortfolioPublication operation;
+- publisher idempotency/reconciliation;
+- authorized Git fallback adapter;
+- evidence/redaction/review semantics.
+
+The historical implementation therefore strengthens the mature contract while simultaneously supporting a thinner, cleaner modern boundary.
