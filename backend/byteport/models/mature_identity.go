@@ -112,3 +112,19 @@ type Observation struct {
 	State string `json:"state"`
 	RawRef string `json:"raw_ref,omitempty"`
 }
+
+type LegacyVerificationState string
+
+const (
+	LegacyVerificationUnverified LegacyVerificationState = "legacy_unverified"
+)
+
+type LegacyDeploymentImport struct {
+	ProjectID ProjectID `json:"project_id"`
+	Provider string `json:"provider"`
+	ExternalID string `json:"external_id"`
+	Verification LegacyVerificationState `json:"verification"`
+	SourceSnapshot *SourceSnapshotID `json:"source_snapshot_id,omitempty"`
+	ManifestRevision *ManifestRevisionID `json:"manifest_revision_id,omitempty"`
+	BuildArtifact *BuildArtifactID `json:"build_artifact_id,omitempty"`
+}
