@@ -1,0 +1,32 @@
+name: Mature Recovery Oracle
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "backend/byteport/routes/**"
+      - ".github/workflows/mature-recovery-oracle.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: byteport-mature-recovery-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  bp-f04-persistence-window:
+    name: BP-F04 persistence-window probe
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend/byteport
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.25.x"
+          cache-dependency-path: backend/byteport/go.sum
+      - name: Run exact BP-F04 observational probe
+        run: go test ./routes -run '^TestRecoveryProbeRemoteDeploySurvivesLocalPersistenceFailure$' -count=1 -v
