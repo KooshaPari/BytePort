@@ -1,20 +1,263 @@
 {
-  "schema":"mature-recovery-work-packages/v1",
-  "product":"KooshaPari/BytePort",
-  "source_snapshot":"0232cca16fedb7963a8c6f556dc5eee5c8c1674e",
-  "packages":[
-    {"id":"BP-WP-A01","tier":"A","title":"Additive domain identities","depends_on":[],"merge_gate":"READY","critical":["ProjectID != ProviderResourceID","component supports built/prebuilt/non-artifact"],"evidence_required":["type/value tests","fingerprint conflict"]},
-    {"id":"BP-WP-A02","tier":"A","title":"Legacy-safe additive persistence","depends_on":["BP-WP-A01"],"merge_gate":"READY","critical":["legacy remains readable","no fake source/artifact verification"],"evidence_required":["old DB migration","idempotent migration","no provider side effect"]},
-    {"id":"BP-WP-A03","tier":"A","title":"Common application operations","depends_on":["BP-WP-A01"],"merge_gate":"READY","critical":["surface-neutral operations","plan != execute"],"evidence_required":["test-double CLI/API/Desktop projection"]},
-    {"id":"BP-WP-A04","tier":"A","title":"BuildEngine interface","depends_on":["BP-WP-A01","BP-WP-A03"],"merge_gate":"READY","critical":["immutable artifact identity","engine capability not brand"],"evidence_required":["prebuilt fake","BuildKit prototype contract"]},
-    {"id":"BP-WP-A05","tier":"A","title":"RuntimeAdapter interface","depends_on":["BP-WP-A01","BP-WP-A03"],"merge_gate":"READY","critical":["exact ProviderResource","UNKNOWN/reconcile support"],"evidence_required":["fake create/observe/stop/reconcile"]},
-    {"id":"BP-WP-A06","tier":"A","title":"Trace and evidence qualification validator","depends_on":["BP-WP-A02","BP-WP-A03","BP-WP-A04","BP-WP-A05"],"merge_gate":"READY","critical":["exact source/artifact/operation/resource identities","legacy scorecards excluded"],"evidence_required":["invalid receipt fixtures"]},
-    {"id":"BP-WP-B01","tier":"B","title":"Provider stop remediation","depends_on":["BP-WP-A01","BP-WP-A05","BP-WP-A06"],"merge_gate":"BLOCKED","blocked_by":["multi-resource generation semantics"],"evidence_required":["BP-F03 retained","unrelated-resource survival"]},
-    {"id":"BP-WP-B02","tier":"B","title":"Durable operation journal","depends_on":["BP-WP-A01","BP-WP-A02","BP-WP-A05","BP-WP-A06"],"merge_gate":"BLOCKED","blocked_by":["journal/duplicate receipts","restart/lost-response fixture"],"evidence_required":["operation model","duplicate request","restart","lost response"]},
-    {"id":"BP-WP-B03","tier":"B","title":"Source and manifest integration","depends_on":["BP-WP-A01","BP-WP-A03","BP-WP-A06"],"merge_gate":"BLOCKED","blocked_by":["ref resolver","manifest schema decision"],"evidence_required":["branch move","invalid manifest"]},
-    {"id":"BP-WP-B04","tier":"B","title":"Selected-app build integration","depends_on":["BP-WP-A04","BP-WP-B03"],"merge_gate":"BLOCKED","blocked_by":["portable artifact/provenance prototype"],"evidence_required":["immutable artifact","live selected-app probe","wrong-artifact-200"]},
-    {"id":"BP-WP-B05","tier":"B","title":"Network mode and auth","depends_on":["BP-WP-A03","BP-WP-A06"],"merge_gate":"BLOCKED","blocked_by":["session expiry oracle","reachability threat review","health/metrics exposure decision"],"evidence_required":["expired token","loopback/LAN policy"]},
-    {"id":"BP-WP-B06","tier":"B","title":"Portfolio projection and publisher","depends_on":["BP-WP-A01","BP-WP-A03","BP-WP-A06"],"merge_gate":"BLOCKED","blocked_by":["projection/publication adapter decision"],"evidence_required":["failure independence","publication idempotency"]},
-    {"id":"BP-WP-B07","tier":"B","title":"CLI Desktop API convergence","depends_on":["BP-WP-A03","BP-WP-B02","BP-WP-B03","BP-WP-B04"],"merge_gate":"BLOCKED","blocked_by":["common operation integrated"],"evidence_required":["same-intent cross-projection"]}
+  "schema": "mature-recovery-work-packages/v1",
+  "product": "KooshaPari/BytePort",
+  "source_snapshot": "0232cca16fedb7963a8c6f556dc5eee5c8c1674e",
+  "packages": [
+    {
+      "id": "BP-WP-A01",
+      "tier": "A",
+      "title": "Additive domain identities",
+      "depends_on": [],
+      "merge_gate": "READY",
+      "critical": [
+        "ProjectID != ProviderResourceID",
+        "component supports built/prebuilt/non-artifact"
+      ],
+      "evidence_required": [
+        "type/value tests",
+        "fingerprint conflict"
+      ]
+    },
+    {
+      "id": "BP-WP-A02",
+      "tier": "A",
+      "title": "Legacy-safe additive persistence",
+      "depends_on": [
+        "BP-WP-A01"
+      ],
+      "merge_gate": "READY",
+      "critical": [
+        "legacy remains readable",
+        "no fake source/artifact verification"
+      ],
+      "evidence_required": [
+        "old DB migration",
+        "idempotent migration",
+        "no provider side effect"
+      ]
+    },
+    {
+      "id": "BP-WP-A03",
+      "tier": "A",
+      "title": "Common application operations",
+      "depends_on": [
+        "BP-WP-A01"
+      ],
+      "merge_gate": "READY",
+      "critical": [
+        "surface-neutral operations",
+        "plan != execute"
+      ],
+      "evidence_required": [
+        "test-double CLI/API/Desktop projection"
+      ]
+    },
+    {
+      "id": "BP-WP-A04",
+      "tier": "A",
+      "title": "BuildEngine interface",
+      "depends_on": [
+        "BP-WP-A01",
+        "BP-WP-A03"
+      ],
+      "merge_gate": "READY",
+      "critical": [
+        "immutable artifact identity",
+        "engine capability not brand"
+      ],
+      "evidence_required": [
+        "prebuilt fake",
+        "BuildKit prototype contract"
+      ]
+    },
+    {
+      "id": "BP-WP-A05",
+      "tier": "A",
+      "title": "RuntimeAdapter interface",
+      "depends_on": [
+        "BP-WP-A01",
+        "BP-WP-A03"
+      ],
+      "merge_gate": "READY",
+      "critical": [
+        "exact ProviderResource",
+        "UNKNOWN/reconcile support"
+      ],
+      "evidence_required": [
+        "fake create/observe/stop/reconcile"
+      ]
+    },
+    {
+      "id": "BP-WP-A06",
+      "tier": "A",
+      "title": "Trace and evidence qualification validator",
+      "depends_on": [
+        "BP-WP-A02",
+        "BP-WP-A03",
+        "BP-WP-A04",
+        "BP-WP-A05"
+      ],
+      "merge_gate": "READY",
+      "critical": [
+        "exact source/artifact/operation/resource identities",
+        "legacy scorecards excluded"
+      ],
+      "evidence_required": [
+        "invalid receipt fixtures"
+      ]
+    },
+    {
+      "id": "BP-WP-B01",
+      "tier": "B",
+      "title": "Provider stop remediation",
+      "depends_on": [
+        "BP-WP-A01",
+        "BP-WP-A05",
+        "BP-WP-A06"
+      ],
+      "merge_gate": "BLOCKED",
+      "blocked_by": [
+        "multi-resource generation semantics"
+      ],
+      "evidence_required": [
+        "BP-F03 retained",
+        "unrelated-resource survival"
+      ],
+      "critical": [
+        "Preserve Provider stop remediation mature identity/invariants; do not bypass the documented merge gate"
+      ]
+    },
+    {
+      "id": "BP-WP-B02",
+      "tier": "B",
+      "title": "Durable operation journal",
+      "depends_on": [
+        "BP-WP-A01",
+        "BP-WP-A02",
+        "BP-WP-A05",
+        "BP-WP-A06"
+      ],
+      "merge_gate": "BLOCKED",
+      "blocked_by": [
+        "journal/duplicate receipts",
+        "restart/lost-response fixture"
+      ],
+      "evidence_required": [
+        "operation model",
+        "duplicate request",
+        "restart",
+        "lost response"
+      ],
+      "critical": [
+        "Preserve Durable operation journal mature identity/invariants; do not bypass the documented merge gate"
+      ]
+    },
+    {
+      "id": "BP-WP-B03",
+      "tier": "B",
+      "title": "Source and manifest integration",
+      "depends_on": [
+        "BP-WP-A01",
+        "BP-WP-A03",
+        "BP-WP-A06"
+      ],
+      "merge_gate": "BLOCKED",
+      "blocked_by": [
+        "ref resolver",
+        "manifest schema decision"
+      ],
+      "evidence_required": [
+        "branch move",
+        "invalid manifest"
+      ],
+      "critical": [
+        "Preserve Source and manifest integration mature identity/invariants; do not bypass the documented merge gate"
+      ]
+    },
+    {
+      "id": "BP-WP-B04",
+      "tier": "B",
+      "title": "Selected-app build integration",
+      "depends_on": [
+        "BP-WP-A04",
+        "BP-WP-B03"
+      ],
+      "merge_gate": "BLOCKED",
+      "blocked_by": [
+        "portable artifact/provenance prototype"
+      ],
+      "evidence_required": [
+        "immutable artifact",
+        "live selected-app probe",
+        "wrong-artifact-200"
+      ],
+      "critical": [
+        "Preserve Selected-app build integration mature identity/invariants; do not bypass the documented merge gate"
+      ]
+    },
+    {
+      "id": "BP-WP-B05",
+      "tier": "B",
+      "title": "Network mode and auth",
+      "depends_on": [
+        "BP-WP-A03",
+        "BP-WP-A06"
+      ],
+      "merge_gate": "BLOCKED",
+      "blocked_by": [
+        "session expiry oracle",
+        "reachability threat review",
+        "health/metrics exposure decision"
+      ],
+      "evidence_required": [
+        "expired token",
+        "loopback/LAN policy"
+      ],
+      "critical": [
+        "Preserve Network mode and auth mature identity/invariants; do not bypass the documented merge gate"
+      ]
+    },
+    {
+      "id": "BP-WP-B06",
+      "tier": "B",
+      "title": "Portfolio projection and publisher",
+      "depends_on": [
+        "BP-WP-A01",
+        "BP-WP-A03",
+        "BP-WP-A06"
+      ],
+      "merge_gate": "BLOCKED",
+      "blocked_by": [
+        "projection/publication adapter decision"
+      ],
+      "evidence_required": [
+        "failure independence",
+        "publication idempotency"
+      ],
+      "critical": [
+        "Preserve Portfolio projection and publisher mature identity/invariants; do not bypass the documented merge gate"
+      ]
+    },
+    {
+      "id": "BP-WP-B07",
+      "tier": "B",
+      "title": "CLI Desktop API convergence",
+      "depends_on": [
+        "BP-WP-A03",
+        "BP-WP-B02",
+        "BP-WP-B03",
+        "BP-WP-B04"
+      ],
+      "merge_gate": "BLOCKED",
+      "blocked_by": [
+        "common operation integrated"
+      ],
+      "evidence_required": [
+        "same-intent cross-projection"
+      ],
+      "critical": [
+        "Preserve CLI Desktop API convergence mature identity/invariants; do not bypass the documented merge gate"
+      ]
+    }
   ]
 }
