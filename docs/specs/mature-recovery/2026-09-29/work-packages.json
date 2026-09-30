@@ -310,8 +310,8 @@
       ],
       "merge_gate": "BLOCKED",
       "blocked_by": [
-        "generalized IaC/bare-metal SOTA pass",
-        "mixed-resource reconciliation oracle"
+        "exact reconciliation reference receipt",
+        "target capability comparison before provider integration"
       ],
       "critical": [
         "UNKNOWN observation cannot trigger destructive guess",
@@ -323,7 +323,8 @@
         "update fixture",
         "unknown observation fixture",
         "destruction safety fixture"
-      ]
+      ],
+      "qualification": "SOTA passes 3-6 + generalized fixture contract complete; pure reconciliation reference model implemented"
     },
     {
       "id": "BP-WP-B09",
