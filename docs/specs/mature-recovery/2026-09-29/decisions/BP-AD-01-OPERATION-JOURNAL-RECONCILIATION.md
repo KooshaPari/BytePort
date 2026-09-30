@@ -36,6 +36,29 @@ Compensation alone is insufficient:
 
 Therefore the durable operation journal is product truth; compensation is one adapter-specific recovery action.
 
+## Engine-owned state versus BytePort operation truth
+
+BytePort MUST NOT duplicate a selected IaC/runtime engine's authoritative resource state.
+
+OpenTofu-style engines already own resource-state snapshots, backend locking, state lineage/serial protections and provider-specific resource bindings. Pulumi-style engines similarly own checkpoints/state plus explicit refresh against provider reality. Those mechanisms are stronger and more specialized than a second BytePort resource-state database.
+
+The BytePort journal instead spans **product stages** that no one external engine owns end-to-end:
+
+`SourceSnapshot → ManifestRevision → BuildOperation/BuildArtifact → RuntimeOperation/ProviderResource → Observation → PortfolioProjection/Publication`.
+
+For an engine-backed stage, the BytePort operation stores references such as:
+- engine/adapter identity + version;
+- engine workspace/stack/state identity where applicable;
+- engine operation/run ID;
+- immutable input/request fingerprint;
+- returned resource/artifact identities;
+- last independently observed outcome;
+- evidence/provenance pointer.
+
+It does not copy the complete provider state graph unless BytePort itself is the selected engine for that stage.
+
+This keeps recovery composable: BytePort can reconcile its product workflow while the specialized engine reconciles its own resource state.
+
 ## Adapter contract
 
 Every provider/runtime adapter must declare:
@@ -59,9 +82,10 @@ NanoVMS currently fits the runtime/sandbox adapter boundary, not proven source-b
 ## Falsification criteria
 
 Revise this decision if:
-- the selected provider engine exposes a stronger durable transaction/state model BytePort can adopt directly without duplicating it;
-- all accepted targets provide a trustworthy engine-owned operation journal and BytePort can reference rather than own it;
-- or mature product intent is narrowed so BytePort never initiates remote side effects itself.
+- a selected orchestration engine can durably own the **entire accepted BytePort product operation**, including source/build/runtime/publication identities, so a BytePort cross-stage journal would be pure duplication;
+- or mature product intent is narrowed so BytePort never coordinates multi-stage side effects itself.
+
+Do **not** reject this decision merely because one stage has strong engine-owned state; referencing that state is the intended composition.
 
 ## Required experiments before freeze
 
