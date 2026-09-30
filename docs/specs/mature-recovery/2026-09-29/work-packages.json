@@ -277,6 +277,79 @@
       "critical": [
         "Preserve CLI Desktop API convergence mature identity/invariants; do not bypass the documented merge gate"
       ]
+    },
+    {
+      "id": "BP-WP-A07",
+      "tier": "A",
+      "title": "Generalized desired infrastructure graph",
+      "depends_on": [
+        "BP-WP-A01",
+        "BP-WP-A03"
+      ],
+      "merge_gate": "READY",
+      "critical": [
+        "Application component is one DesiredResource kind",
+        "Target is provider-neutral identity",
+        "ResourcePlan is not realized state",
+        "Non-artifact infrastructure is first-class"
+      ],
+      "evidence_required": [
+        "mixed-resource graph fixture",
+        "target capability fixture",
+        "plan-vs-realized fixture"
+      ]
+    },
+    {
+      "id": "BP-WP-B08",
+      "tier": "B",
+      "title": "Generalized infrastructure reconciliation",
+      "depends_on": [
+        "BP-WP-A05",
+        "BP-WP-A07",
+        "BP-WP-A06"
+      ],
+      "merge_gate": "BLOCKED",
+      "blocked_by": [
+        "generalized IaC/bare-metal SOTA pass",
+        "mixed-resource reconciliation oracle"
+      ],
+      "critical": [
+        "UNKNOWN observation cannot trigger destructive guess",
+        "Create/update/replace/delete/no-op explicit",
+        "Destruction requires exact authorized intent"
+      ],
+      "evidence_required": [
+        "mixed desired/observed graph",
+        "update fixture",
+        "unknown observation fixture",
+        "destruction safety fixture"
+      ]
+    },
+    {
+      "id": "BP-WP-B09",
+      "tier": "B",
+      "title": "Bare-metal target adapter",
+      "depends_on": [
+        "BP-WP-A07",
+        "BP-WP-B08"
+      ],
+      "merge_gate": "BLOCKED",
+      "blocked_by": [
+        "bare-metal bootstrap decision",
+        "target capability contract",
+        "disposable bare-metal/VM fixture"
+      ],
+      "critical": [
+        "Bare metal not modeled as fake cloud",
+        "Provider-specific capability remains extension",
+        "Exact host/resource identity preserved"
+      ],
+      "evidence_required": [
+        "target discovery",
+        "plan/apply/observe/reconcile",
+        "restart",
+        "destroy exact resource"
+      ]
     }
   ]
 }
