@@ -58,3 +58,23 @@ func TestImmutableMismatchPlansReplaceNotUpdate(t *testing.T){
 	p:=PlanReconciliation(g,obs,ReconciliationPolicy{})
 	if p.Actions[0].Action!=ReconcileReplace { t.Fatal(p.Actions[0]) }
 }
+
+
+func TestUnsupportedTargetActionBecomesUnknown(t *testing.T){
+	p:=ResourcePlan{ID:"p",DesiredGraphID:"g",Actions:[]PlannedResourceAction{
+		{DesiredResourceID:"host",Action:ReconcileReplace,Reason:"immutable change"},
+	}}
+	caps:=TargetCapabilities{TargetID:"limited",Provider:"fixture",SupportsObserve:true,SupportsCreate:true,SupportsUpdate:true,SupportsReplace:false,SupportsDelete:false}
+	out:=ConstrainPlanToTarget(p,caps)
+	if out.TargetID!="limited" {t.Fatal(out.TargetID)}
+	if out.Actions[0].Action!=ReconcileUnknown {t.Fatal(out.Actions[0])}
+}
+
+func TestSamePlanCanRemainValidOnMoreCapableTarget(t *testing.T){
+	p:=ResourcePlan{ID:"p",DesiredGraphID:"g",Actions:[]PlannedResourceAction{
+		{DesiredResourceID:"host",Action:ReconcileReplace,Reason:"immutable change"},
+	}}
+	caps:=TargetCapabilities{TargetID:"baremetal",Provider:"ironic",BareMetal:true,SupportsObserve:true,SupportsCreate:true,SupportsUpdate:true,SupportsReplace:true,SupportsDelete:true}
+	out:=ConstrainPlanToTarget(p,caps)
+	if out.Actions[0].Action!=ReconcileReplace {t.Fatal(out.Actions[0])}
+}
