@@ -1,5 +1,4 @@
 name: BytePort Mature Recovery Oracle
-# recovery-pass: 2026-09-30-final-wp4-rerun
 
 on:
   pull_request:
@@ -83,3 +82,5 @@ jobs:
           cache-dependency-path: backend/byteport/go.sum
       - name: Validate retry and restart semantics
         run: go test ./routes -run '^TestRecoveryOperation' -count=1 -v
+
+# execution-freeze-trigger: 2026-09-30T13
