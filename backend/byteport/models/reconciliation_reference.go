@@ -73,3 +73,32 @@ func PlanReconciliation(graph DesiredResourceGraph, observed []ObservedResourceS
 
 	return ResourcePlan{ID:"reference-plan",DesiredGraphID:graph.ID,Actions:actions}
 }
+
+
+func ConstrainPlanToTarget(plan ResourcePlan, caps TargetCapabilities) ResourcePlan {
+	out := plan
+	out.TargetID = caps.TargetID
+	out.Actions = append([]PlannedResourceAction(nil), plan.Actions...)
+	for i, action := range out.Actions {
+		supported := true
+		switch action.Action {
+		case ReconcileRead:
+			supported = caps.SupportsObserve
+		case ReconcileCreate:
+			supported = caps.SupportsCreate
+		case ReconcileUpdate:
+			supported = caps.SupportsUpdate
+		case ReconcileReplace:
+			supported = caps.SupportsReplace
+		case ReconcileDelete:
+			supported = caps.SupportsDelete
+		case ReconcileNoop, ReconcileUnknown:
+			supported = true
+		}
+		if !supported {
+			out.Actions[i].Action = ReconcileUnknown
+			out.Actions[i].Reason = "target capability does not support planned action"
+		}
+	}
+	return out
+}
