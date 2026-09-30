@@ -16,7 +16,8 @@
     "BP_DUPLICATE_DEPLOY": "NATIVE_CURRENT_BEHAVIOR_REPRODUCED_TWO_PROVIDER_CALLS_TWO_PROJECT_ROWS_RUN_36738216973_JOB_109966848952",
     "BP_OPERATION_JOURNAL_MODEL": "PARTIAL_MODEL_PASS_SAME_ID_RETRY_AND_FINGERPRINT_CONFLICT_ONLY_RESTART_CASES_NOT_EXECUTED_DUE_REGEX",
     "BP_DELEGATED_BUILD_PROTOTYPE": "ARCHITECTURE_PROTOTYPE_PASS_RUN_36738217349_JOB_109967208724_LOCAL_IMMUTABLE_IMAGE_ID_AND_LIVE_SOURCE_MANIFEST_PROBE",
-    "BP_SESSION_TOKEN_EXPIRY": "STATIC_CONCERN_FALSIFIED_EXPIRED_SESSION_REJECTED_RUN_36738216973_JOB_109966848889"
+    "BP_SESSION_TOKEN_EXPIRY": "STATIC_CONCERN_FALSIFIED_EXPIRED_SESSION_REJECTED_RUN_36738216973_JOB_109966848889",
+    "BP_F03_REMEDIATION": "IMPLEMENTED_B01_EXACT_PERSISTED_PROVIDER_RESOURCE_ZERO_MULTI_FAIL_CLOSED_QUALIFICATION_PENDING"
   },
   "blocking_findings": [
     "BP-F01",
@@ -31,7 +32,7 @@
     "history_alias_falsification": "MULTI_PASS_OPEN",
     "sota_research": "MULTI_PASS_OPEN",
     "best_alternative_stack": "PROPOSED_NOT_VALIDATED",
-    "bootstrap_decisions": "DELEGATED_CAPABILITY_BUILDENGINE + DURABLE_OPERATION_RECONCILIATION + COMMON_DOMAIN_PROJECTIONS LEADING_NOT_FROZEN",
+    "bootstrap_decisions": "DELEGATED_CAPABILITY_BUILDENGINE P0 SURVIVED; DURABLE_OPERATION_RECONCILIATION LEADING WITH DUPLICATE-RISK NATIVE EVIDENCE; COMMON_DOMAIN_PROJECTIONS LEADING; EXACT_PROVIDER_STOP B01 IMPLEMENTED_PENDING_QUALIFICATION",
     "differentiation_survives_attack": "OPEN",
     "ontology_review": "V1_1_CANDIDATE_INTERNAL_ADVERSARIAL_PASS_COMPLETE",
     "all_accepted_obligations": "OPEN_MULTIPLE_SEMANTIC_SLICES",
@@ -51,12 +52,12 @@
   },
   "evidence_policy": "BP-F03/BP-F04 HAVE EXACT NATIVE RECEIPTS; CURRENT QUEUED/CANCELLED DUPLICATE/JOURNAL/BUILD/AUTH RUNS ARE NOT EVIDENCE",
   "next_minimal_context": [
+    "Qualify BP-WP-B01 exact provider-stop remediation on current candidate",
     "Execute corrected full operation-journal reference model",
-    "Upgrade delegated build P0 local image identity to portable OCI digest/provenance",
+    "Upgrade delegated build P0 to portable OCI digest/provenance",
     "Prototype lost-response/restart/delayed-visibility reconciliation",
     "Close explicit network-mode and health/metrics exposure decision",
-    "Qualify A04-A06 contract workflow after working-directory repair",
-    "Begin BP-WP-B01 exact provider-stop remediation behind multi-resource semantics"
+    "Qualify A04-A06 contract workflow after working-directory repair"
   ],
   "pilot": "DEFERRED_UNTIL_BUILT_STAGE; not a substitute for design gate"
 }
