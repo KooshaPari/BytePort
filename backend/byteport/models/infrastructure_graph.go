@@ -14,6 +14,16 @@ const (
 	DesiredResourceManaged DesiredResourceKind = "managed_service"
 )
 
+type LifecyclePolicy string
+
+const (
+	LifecycleObserveOnly LifecyclePolicy = "observe_only"
+	LifecycleCreateObserve LifecyclePolicy = "create_observe"
+	LifecycleManage LifecyclePolicy = "manage"
+	LifecycleOrphanOnRemove LifecyclePolicy = "orphan_on_remove"
+	LifecycleDestroyOnExplicitIntent LifecyclePolicy = "destroy_on_explicit_intent"
+)
+
 type DesiredResource struct {
 	ID string `json:"id"`
 	Kind DesiredResourceKind `json:"kind"`
@@ -21,6 +31,7 @@ type DesiredResource struct {
 	DependsOn []string `json:"depends_on,omitempty"`
 	Artifact *BuildArtifactID `json:"artifact_id,omitempty"`
 	Target string `json:"target"`
+	Lifecycle LifecyclePolicy `json:"lifecycle"`
 }
 
 type DesiredResourceGraph struct {
