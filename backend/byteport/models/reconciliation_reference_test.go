@@ -48,3 +48,13 @@ func TestObserveOnlyResourceCannotDeleteEvenWithIntent(t *testing.T){
 	p:=PlanReconciliation(g,obs,ReconciliationPolicy{DestructionIntents:[]DestructionIntent{{DesiredResourceID:"old",RealizedResourceID:"r1",Authorized:true,Reason:"requested"}}})
 	if p.Actions[0].Action==ReconcileDelete { t.Fatal("observe-only lifecycle allowed deletion") }
 }
+
+
+func TestImmutableMismatchPlansReplaceNotUpdate(t *testing.T){
+	g:=DesiredResourceGraph{ID:"g",Resources:[]DesiredResource{
+		{ID:"host",Kind:DesiredResourceHost,ConfigDigest:"new",ReplaceOnChange:true},
+	}}
+	obs:=[]ObservedResourceState{{DesiredResourceID:"host",RealizedResourceID:"rh",ConfigDigest:"old",Fresh:true,Lifecycle:LifecycleManage}}
+	p:=PlanReconciliation(g,obs,ReconciliationPolicy{})
+	if p.Actions[0].Action!=ReconcileReplace { t.Fatal(p.Actions[0]) }
+}
