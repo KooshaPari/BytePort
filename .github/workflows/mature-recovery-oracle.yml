@@ -1,10 +1,10 @@
-name: Mature Recovery Oracle
+name: BytePort Mature Recovery Oracle
 
 on:
   pull_request:
     branches: [main]
     paths:
-      - "backend/byteport/routes/**"
+      - "backend/byteport/routes/recovery_*_test.go"
       - ".github/workflows/mature-recovery-oracle.yml"
   workflow_dispatch:
 
@@ -12,22 +12,58 @@ permissions:
   contents: read
 
 concurrency:
-  group: byteport-mature-recovery-${{ github.ref }}
+  group: byteport-mature-recovery-oracle-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  bp-f04-persistence-window:
-    name: BP-F04 persistence-window probe
+  provider-resource-identity:
+    name: BP-F03 provider identity counterexample
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     defaults:
       run:
         working-directory: backend/byteport
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-go@v6
+      - uses: actions/setup-go@v7
         with:
-          go-version: "1.25.x"
+          go-version-file: backend/byteport/go.mod
           cache-dependency-path: backend/byteport/go.sum
-      - name: Run exact BP-F04 observational probe
+      - name: Require exact known counterexample
+        shell: bash
+        run: |
+          set +e
+          go test ./routes -run '^TestTerminateInstanceUsesPersistedProviderSandboxID$' -count=1 -v 2>&1 | tee /tmp/bp-f03.log
+          code=${PIPESTATUS[0]}
+          set -e
+          test "$code" -ne 0
+          grep -F 'wrong runtime targeted' /tmp/bp-f03.log
+
+  persistence-window:
+    name: BP-F04 remote-success local-persistence-failure probe
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend/byteport
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: backend/byteport/go.mod
+          cache-dependency-path: backend/byteport/go.sum
+      - name: Reproduce remote side-effect window
         run: go test ./routes -run '^TestRecoveryProbeRemoteDeploySurvivesLocalPersistenceFailure$' -count=1 -v
+
+  duplicate-deploy:
+    name: Duplicate deploy operation-identity probe
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend/byteport
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: backend/byteport/go.mod
+          cache-dependency-path: backend/byteport/go.sum
+      - name: Observe repeated request behavior
+        run: go test ./routes -run '^TestRecoveryProbeRepeatedDeployCreatesTwoRemoteOperations$' -count=1 -v
