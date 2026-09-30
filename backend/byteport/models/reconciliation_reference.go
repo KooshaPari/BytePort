@@ -50,6 +50,8 @@ func PlanReconciliation(graph DesiredResourceGraph, observed []ObservedResourceS
 		}
 		if o.ConfigDigest==d.ConfigDigest {
 			actions=append(actions,PlannedResourceAction{DesiredResourceID:d.ID,RealizedResourceID:o.RealizedResourceID,Action:ReconcileNoop,Reason:"observed configuration matches desired"})
+		} else if d.ReplaceOnChange {
+			actions=append(actions,PlannedResourceAction{DesiredResourceID:d.ID,RealizedResourceID:o.RealizedResourceID,Action:ReconcileReplace,Reason:"configuration changed and resource requires replacement"})
 		} else {
 			actions=append(actions,PlannedResourceAction{DesiredResourceID:d.ID,RealizedResourceID:o.RealizedResourceID,Action:ReconcileUpdate,Reason:"observed configuration differs"})
 		}
