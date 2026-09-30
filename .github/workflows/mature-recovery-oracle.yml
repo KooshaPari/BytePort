@@ -19,6 +19,7 @@ jobs:
   bp-f04-persistence-window:
     name: BP-F04 persistence-window probe
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     defaults:
       run:
         working-directory: backend/byteport
