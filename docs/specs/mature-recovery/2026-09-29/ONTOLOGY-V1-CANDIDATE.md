@@ -1,6 +1,6 @@
 # BytePort ontology v1.0 candidate — source-to-realized-product contract
 
-Status: **V1.1 CANDIDATE / adversarial-review refinements incorporated; experiments still gate freeze**  
+Status: **V1.2 CANDIDATE / direct-user thesis correction incorporated; generalized infrastructure graph expanded**  
 Date: 2026-09-30.  
 Frozen implementation source: `0232cca16fedb7963a8c6f556dc5eee5c8c1674e`.
 
@@ -182,3 +182,48 @@ Final v1.0 acceptance still requires:
 - independent adversarial review.
 
 Until then this candidate ontology is the canonical vocabulary for further contract decomposition.
+
+
+## V1.2 generalized infrastructure extension
+
+Direct user authority establishes heterogeneous infrastructure/deployment lifecycle as the mature thesis.
+
+### DesiredResource
+A node in declarative desired state. Kinds may include service, job, host/machine, network, storage, managed service, secret binding or adapter-defined infrastructure resource.
+
+### DesiredResourceGraph
+Versioned graph of DesiredResources and dependency/connectivity/placement relationships derived from ManifestRevision.
+
+### Target
+A deployment/infrastructure destination or scheduling domain: cloud account/region, bare-metal host/group, local host, VM/MicroVM runtime or other accepted adapter target.
+
+### PlacementConstraint
+Desired/policy constraints governing where/how a DesiredResource may be realized.
+
+### ResourcePlan
+Adapter-neutral planned mapping from desired graph to build actions and target resource operations. It is not realized state.
+
+### RealizedResource
+Generalization of ProviderResource: exact target/provider-owned identity realizing one DesiredResource/generation. Runnable ProviderResource remains a specialization/compatibility projection.
+
+### InfrastructureObservation
+Observed state/configuration/health/identity for a RealizedResource with freshness/provenance.
+
+### ReconciliationPlan
+Versioned diff/actions required to move observed realized graph toward desired graph, including create/update/replace/delete/no-op/unknown.
+
+### DestructionIntent
+Explicit authorized desired-state transition for resource destruction. Local uninstall is not DestructionIntent.
+
+## V1.2 invariants
+
+27. Application components are one DesiredResource family, not the whole infrastructure ontology.
+28. Bare-metal/cloud/local targets share lifecycle semantics but may expose different capabilities.
+29. Unsupported target/resource capability is explicit; adapters do not silently approximate destructive semantics.
+30. ResourcePlan is not realized infrastructure.
+31. Every externally visible realized resource has exact target/provider identity where the target supplies one.
+32. Reconciliation compares desired and observed graphs and preserves UNKNOWN when observation is insufficient.
+33. Destruction requires explicit authorized intent and exact selected resources.
+34. BuildArtifact is required only for DesiredResources that actually consume runnable artifacts.
+35. Target/provider choice is adapter/policy data, not BytePort product identity.
+36. The selected-app vertical slice proves a narrow graph projection; it cannot be used as the mature-scope denominator.
