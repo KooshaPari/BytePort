@@ -46,6 +46,7 @@ type TargetCapabilities struct {
 	Provider string `json:"provider"`
 	BareMetal bool `json:"bare_metal"`
 	SupportsObserve bool `json:"supports_observe"`
+	SupportsCreate bool `json:"supports_create"`
 	SupportsUpdate bool `json:"supports_update"`
 	SupportsReplace bool `json:"supports_replace"`
 	SupportsDelete bool `json:"supports_delete"`
