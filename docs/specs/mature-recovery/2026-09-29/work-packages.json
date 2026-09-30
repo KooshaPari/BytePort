@@ -115,16 +115,20 @@
         "BP-WP-A05",
         "BP-WP-A06"
       ],
-      "merge_gate": "BLOCKED",
-      "blocked_by": [
-        "multi-resource generation semantics"
-      ],
+      "merge_gate": "READY",
+      "blocked_by": [],
       "evidence_required": [
-        "BP-F03 retained",
+        "BP-F03 retained counterexample",
+        "zero-resource fixture",
+        "one-resource exact stop",
+        "multi-resource selection",
         "unrelated-resource survival"
       ],
       "critical": [
-        "Preserve Provider stop remediation mature identity/invariants; do not bypass the documented merge gate"
+        "Stop resolves typed ProviderResource identity from the selected deployment generation",
+        "No ProjectID fallback",
+        "Zero/one/multiple resource selection is explicit",
+        "Unrelated provider resource survives"
       ]
     },
     {
@@ -139,17 +143,20 @@
       ],
       "merge_gate": "BLOCKED",
       "blocked_by": [
-        "journal/duplicate receipts",
-        "restart/lost-response fixture"
+        "corrected full journal-model receipt",
+        "restart/lost-response provider fixture"
       ],
       "evidence_required": [
-        "operation model",
-        "duplicate request",
-        "restart",
-        "lost response"
+        "duplicate deploy current-behavior receipt",
+        "full operation journal model",
+        "restart fixture",
+        "lost response fixture"
       ],
       "critical": [
-        "Preserve Durable operation journal mature identity/invariants; do not bypass the documented merge gate"
+        "Persist recoverable operation identity before provider mutation",
+        "Same OperationID/different fingerprint rejects",
+        "UNKNOWN/RECONCILING survives restart",
+        "Retry cannot blindly duplicate provider mutation"
       ]
     },
     {
@@ -205,16 +212,19 @@
       ],
       "merge_gate": "BLOCKED",
       "blocked_by": [
-        "session expiry oracle",
         "reachability threat review",
-        "health/metrics exposure decision"
+        "health/metrics exposure decision",
+        "default network mode decision"
       ],
       "evidence_required": [
-        "expired token",
-        "loopback/LAN policy"
+        "expired session rejection receipt",
+        "loopback/LAN reachability fixtures",
+        "public health/metrics exposure fixture"
       ],
       "critical": [
-        "Preserve Network mode and auth mature identity/invariants; do not bypass the documented merge gate"
+        "CORS is not authorization",
+        "Mutation boundary rechecks auth",
+        "Network placement mode is explicit"
       ]
     },
     {
