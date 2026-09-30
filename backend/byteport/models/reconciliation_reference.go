@@ -8,10 +8,27 @@ type ObservedResourceState struct {
 	RealizedResourceID string
 	ConfigDigest string
 	Fresh bool
+	Lifecycle LifecyclePolicy
+}
+
+type DestructionIntent struct {
+	DesiredResourceID string
+	RealizedResourceID string
+	Authorized bool
+	Reason string
 }
 
 type ReconciliationPolicy struct {
-	AllowDelete bool
+	DestructionIntents []DestructionIntent
+}
+
+func findDestructionIntent(policy ReconciliationPolicy, desiredID, realizedID string) (DestructionIntent, bool) {
+	for _, intent := range policy.DestructionIntents {
+		if intent.DesiredResourceID == desiredID && intent.RealizedResourceID == realizedID && intent.Authorized {
+			return intent, true
+		}
+	}
+	return DestructionIntent{}, false
 }
 
 func PlanReconciliation(graph DesiredResourceGraph, observed []ObservedResourceState, policy ReconciliationPolicy) ResourcePlan {
@@ -44,10 +61,11 @@ func PlanReconciliation(graph DesiredResourceGraph, observed []ObservedResourceS
 			actions=append(actions,PlannedResourceAction{DesiredResourceID:o.DesiredResourceID,RealizedResourceID:o.RealizedResourceID,Action:ReconcileUnknown,Reason:"orphan observation stale"})
 			continue
 		}
-		if policy.AllowDelete {
-			actions=append(actions,PlannedResourceAction{DesiredResourceID:o.DesiredResourceID,RealizedResourceID:o.RealizedResourceID,Action:ReconcileDelete,Reason:"resource absent from desired graph and destruction authorized"})
+		intent, authorized := findDestructionIntent(policy, o.DesiredResourceID, o.RealizedResourceID)
+		if o.Lifecycle == LifecycleDestroyOnExplicitIntent && authorized {
+			actions=append(actions,PlannedResourceAction{DesiredResourceID:o.DesiredResourceID,RealizedResourceID:o.RealizedResourceID,Action:ReconcileDelete,Reason:intent.Reason})
 		} else {
-			actions=append(actions,PlannedResourceAction{DesiredResourceID:o.DesiredResourceID,RealizedResourceID:o.RealizedResourceID,Action:ReconcileRead,Reason:"resource absent from desired graph but destruction not authorized"})
+			actions=append(actions,PlannedResourceAction{DesiredResourceID:o.DesiredResourceID,RealizedResourceID:o.RealizedResourceID,Action:ReconcileRead,Reason:"resource absent from desired graph but lifecycle/intent does not authorize destruction"})
 		}
 	}
 
