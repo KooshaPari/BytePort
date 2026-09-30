@@ -129,7 +129,8 @@
         "No ProjectID fallback",
         "Zero/one/multiple resource selection is explicit",
         "Unrelated provider resource survives"
-      ]
+      ],
+      "qualification": "QUALIFIED run 36745277093 job 109995492856"
     },
     {
       "id": "BP-WP-B02",
@@ -141,11 +142,8 @@
         "BP-WP-A05",
         "BP-WP-A06"
       ],
-      "merge_gate": "BLOCKED",
-      "blocked_by": [
-        "corrected full journal-model receipt",
-        "restart/lost-response provider fixture"
-      ],
+      "merge_gate": "READY",
+      "blocked_by": [],
       "evidence_required": [
         "duplicate deploy current-behavior receipt",
         "full operation journal model",
@@ -157,7 +155,8 @@
         "Same OperationID/different fingerprint rejects",
         "UNKNOWN/RECONCILING survives restart",
         "Retry cannot blindly duplicate provider mutation"
-      ]
+      ],
+      "qualification": "DESIGN_GATE_QUALIFIED run 36745277093 jobs 109995492782 and 109995492863; production integration still requires package acceptance"
     },
     {
       "id": "BP-WP-B03",
