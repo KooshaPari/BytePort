@@ -20,7 +20,7 @@
     "BP_F03_REMEDIATION": "QUALIFIED_RUN_36749551929_JOB_110004908919",
     "BP_RUNTIME_RECONCILIATION_MODEL": "PASS_RUN_36749551929_JOB_110004909035",
     "BP_B02_PRODUCTION_JOURNAL": "QUALIFIED_RUN_36749551929_JOB_110004908884",
-    "BP_B03_SOURCE_MANIFEST": "PROTOTYPE_IMPLEMENTED_BRANCH_MOVE_IMMUTABLE_SHA_STRICT_MANIFEST_QUALIFICATION_PENDING"
+    "BP_B03_SOURCE_MANIFEST": "PROTOTYPE_IMPLEMENTED_EXACT_REF_FREEZE_STRICT_MANIFEST_DIGEST_VALIDATION_EXECUTION_PENDING"
   },
   "blocking_findings": [
     "BP-F01",
@@ -35,7 +35,7 @@
     "history_alias_falsification": "MULTI_PASS_OPEN",
     "sota_research": "MULTI_PASS_OPEN",
     "best_alternative_stack": "PROPOSED_NOT_VALIDATED",
-    "bootstrap_decisions": "B01 EXACT STOP QUALIFIED; B02 DURABLE OPERATION JOURNAL QUALIFIED ON MOUNTED HANDLER; B03 HISTORICAL MANIFEST SHAPE RECOVERED PROTOTYPE OPEN; B04 PORTABLE SUBJECT PASS PROVENANCE OPEN",
+    "bootstrap_decisions": "B01/B02 QUALIFIED; B03 EXACT_REF_PLUS_STRICT_MANIFEST PROTOTYPE IMPLEMENTED PENDING QUALIFICATION; B04 PORTABLE SUBJECT PASS PROVENANCE OPEN",
     "differentiation_survives_attack": "OPEN",
     "ontology_review": "V1_1_CANDIDATE_INTERNAL_ADVERSARIAL_PASS_COMPLETE",
     "all_accepted_obligations": "OPEN_MULTIPLE_SEMANTIC_SLICES",
@@ -55,11 +55,11 @@
   },
   "evidence_policy": "BP-F03/BP-F04 HAVE EXACT NATIVE RECEIPTS; CURRENT QUEUED/CANCELLED DUPLICATE/JOURNAL/BUILD/AUTH RUNS ARE NOT EVIDENCE",
   "next_minimal_context": [
-    "Qualify B03 source/manifest prototype",
-    "If B03 passes, integrate SourceSnapshot/ManifestRevision before build/runtime mutation",
-    "Add BuildKit provenance attestation verification before opening B04",
-    "Close network mode/health metrics exposure",
-    "Prototype portfolio projection/publisher independently"
+    "Qualify B03 exact-ref/manifest prototype",
+    "If B03 passes, integrate SourceSnapshot/ManifestRevision before build/runtime without opening B04",
+    "Add BuildKit provenance attestation verification",
+    "Close explicit network mode and health/metrics exposure",
+    "Advance portfolio projection/publisher experiment"
   ],
   "pilot": "DEFERRED_UNTIL_BUILT_STAGE; not a substitute for design gate"
 }
