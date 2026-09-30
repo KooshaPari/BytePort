@@ -68,3 +68,24 @@ jobs:
           cache-dependency-path: backend/byteport/go.sum
       - name: Legacy-safe and application-contract tests
         run: go test ./models -run '^(TestLegacyImportDoesNotFabricateVerifiedIdentity|TestMatureIdentity|TestComponentCanBeProviderManagedWithoutArtifact|TestRuntimeUnknownIsFirstClass|TestProviderResourceIdentityIsDistinctAtTypedBoundary)$' -count=1 -v
+
+  a04-a06-contracts:
+    name: BP-WP-A04-A06 adapter and trace contracts
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend/byteport
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: backend/byteport/go.mod
+          cache-dependency-path: backend/byteport/go.sum
+      - name: Test adapter capability semantics
+        run: go test ./models -run '^(TestBuildEngineCapabilitiesAreNotBrandIdentity|TestRuntimeObservationCanRepresentVisibilityUncertainty)$' -count=1 -v
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - name: Validate semantic trace fixture
+        working-directory: ../..
+        run: python scripts/recovery/validate_trace.py docs/specs/mature-recovery/2026-09-29/trace-slice.json
