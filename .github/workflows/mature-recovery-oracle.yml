@@ -29,7 +29,7 @@ jobs:
           go-version-file: backend/byteport/go.mod
           cache-dependency-path: backend/byteport/go.sum
       - name: Require historical counterexample to remain remediated
-        run: go test ./routes -run '^TestTerminateInstanceUsesPersistedProviderSandboxID
+        run: go test ./routes -run TestTerminateInstanceUsesPersistedProviderSandboxID -count=1 -v
 
   persistence-window:
     name: BP-F04 remote-success local-persistence-failure probe
