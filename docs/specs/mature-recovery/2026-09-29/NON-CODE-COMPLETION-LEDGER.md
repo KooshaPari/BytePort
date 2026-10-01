@@ -116,3 +116,16 @@ Adversarial families represented:
 ## Finality rule
 
 Reopen only for new authority/source/prior-art falsification/concrete uncovered behavior or empirical evidence. Additional document volume by itself is not evidence of incompleteness.
+
+
+## Pass-4 source closure update
+
+SOURCE-COVERAGE-LEDGER-PASS-4 resolves every currently available non-code source family. The only unavailable archaeology family is the user-identified Claude corpus.
+
+Therefore:
+- **document/spec/research/test-design completeness: FINAL FOR AVAILABLE EVIDENCE**;
+- **absolute historical completeness: BLOCKED BY CLAUDE CORPUS**;
+- **architecture acceptance: BLOCKED BY ENUMERATED EMPIRICAL RECEIPTS/PRODUCT DECISIONS**;
+- **global completion: BLOCKED BY FRESH INDEPENDENT REVIEW**.
+
+Do not add generalized IaC documentation merely for volume; reopen only from a concrete falsifier/new authority.
