@@ -20,7 +20,7 @@ type InfrastructureApplyResult struct {
 type InfrastructureTargetAdapter interface {
 	Capabilities(context.Context, string) (TargetCapabilities, error)
 	Observe(context.Context, RealizedResource) (InfrastructureObservation, error)
-	Apply(context.Context, PlannedResourceAction, DesiredResource, *RealizedResource) (InfrastructureApplyResult, error)
+	Apply(context.Context, PlannedResourceAction, *DesiredResource, *RealizedResource) (InfrastructureApplyResult, error)
 }
 
 type ExternalOperationRef struct {
