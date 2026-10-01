@@ -18,3 +18,17 @@ Date: 2026-09-30.
 | Slickport/Demonstrator portfolio code | historical lineage | PRIOR ART/HISTORICAL IMPLEMENTATION | adapt projection/publisher semantics where current product contract requires |
 
 No row is deleted by this ledger.
+
+
+## v1.2 final sweep — 2026-10-01
+
+Reclassification after direct thesis correction:
+- provider/cloud/bare-metal breadth is core horizon, not scope creep, when expressed through Target/DesiredResource/RealizedResource contracts.
+- AWS-specific old architecture remains revisable because provider breadth is core but AWS identity is not.
+- transport functionality may become an artifact/source/publication adapter; until traced, it remains transition/scope candidate.
+- historical Demonstrator remains prior implementation evidence for productization/portfolio, not canonical architecture.
+- current application-only Project/DeploymentsJSON remains legacy compatibility, not generalized infrastructure state.
+- Tauri plan-only deploy remains scaffold until it projects the common Operation.
+- public health/metrics remain operational surfaces requiring explicit network policy.
+
+No historical provider implementation or mounted route establishes generalized lifecycle completion without desired/realized graph trace and evidence.
