@@ -1,6 +1,6 @@
 import { sveltekit } from '@sveltejs/kit/vite';
 import tailwindcss from '@tailwindcss/vite';
-import { defineConfig } from 'vite';
+import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
 	// `tailwindcss()` must precede `sveltekit()`: it resolves the bare
@@ -10,6 +10,11 @@ export default defineConfig({
 	plugins: [tailwindcss(), sveltekit()],
 	optimizeDeps: {
 		include: ['lucide-svelte']
+	},
+	test: {
+		environment: 'node',
+		// Playwright e2e specs are owned by @playwright/test, not vitest.
+		exclude: ['tests/e2e/**', '**/node_modules/**', '**/dist/**', '**/.svelte-kit/**']
 	},
 	server: {
 		host: '0.0.0.0',

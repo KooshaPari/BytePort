@@ -298,10 +298,10 @@ tasks:
   # -- Convenience --------------------------------------------------------
 
   install:
-    desc: Install JS dependencies (frontend/web). Uses the same flag as CI (npm ci --legacy-peer-deps) for parity.
+    desc: Install JS dependencies (frontend/web). Same plain command as CI (npm ci --ignore-scripts).
     dir: '{{.FRONTEND_DIR}}'
     cmds:
-      - npm ci --legacy-peer-deps
+      - npm ci --ignore-scripts
 
   clean:
     desc: Clean build artifacts (target/, .svelte-kit/, build/, dist/).

@@ -229,7 +229,7 @@ jobs:
           cache-dependency-path: frontend/web/package-lock.json
       - name: Install dependencies
         working-directory: frontend/web
-        run: npm ci --ignore-scripts --no-audit --no-fund --legacy-peer-deps
+        run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Build
         working-directory: frontend/web
         run: npm run build
@@ -251,7 +251,7 @@ jobs:
           cache-dependency-path: frontend/web/package-lock.json
       - name: Install dependencies
         working-directory: frontend/web
-        run: npm ci --ignore-scripts --no-audit --no-fund --legacy-peer-deps
+        run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Prettier check
         working-directory: frontend/web
         run: ./node_modules/.bin/prettier --check .
@@ -276,7 +276,7 @@ jobs:
           cache-dependency-path: frontend/web/package-lock.json
       - name: Install dependencies
         working-directory: frontend/web
-        run: npm ci --ignore-scripts --no-audit --no-fund --legacy-peer-deps
+        run: npm ci --ignore-scripts --no-audit --no-fund
       - name: svelte-check
         working-directory: frontend/web
         run: npm run check

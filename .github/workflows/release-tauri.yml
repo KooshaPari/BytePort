@@ -47,7 +47,7 @@ jobs:
 
       - name: Install frontend deps
         working-directory: frontend/web
-        run: npm ci --ignore-scripts --legacy-peer-deps
+        run: npm ci --ignore-scripts
 
       - name: Build Tauri app (universal)
         uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f # v1.0.0
@@ -82,7 +82,7 @@ jobs:
 
       - name: Install frontend deps
         working-directory: frontend/web
-        run: npm ci --ignore-scripts --legacy-peer-deps
+        run: npm ci --ignore-scripts
 
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f # v1.0.0
@@ -124,7 +124,7 @@ jobs:
 
       - name: Install frontend deps
         working-directory: frontend/web
-        run: npm ci --ignore-scripts --legacy-peer-deps
+        run: npm ci --ignore-scripts
 
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f # v1.0.0
