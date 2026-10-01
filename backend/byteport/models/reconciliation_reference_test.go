@@ -80,3 +80,29 @@ func TestSamePlanCanRemainValidOnMoreCapableTarget(t *testing.T){
 	out:=ConstrainPlanToTarget(p,caps)
 	if out.Actions[0].Action!=ReconcileReplace {t.Fatal(out.Actions[0])}
 }
+
+
+func TestWrongTargetObservationBecomesUnknown(t *testing.T) {
+	graph := DesiredResourceGraph{
+		ID: "g",
+		Resources: []DesiredResource{{
+			ID:           "service",
+			Kind:         DesiredResourceService,
+			ConfigDigest: "v2",
+			Target:       "target-1",
+			Lifecycle:    LifecycleManage,
+		}},
+	}
+	observed := []ObservedResourceState{{
+		DesiredResourceID:  "service",
+		RealizedResourceID: "real-service",
+		TargetID:           "other-target",
+		ConfigDigest:       "v1",
+		Fresh:              true,
+		Lifecycle:          LifecycleManage,
+	}}
+	plan := PlanReconciliation(graph, observed, ReconciliationPolicy{})
+	if plan.Actions[0].Action != ReconcileUnknown {
+		t.Fatalf("wrong-target observation planned mutation: %v", plan.Actions[0])
+	}
+}
