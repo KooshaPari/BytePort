@@ -134,6 +134,24 @@ func ReconcileOnceWithTargetAdapter(
 					action.RealizedResourceID,
 				)
 			}
+			if value.TargetID != targetID {
+				return InfrastructureExecutionReceipt{}, fmt.Errorf(
+					"%s %q realized target mismatch: got %q want %q",
+					action.Action,
+					action.DesiredResourceID,
+					value.TargetID,
+					targetID,
+				)
+			}
+			if caps.Provider != "" && value.Provider != "" && value.Provider != caps.Provider {
+				return InfrastructureExecutionReceipt{}, fmt.Errorf(
+					"%s %q realized provider mismatch: got %q want %q",
+					action.Action,
+					action.DesiredResourceID,
+					value.Provider,
+					caps.Provider,
+				)
+			}
 			copy := value
 			current = &copy
 		}
