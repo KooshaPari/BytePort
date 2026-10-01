@@ -6,6 +6,8 @@ package models
 type ObservedResourceState struct {
 	DesiredResourceID string
 	RealizedResourceID string
+	TargetID string
+	Provider string
 	ConfigDigest string
 	Fresh bool
 	Lifecycle LifecyclePolicy
@@ -39,6 +41,10 @@ func PlanReconciliation(graph DesiredResourceGraph, observed []ObservedResourceS
 		}
 		if !o.Fresh {
 			actions=append(actions,PlannedResourceAction{DesiredResourceID:d.ID,RealizedResourceID:o.RealizedResourceID,Action:ReconcileUnknown,Reason:"observation stale or incomplete"})
+			continue
+		}
+		if o.TargetID != "" && d.Target != "" && o.TargetID != d.Target {
+			actions=append(actions,PlannedResourceAction{DesiredResourceID:d.ID,RealizedResourceID:o.RealizedResourceID,Action:ReconcileUnknown,Reason:"observation target does not match desired target"})
 			continue
 		}
 		if o.ConfigDigest==d.ConfigDigest {
