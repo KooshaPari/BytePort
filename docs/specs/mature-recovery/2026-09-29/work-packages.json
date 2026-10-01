@@ -310,8 +310,10 @@
       ],
       "merge_gate": "BLOCKED",
       "blocked_by": [
-        "exact reconciliation reference receipt",
-        "target capability comparison before provider integration"
+        "graph validation/topological planner",
+        "mixed desired/observed reconciliation oracle",
+        "destructive-action authorization fixture",
+        "partial/UNKNOWN interruption fixture"
       ],
       "critical": [
         "UNKNOWN observation cannot trigger destructive guess",
