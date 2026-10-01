@@ -48,6 +48,22 @@ jobs:
           sha256sum /tmp/byteport-image.tar | awk '{print $1}' > /tmp/portable-artifact-digest
           docker buildx version > /tmp/builder-version
 
+      - name: Generate and verify BuildKit SLSA provenance
+        shell: bash
+        run: |
+          set -euo pipefail
+          FIXTURE="docs/specs/mature-recovery/2026-09-29/fixtures/selected-app"
+          rm -rf /tmp/byteport-provenance-out
+          docker buildx create --name byteport-recovery-builder --driver docker-container --use
+          trap 'docker buildx rm -f byteport-recovery-builder >/dev/null 2>&1 || true' EXIT
+          docker buildx inspect --bootstrap
+          docker buildx build --build-arg SOURCE_COMMIT="${{ steps.identity.outputs.source_commit }}" --build-arg MANIFEST_DIGEST="${{ steps.identity.outputs.manifest_digest }}" --attest type=provenance,mode=min,version=v1,filename=provenance.json --output type=local,dest=/tmp/byteport-provenance-out "$FIXTURE"
+          test -s /tmp/byteport-provenance-out/provenance.json
+          grep -q 'https://slsa.dev/provenance/v1' /tmp/byteport-provenance-out/provenance.json
+          grep -q 'buildDefinition' /tmp/byteport-provenance-out/provenance.json
+          grep -q 'runDetails' /tmp/byteport-provenance-out/provenance.json
+          cp /tmp/byteport-provenance-out/provenance.json /tmp/byteport-provenance.json
+          sha256sum /tmp/byteport-provenance.json | awk '{print $1}' > /tmp/provenance-digest
       - name: Run immutable built subject and observe application identity
         shell: bash
         run: |
@@ -71,7 +87,8 @@ jobs:
           ARTIFACT_ID="$(cat /tmp/artifact-id)"
           PORTABLE_DIGEST="$(cat /tmp/portable-artifact-digest)"
           BUILDER="$(head -n1 /tmp/builder-version)"
-          jq -n             --arg source_commit "${{ steps.identity.outputs.source_commit }}"             --arg manifest_digest "${{ steps.identity.outputs.manifest_digest }}"             --arg artifact_id "$ARTIFACT_ID"             --arg portable_digest "$PORTABLE_DIGEST"             --arg builder "$BUILDER"             --slurpfile probe /tmp/probe.json             '{
+          PROVENANCE_DIGEST="$(cat /tmp/provenance-digest)"
+          jq -n             --arg source_commit "${{ steps.identity.outputs.source_commit }}"             --arg manifest_digest "${{ steps.identity.outputs.manifest_digest }}"             --arg artifact_id "$ARTIFACT_ID"             --arg portable_digest "$PORTABLE_DIGEST"             --arg builder "$BUILDER"             --arg provenance_digest "$PROVENANCE_DIGEST"             --slurpfile probe /tmp/probe.json             '{
               classification:"ARCHITECTURE_PROTOTYPE_NOT_PRODUCT_ACCEPTANCE",
               source_snapshot:$source_commit,
               manifest_digest:$manifest_digest,
@@ -79,7 +96,8 @@ jobs:
               immutable_local_artifact_id:$artifact_id,
               portable_archive_sha256:$portable_digest,
               builder:$builder,
-              provenance_status:"BUILDER_CAPABILITY_OBSERVED_NOT_YET_ATTESTATION_VERIFIED",
+              provenance_status:"SLSA_V1_ATTESTATION_VERIFIED",
+              provenance_sha256:$provenance_digest,
               live_probe:$probe[0]
             }' > /tmp/byteport-build-receipt.json
           cat /tmp/byteport-build-receipt.json
@@ -87,5 +105,7 @@ jobs:
       - uses: actions/upload-artifact@v7
         with:
           name: byteport-mature-recovery-build-receipt
-          path: /tmp/byteport-build-receipt.json
+          path: |
+            /tmp/byteport-build-receipt.json
+            /tmp/byteport-provenance.json
           retention-days: 30
