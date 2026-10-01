@@ -188,7 +188,24 @@ jobs:
           go-version-file: backend/byteport/go.mod
           cache-dependency-path: backend/byteport/go.sum
       - name: Mixed-resource reconciliation controls
+        run: go test ./models -run '^(TestReconciliationCreatesUpdatesAndNoopsExplicitly|TestStaleObservationProducesUnknownNotDestruction|TestMissingDesiredResourceDoesNotDeleteWithoutAuthorization|TestExplicitDestructionCanPlanExactDelete|TestObserveOnlyResourceCannotDeleteEvenWithIntent|TestImmutableMismatchPlansReplaceNotUpdate|TestUnsupportedTargetActionBecomesUnknown|TestSamePlanCanRemainValidOnMoreCapableTarget|TestDesiredResourceGraphTopologicalOrderRespectsDependencies|TestDesiredResourceGraphPreservesDeclarationOrderAmongReadyResources|TestDesiredResourceGraphRejectsDuplicateIDs|TestDesiredResourceGraphRejectsUnknownDependency|TestDesiredResourceGraphRejectsSelfDependency|TestDesiredResourceGraphRejectsCycles|TestCheckedReconciliationPlansDesiredActionsInTopologicalOrder)
+ -count=1 -v
+
+  infrastructure-reconciliation-model:
+    name: B08 reconciliation reference model
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend/byteport
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: backend/byteport/go.mod
+          cache-dependency-path: backend/byteport/go.sum
+      - name: Mixed-resource reconciliation controls
         run: go test ./models -run '^(TestReconciliationCreatesUpdatesAndNoopsExplicitly|TestStaleObservationProducesUnknownNotDestruction|TestMissingDesiredResourceDoesNotDeleteWithoutAuthorization|TestExplicitDestructionCanPlanExactDelete|TestObserveOnlyResourceCannotDeleteEvenWithIntent|TestImmutableMismatchPlansReplaceNotUpdate|TestUnsupportedTargetActionBecomesUnknown|TestSamePlanCanRemainValidOnMoreCapableTarget)$' -count=1 -v
+ -count=1 -v
  -count=1 -v
 
   infrastructure-reconciliation-model:
