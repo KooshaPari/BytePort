@@ -316,3 +316,98 @@ func TestProviderBackedReconcileRejectsMixedTargetGraph(t *testing.T) {
 		t.Fatalf("mixed-target rejection occurred after %d mutations", len(adapter.applied))
 	}
 }
+
+
+func TestProviderBackedReconcileRejectsWrongTargetRealizedBeforeDelete(t *testing.T) {
+	graph := DesiredResourceGraph{ID: "graph-1"}
+	observed := []ObservedResourceState{{
+		DesiredResourceID:  "removed-cache",
+		RealizedResourceID: "real-cache",
+		ConfigDigest:       "cache-v1",
+		Fresh:              true,
+		Lifecycle:          LifecycleDestroyOnExplicitIntent,
+	}}
+	realized := map[string]RealizedResource{
+		"real-cache": {
+			ID:                "real-cache",
+			DesiredResourceID: "removed-cache",
+			TargetID:          "other-target",
+			Provider:          "fixture",
+			ExternalID:        "ext-cache",
+		},
+	}
+	policy := ReconciliationPolicy{
+		DestructionIntents: []DestructionIntent{{
+			ID:                 "destroy-cache",
+			DesiredResourceID:  "removed-cache",
+			RealizedResourceID: "real-cache",
+			AuthorizedBy:       "fixture-authority",
+			Reason:             "removed from desired graph",
+		}},
+	}
+	adapter := &fixtureInfrastructureAdapter{caps: fullFixtureCapabilities()}
+
+	_, err := ReconcileOnceWithTargetAdapter(
+		context.Background(),
+		graph,
+		observed,
+		realized,
+		policy,
+		nil,
+		"target-1",
+		adapter,
+	)
+	if err == nil {
+		t.Fatal("wrong-target realized resource reached delete path")
+	}
+	if len(adapter.applied) != 0 {
+		t.Fatalf("wrong-target rejection occurred after %d mutations", len(adapter.applied))
+	}
+}
+
+func TestProviderBackedReconcileRejectsWrongProviderRealizedBeforeUpdate(t *testing.T) {
+	graph := DesiredResourceGraph{
+		ID: "graph-1",
+		Resources: []DesiredResource{{
+			ID:           "service",
+			Kind:         DesiredResourceService,
+			ConfigDigest: "service-v2",
+			Target:       "target-1",
+			Lifecycle:    LifecycleManage,
+		}},
+	}
+	observed := []ObservedResourceState{{
+		DesiredResourceID:  "service",
+		RealizedResourceID: "real-service",
+		ConfigDigest:       "service-v1",
+		Fresh:              true,
+		Lifecycle:          LifecycleManage,
+	}}
+	realized := map[string]RealizedResource{
+		"real-service": {
+			ID:                "real-service",
+			DesiredResourceID: "service",
+			TargetID:          "target-1",
+			Provider:          "other-provider",
+			ExternalID:        "ext-service",
+		},
+	}
+	adapter := &fixtureInfrastructureAdapter{caps: fullFixtureCapabilities()}
+
+	_, err := ReconcileOnceWithTargetAdapter(
+		context.Background(),
+		graph,
+		observed,
+		realized,
+		ReconciliationPolicy{},
+		nil,
+		"target-1",
+		adapter,
+	)
+	if err == nil {
+		t.Fatal("wrong-provider realized resource reached update path")
+	}
+	if len(adapter.applied) != 0 {
+		t.Fatalf("wrong-provider rejection occurred after %d mutations", len(adapter.applied))
+	}
+}
