@@ -195,3 +195,50 @@ func TestApplyingBeforeOutcomeResolutionAlsoFailsClosed(t *testing.T) {
 		t.Fatalf("APPLYING interruption allowed a second create: %v", plan.Actions[0])
 	}
 }
+
+
+func TestInterruptedCreateWithContradictoryExternalTargetIsNotExactMatch(t *testing.T) {
+	graph := DesiredResourceGraph{ID: "g", Resources: []DesiredResource{{
+		ID: "db", Kind: DesiredResourceManaged, ConfigDigest: "v1",
+		Target: "prod", Lifecycle: LifecycleManage,
+	}}}
+	plan, err := PlanReconciliationWithInterruptions(
+		graph, nil, ReconciliationPolicy{},
+		[]InterruptedResourceOperation{{
+			OperationID: "op-contradictory", DesiredResourceID: "db",
+			TargetID: "prod", Provider: "fixture",
+			Action: ReconcileCreate, State: RuntimeOperationUnknown,
+			ExternalOperation: &ExternalOperationRef{
+				Provider: "fixture", TargetID: "staging",
+				ExternalID: "provider-op-1", LookupKind: "operation",
+			},
+		}},
+	)
+	if err != nil { t.Fatal(err) }
+	if plan.Actions[0].Action != ReconcileCreate {
+		t.Fatalf("contradictory external target incorrectly matched exact interruption: %v", plan.Actions[0])
+	}
+}
+
+func TestInterruptedCreateWithContradictoryProviderIsNotExactMatch(t *testing.T) {
+	graph := DesiredResourceGraph{ID: "g", Resources: []DesiredResource{{
+		ID: "db", Kind: DesiredResourceManaged, ConfigDigest: "v1",
+		Target: "prod", Lifecycle: LifecycleManage,
+	}}}
+	plan, err := PlanReconciliationWithInterruptions(
+		graph, nil, ReconciliationPolicy{},
+		[]InterruptedResourceOperation{{
+			OperationID: "op-provider-mismatch", DesiredResourceID: "db",
+			TargetID: "prod", Provider: "provider-a",
+			Action: ReconcileCreate, State: RuntimeOperationReconciling,
+			ExternalOperation: &ExternalOperationRef{
+				Provider: "provider-b", TargetID: "prod",
+				ExternalID: "provider-op-2", LookupKind: "operation",
+			},
+		}},
+	)
+	if err != nil { t.Fatal(err) }
+	if plan.Actions[0].Action != ReconcileCreate {
+		t.Fatalf("contradictory provider incorrectly matched exact interruption: %v", plan.Actions[0])
+	}
+}
