@@ -5,6 +5,9 @@ on:
     branches: [main]
     paths:
       - "backend/byteport/routes/recovery_*_test.go"
+      - "backend/byteport/models/**"
+      - "scripts/recovery/**"
+      - "docs/specs/mature-recovery/**"
       - ".github/workflows/mature-recovery-oracle.yml"
   workflow_dispatch:
 
