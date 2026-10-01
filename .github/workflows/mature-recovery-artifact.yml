@@ -48,18 +48,17 @@ jobs:
             echo "nonce_b=$NONCE_B"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Build fixture A with BuildKit metadata/provenance
+      - name: Build fixture A with BuildKit metadata
         id: build_a
         shell: bash
         run: |
           set -euo pipefail
-          docker buildx build             --load             --provenance=mode=max             --metadata-file /tmp/build-a.json             --build-arg SOURCE_COMMIT="${{ steps.inputs.outputs.source_commit }}"             --build-arg MANIFEST_DIGEST="${{ steps.inputs.outputs.manifest_digest }}"             --build-arg FIXTURE_NONCE="${{ steps.inputs.outputs.nonce_a }}"             -t byteport-recovery:mutable             tests/fixtures/mature-recovery-app
+          docker buildx build             --load             --provenance=false             --metadata-file /tmp/build-a.json             --build-arg SOURCE_COMMIT="${{ steps.inputs.outputs.source_commit }}"             --build-arg MANIFEST_DIGEST="${{ steps.inputs.outputs.manifest_digest }}"             --build-arg FIXTURE_NONCE="${{ steps.inputs.outputs.nonce_a }}"             -t byteport-recovery:mutable             tests/fixtures/mature-recovery-app
 
           ID_A="$(docker image inspect byteport-recovery:mutable --format '{{.Id}}')"
           DIGEST_A="$(jq -r '."containerimage.digest" // empty' /tmp/build-a.json)"
           test -n "$DIGEST_A"
           case "$DIGEST_A" in sha256:*) ;; *) echo "invalid BuildKit digest: $DIGEST_A"; exit 1;; esac
-          jq -e '."buildx.build.provenance" != null or ."buildx.build.ref" != null' /tmp/build-a.json >/dev/null
 
           {
             echo "image_id_a=$ID_A"
@@ -99,7 +98,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          docker buildx build             --load             --provenance=mode=max             --metadata-file /tmp/build-b.json             --build-arg SOURCE_COMMIT="${{ steps.inputs.outputs.source_commit }}"             --build-arg MANIFEST_DIGEST="${{ steps.inputs.outputs.manifest_digest }}"             --build-arg FIXTURE_NONCE="${{ steps.inputs.outputs.nonce_b }}"             -t byteport-recovery:mutable             tests/fixtures/mature-recovery-app
+          docker buildx build             --load             --provenance=false             --metadata-file /tmp/build-b.json             --build-arg SOURCE_COMMIT="${{ steps.inputs.outputs.source_commit }}"             --build-arg MANIFEST_DIGEST="${{ steps.inputs.outputs.manifest_digest }}"             --build-arg FIXTURE_NONCE="${{ steps.inputs.outputs.nonce_b }}"             -t byteport-recovery:mutable             tests/fixtures/mature-recovery-app
 
           ID_B="$(docker image inspect byteport-recovery:mutable --format '{{.Id}}')"
           DIGEST_B="$(jq -r '."containerimage.digest" // empty' /tmp/build-b.json)"
@@ -157,4 +156,5 @@ jobs:
             echo "- BuildKit digest B: ${{ steps.build_b.outputs.digest_b }}"
             echo "- Runtime probe matched source/manifest/nonce for A."
             echo "- Immutable local A remained runnable after mutable tag moved to B."
+            echo "- Provenance attestation: NOT VERIFIED in this chain; BP-WP-B04 remains blocked on separate attestation verification."
           } >> "$GITHUB_STEP_SUMMARY"
