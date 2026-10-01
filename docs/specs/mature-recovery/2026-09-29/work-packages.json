@@ -316,7 +316,8 @@
         "exact CI receipt for graph validation/topological planner",
         "exact CI receipt for mixed desired/observed reconciliation and destruction safety",
         "exact CI receipt for partial/APPLYING/UNKNOWN interruption controls",
-        "provider-backed reconciliation experiment; reference model is not provider evidence"
+        "exact CI receipt for provider-backed canonical reconcile execution",
+        "heterogeneous multi-target orchestration remains separate from single-target provider execution"
       ],
       "critical": [
         "UNKNOWN observation cannot trigger destructive guess",
@@ -329,7 +330,7 @@
         "unknown observation fixture",
         "destruction safety fixture"
       ],
-      "qualification": "SOTA passes 3-6 complete; pure reconciler now includes graph validation/topological ordering, exact destruction intent, target capability constraints and ambiguous CREATE/REPLACE interruption barriers; exact CI/provider evidence pending"
+      "qualification": "Canonical checked planner, exact destruction intent, interruption barriers, target capability constraints and single-target provider-backed execution experiment implemented; exact CI pending"
     },
     {
       "id": "BP-WP-B09",
