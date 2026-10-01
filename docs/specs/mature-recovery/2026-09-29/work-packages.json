@@ -169,7 +169,8 @@
       ],
       "merge_gate": "BLOCKED",
       "blocked_by": [
-        "B03 source/manifest prototype exact CI receipt"
+        "exact CI receipt for immutable source/strict manifest/inert graph projection",
+        "integration ahead of build/runtime remains blocked until qualification"
       ],
       "evidence_required": [
         "branch move",
@@ -180,7 +181,9 @@
         "path escape",
         "invalid port",
         "unknown key",
-        "malformed YAML"
+        "malformed YAML",
+        "manifest-to-graph projection",
+        "BUILD/ENV inertness"
       ],
       "critical": [
         "Mutable ref resolves once to immutable commit",
@@ -188,7 +191,7 @@
         "Invalid/unknown/path-escape/port errors stop before runtime mutation",
         "BUILD/ENV parsing does not authorize execution or secret use"
       ],
-      "qualification": "PROTOTYPE_IMPLEMENTED_PENDING"
+      "qualification": "Exact-ref resolver, strict exact-byte manifest revision, and explicit-target graph projection implemented; BUILD/ENV remain parsed but inert at graph stage; exact CI receipt pending"
     },
     {
       "id": "BP-WP-B04",
