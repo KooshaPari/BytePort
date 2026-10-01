@@ -21,7 +21,19 @@ func RecoveryManifestToDesiredGraph(
 
 	resources := make([]DesiredResource, 0, len(manifest.Services))
 	for _, svc := range manifest.Services {
-		raw, err := json.Marshal(svc)
+		// BUILD and ENV are parsed as untrusted manifest data, but projecting a
+		// desired graph must not authorize execution or materialize secret values.
+		// The graph digest therefore captures only declarative service placement
+		// inputs that are safe at this stage.
+		declarative := struct {
+			Name    string `json:"name"`
+			Path    string `json:"path"`
+			Port    int    `json:"port"`
+			Runtime string `json:"runtime,omitempty"`
+		}{
+			Name: svc.Name, Path: svc.Path, Port: svc.Port, Runtime: svc.Runtime,
+		}
+		raw, err := json.Marshal(declarative)
 		if err != nil {
 			return DesiredResourceGraph{}, fmt.Errorf("digest service %q: %w", svc.Name, err)
 		}
