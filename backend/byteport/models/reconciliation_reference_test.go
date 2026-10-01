@@ -21,7 +21,7 @@ func TestReconciliationCreatesUpdatesAndNoopsExplicitly(t *testing.T){
 func TestStaleObservationProducesUnknownNotDestruction(t *testing.T){
 	g:=DesiredResourceGraph{ID:"g"}
 	obs:=[]ObservedResourceState{{DesiredResourceID:"old",RealizedResourceID:"r1",Fresh:false}}
-	p:=PlanReconciliation(g,obs,ReconciliationPolicy{DestructionIntents:[]DestructionIntent{{DesiredResourceID:"old",RealizedResourceID:"r1",Authorized:true,Reason:"explicit cleanup"}}})
+	p:=PlanReconciliation(g,obs,ReconciliationPolicy{DestructionIntents:[]DestructionIntent{{DesiredResourceID:"old",RealizedResourceID:"r1",AuthorizedBy:"test-authority",Reason:"explicit cleanup"}}})
 	if p.Actions[0].Action!=ReconcileUnknown {t.Fatal(p.Actions[0])}
 }
 
@@ -35,8 +35,10 @@ func TestMissingDesiredResourceDoesNotDeleteWithoutAuthorization(t *testing.T){
 
 func TestExplicitDestructionCanPlanExactDelete(t *testing.T){
 	g:=DesiredResourceGraph{ID:"g"}
-	obs:=[]ObservedResourceState{{DesiredResourceID:"old",RealizedResourceID:"r1",Fresh:true}}
-	p:=PlanReconciliation(g,obs,ReconciliationPolicy{AllowDelete:true})
+	obs:=[]ObservedResourceState{{DesiredResourceID:"old",RealizedResourceID:"r1",Fresh:true,Lifecycle:LifecycleDestroyOnExplicitIntent}}
+	p:=PlanReconciliation(g,obs,ReconciliationPolicy{DestructionIntents:[]DestructionIntent{{
+		ID:"destroy-1",DesiredResourceID:"old",RealizedResourceID:"r1",AuthorizedBy:"test-authority",Reason:"explicit cleanup",
+	}}})
 	if p.Actions[0].Action!=ReconcileDelete {t.Fatal(p.Actions[0])}
 	if p.Actions[0].RealizedResourceID!="r1" {t.Fatal("delete lost exact realized-resource identity")}
 }
@@ -45,7 +47,7 @@ func TestExplicitDestructionCanPlanExactDelete(t *testing.T){
 func TestObserveOnlyResourceCannotDeleteEvenWithIntent(t *testing.T){
 	g:=DesiredResourceGraph{ID:"g"}
 	obs:=[]ObservedResourceState{{DesiredResourceID:"old",RealizedResourceID:"r1",Fresh:true,Lifecycle:LifecycleObserveOnly}}
-	p:=PlanReconciliation(g,obs,ReconciliationPolicy{DestructionIntents:[]DestructionIntent{{DesiredResourceID:"old",RealizedResourceID:"r1",Authorized:true,Reason:"requested"}}})
+	p:=PlanReconciliation(g,obs,ReconciliationPolicy{DestructionIntents:[]DestructionIntent{{DesiredResourceID:"old",RealizedResourceID:"r1",AuthorizedBy:"test-authority",Reason:"requested"}}})
 	if p.Actions[0].Action==ReconcileDelete { t.Fatal("observe-only lifecycle allowed deletion") }
 }
 
