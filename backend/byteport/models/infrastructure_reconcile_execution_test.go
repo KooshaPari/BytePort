@@ -29,6 +29,7 @@ func (f *fixtureInfrastructureAdapter) Observe(
 	return InfrastructureObservation{
 		RealizedResourceID: realized.ID,
 		TargetID:           realized.TargetID,
+		Provider:           realized.Provider,
 		State:              "observed",
 		Fresh:              true,
 	}, nil
@@ -409,5 +410,86 @@ func TestProviderBackedReconcileRejectsWrongProviderRealizedBeforeUpdate(t *test
 	}
 	if len(adapter.applied) != 0 {
 		t.Fatalf("wrong-provider rejection occurred after %d mutations", len(adapter.applied))
+	}
+}
+
+
+func TestProviderBackedReconcileRejectsWrongProviderObservationBeforePlanning(t *testing.T) {
+	graph := DesiredResourceGraph{
+		ID: "graph-1",
+		Resources: []DesiredResource{{
+			ID:           "service",
+			Kind:         DesiredResourceService,
+			ConfigDigest: "service-v2",
+			Target:       "target-1",
+			Lifecycle:    LifecycleManage,
+		}},
+	}
+	observed := []ObservedResourceState{{
+		DesiredResourceID:  "service",
+		RealizedResourceID: "real-service",
+		TargetID:           "target-1",
+		Provider:           "other-provider",
+		ConfigDigest:       "service-v1",
+		Fresh:              true,
+		Lifecycle:          LifecycleManage,
+	}}
+	adapter := &fixtureInfrastructureAdapter{caps: fullFixtureCapabilities()}
+
+	_, err := ReconcileOnceWithTargetAdapter(
+		context.Background(),
+		graph,
+		observed,
+		map[string]RealizedResource{},
+		ReconciliationPolicy{},
+		nil,
+		"target-1",
+		adapter,
+	)
+	if err == nil {
+		t.Fatal("wrong-provider observation entered planning")
+	}
+	if len(adapter.applied) != 0 {
+		t.Fatalf("wrong-provider observation caused %d mutations", len(adapter.applied))
+	}
+}
+
+func TestProviderBackedReconcileRejectsWrongTargetObservationBeforePlanning(t *testing.T) {
+	graph := DesiredResourceGraph{
+		ID: "graph-1",
+		Resources: []DesiredResource{{
+			ID:           "service",
+			Kind:         DesiredResourceService,
+			ConfigDigest: "service-v2",
+			Target:       "target-1",
+			Lifecycle:    LifecycleManage,
+		}},
+	}
+	observed := []ObservedResourceState{{
+		DesiredResourceID:  "service",
+		RealizedResourceID: "real-service",
+		TargetID:           "other-target",
+		Provider:           "fixture",
+		ConfigDigest:       "service-v1",
+		Fresh:              true,
+		Lifecycle:          LifecycleManage,
+	}}
+	adapter := &fixtureInfrastructureAdapter{caps: fullFixtureCapabilities()}
+
+	_, err := ReconcileOnceWithTargetAdapter(
+		context.Background(),
+		graph,
+		observed,
+		map[string]RealizedResource{},
+		ReconciliationPolicy{},
+		nil,
+		"target-1",
+		adapter,
+	)
+	if err == nil {
+		t.Fatal("wrong-target observation entered planning")
+	}
+	if len(adapter.applied) != 0 {
+		t.Fatalf("wrong-target observation caused %d mutations", len(adapter.applied))
 	}
 }
