@@ -158,7 +158,7 @@ jobs:
           go-version-file: backend/byteport/go.mod
           cache-dependency-path: backend/byteport/go.sum
       - name: Immutable ref and strict manifest controls
-        run: go test ./models -run '^(TestResolveGitSourceSnapshot|TestRecoveryManifest)' -count=1 -v
+        run: go test ./models -run '^(TestResolveGitSourceSnapshot|TestRecoveryManifest|TestHistoricalManifestProjectsIntoMatureDesiredGraph|TestHistoricalManifestImportRequiresExplicitTarget|TestHistoricalManifestGraphDoesNotAuthorizeBuildOrEnv)' -count=1 -v
 
   infrastructure-graph-domain:
     name: BP-WP-A07 infrastructure graph
