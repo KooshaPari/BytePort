@@ -11,20 +11,13 @@ type ObservedResourceState struct {
 	Lifecycle LifecyclePolicy
 }
 
-type DestructionIntent struct {
-	DesiredResourceID string
-	RealizedResourceID string
-	Authorized bool
-	Reason string
-}
-
 type ReconciliationPolicy struct {
 	DestructionIntents []DestructionIntent
 }
 
 func findDestructionIntent(policy ReconciliationPolicy, desiredID, realizedID string) (DestructionIntent, bool) {
 	for _, intent := range policy.DestructionIntents {
-		if intent.DesiredResourceID == desiredID && intent.RealizedResourceID == realizedID && intent.Authorized {
+		if intent.DesiredResourceID == desiredID && intent.RealizedResourceID == realizedID && intent.AuthorizedBy != "" {
 			return intent, true
 		}
 	}
