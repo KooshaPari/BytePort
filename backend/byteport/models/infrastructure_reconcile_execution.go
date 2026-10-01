@@ -63,6 +63,26 @@ func ReconcileOnceWithTargetAdapter(
 		}
 	}
 
+	for _, observation := range observed {
+		if observation.TargetID != "" && observation.TargetID != targetID {
+			return InfrastructureExecutionReceipt{}, fmt.Errorf(
+				"observation for %q targets %q, not execution target %q",
+				observation.DesiredResourceID,
+				observation.TargetID,
+				targetID,
+			)
+		}
+		if caps.Provider != "" && observation.Provider != "" &&
+			observation.Provider != caps.Provider {
+			return InfrastructureExecutionReceipt{}, fmt.Errorf(
+				"observation for %q uses provider %q, want %q",
+				observation.DesiredResourceID,
+				observation.Provider,
+				caps.Provider,
+			)
+		}
+	}
+
 	plan, err := PlanReconciliationWithInterruptions(graph, observed, policy, interruptions)
 	if err != nil {
 		return InfrastructureExecutionReceipt{}, err
@@ -106,7 +126,9 @@ func ReconcileOnceWithTargetAdapter(
 				)
 			}
 			if observation.RealizedResourceID != current.ID ||
-				observation.TargetID != targetID {
+				observation.TargetID != targetID ||
+				(caps.Provider != "" && observation.Provider != "" &&
+					observation.Provider != caps.Provider) {
 				return InfrastructureExecutionReceipt{}, fmt.Errorf(
 					"observation identity mismatch for realized resource %q",
 					current.ID,
