@@ -301,8 +301,6 @@ def _report_results(failures, warnings) -> int:
     return 0
 
 
-
-
 def doctor() -> int:
     failures: list[str] = []
     warnings: list[str] = []
