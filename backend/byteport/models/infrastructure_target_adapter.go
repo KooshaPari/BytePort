@@ -5,6 +5,7 @@ import "context"
 type InfrastructureObservation struct {
 	RealizedResourceID string `json:"realized_resource_id"`
 	TargetID string `json:"target_id"`
+	Provider string `json:"provider,omitempty"`
 	ConfigDigest string `json:"config_digest,omitempty"`
 	State string `json:"state"`
 	Fresh bool `json:"fresh"`
