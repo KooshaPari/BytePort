@@ -33,3 +33,20 @@ func TestUnknownReconciliationIsFirstClass(t *testing.T) {
 	a:=PlannedResourceAction{DesiredResourceID:"svc",Action:ReconcileUnknown,Reason:"observation stale"}
 	if a.Action!=ReconcileUnknown { t.Fatal(a) }
 }
+
+func TestDeleteRequiresExactExplicitDestructionIntent(t *testing.T) {
+	d:=DesiredResource{ID:"db",Kind:DesiredResourceManaged,Target:"t1",Lifecycle:LifecycleDestroyOnExplicitIntent}
+	r:=RealizedResource{ID:"real-db",DesiredResourceID:"db",TargetID:"t1",Provider:"fixture",ExternalID:"ext"}
+	if d.AllowsDelete(nil,r) { t.Fatal("nil intent authorized delete") }
+	wrong:=DestructionIntent{ID:"destroy-1",RealizedResourceID:"other",AuthorizedBy:"user",Reason:"test"}
+	if d.AllowsDelete(&wrong,r) { t.Fatal("wrong resource authorized delete") }
+	ok:=DestructionIntent{ID:"destroy-2",RealizedResourceID:"real-db",AuthorizedBy:"user",Reason:"test"}
+	if !d.AllowsDelete(&ok,r) { t.Fatal("exact explicit intent did not authorize delete") }
+}
+
+func TestObserveOnlyNeverAllowsDelete(t *testing.T) {
+	d:=DesiredResource{ID:"db",Kind:DesiredResourceManaged,Target:"t1",Lifecycle:LifecycleObserveOnly}
+	r:=RealizedResource{ID:"real-db",DesiredResourceID:"db",TargetID:"t1"}
+	intent:=DestructionIntent{ID:"destroy",RealizedResourceID:"real-db",AuthorizedBy:"user"}
+	if d.AllowsDelete(&intent,r) { t.Fatal("observe-only resource allowed delete") }
+}
