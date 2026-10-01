@@ -26,3 +26,6 @@ vite.config.ts.timestamp-*
 
 # Storybook static build output
 storybook-static/
+
+# Vitest default coverage output (superseded by target/coverage-service)
+coverage/

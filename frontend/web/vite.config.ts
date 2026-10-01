@@ -14,7 +14,16 @@ export default defineConfig({
 	test: {
 		environment: 'node',
 		// Playwright e2e specs are owned by @playwright/test, not vitest.
-		exclude: ['tests/e2e/**', '**/node_modules/**', '**/dist/**', '**/.svelte-kit/**']
+		exclude: ['tests/e2e/**', '**/node_modules/**', '**/dist/**', '**/.svelte-kit/**'],
+		coverage: {
+			provider: 'v8',
+			// json-summary is what CI's threshold check parses (coverage-summary.json).
+			reporter: ['text', 'json-summary'],
+			// "Service" coverage scope: the unit-testable service layer under src/lib.
+			include: ['src/lib/**/*.ts'],
+			exclude: ['**/*.test.ts', '**/node_modules/**', '**/.svelte-kit/**'],
+			reportsDirectory: 'target/coverage-service'
+		}
 	},
 	server: {
 		host: '0.0.0.0',
