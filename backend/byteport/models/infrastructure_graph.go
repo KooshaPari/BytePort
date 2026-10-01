@@ -94,6 +94,7 @@ type RealizedResource struct {
 
 type DestructionIntent struct {
 	ID string `json:"id"`
+	DesiredResourceID string `json:"desired_resource_id"`
 	RealizedResourceID string `json:"realized_resource_id"`
 	AuthorizedBy string `json:"authorized_by"`
 	Reason string `json:"reason"`
@@ -103,5 +104,8 @@ func (r DesiredResource) AllowsDelete(intent *DestructionIntent, realized Realiz
 	if r.Lifecycle != LifecycleDestroyOnExplicitIntent || intent == nil {
 		return false
 	}
-	return intent.RealizedResourceID == realized.ID && realized.DesiredResourceID == r.ID && intent.AuthorizedBy != ""
+	return intent.DesiredResourceID == r.ID &&
+		intent.RealizedResourceID == realized.ID &&
+		realized.DesiredResourceID == r.ID &&
+		intent.AuthorizedBy != ""
 }
