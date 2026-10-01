@@ -13,6 +13,7 @@ type InterruptedResourceOperation struct {
 	TargetID           string
 	Action             ReconciliationAction
 	State              RuntimeOperationState
+	Provider           string
 	ExternalOperation  *ExternalOperationRef
 }
 
@@ -36,6 +37,21 @@ func interruptionMatchesAction(
 		interruption.Action != action.Action ||
 		!ambiguousMutationState(interruption.State) {
 		return false
+	}
+
+	// If an external provider operation is known, its target must agree with
+	// the product journal. A contradictory receipt is itself ambiguous and
+	// cannot authorize a blind retry or be treated as an exact match.
+	if interruption.ExternalOperation != nil {
+		if interruption.ExternalOperation.TargetID != "" &&
+			interruption.ExternalOperation.TargetID != interruption.TargetID {
+			return false
+		}
+		if interruption.Provider != "" &&
+			interruption.ExternalOperation.Provider != "" &&
+			interruption.ExternalOperation.Provider != interruption.Provider {
+			return false
+		}
 	}
 
 	if action.Action == ReconcileReplace {
