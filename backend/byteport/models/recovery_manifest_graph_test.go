@@ -25,3 +25,46 @@ func TestHistoricalManifestImportRequiresExplicitTarget(t *testing.T) {
 		t.Fatal("historical import invented target placement")
 	}
 }
+
+
+func TestHistoricalManifestGraphDoesNotAuthorizeBuildOrEnv(t *testing.T) {
+	rawA := []byte(`NAME: app
+SERVICES:
+  - NAME: api
+    PATH: .
+    PORT: 8080
+    RUNTIME: python
+    BUILD: ["echo", "first"]
+    ENV:
+      SECRET: first
+`)
+	rawB := []byte(`NAME: app
+SERVICES:
+  - NAME: api
+    PATH: .
+    PORT: 8080
+    RUNTIME: python
+    BUILD: ["rm", "-rf", "/"]
+    ENV:
+      SECRET: second
+`)
+
+	revA, manifestA, err := ParseRecoveryManifest(rawA, "src-1", "byteport.yaml")
+	if err != nil { t.Fatal(err) }
+	revB, manifestB, err := ParseRecoveryManifest(rawB, "src-1", "byteport.yaml")
+	if err != nil { t.Fatal(err) }
+	if revA.ID == revB.ID {
+		t.Fatal("exact manifest revision must still capture BUILD/ENV byte changes")
+	}
+
+	graphA, err := RecoveryManifestToDesiredGraph(revA, manifestA, "target-1")
+	if err != nil { t.Fatal(err) }
+	graphB, err := RecoveryManifestToDesiredGraph(revB, manifestB, "target-1")
+	if err != nil { t.Fatal(err) }
+	if graphA.Resources[0].ConfigDigest != graphB.Resources[0].ConfigDigest {
+		t.Fatal("graph projection treated untrusted BUILD/ENV as authorized desired-resource configuration")
+	}
+	if graphA.Resources[0].Artifact != nil || graphB.Resources[0].Artifact != nil {
+		t.Fatal("manifest projection fabricated a build artifact")
+	}
+}
