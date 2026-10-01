@@ -310,10 +310,10 @@
       ],
       "merge_gate": "BLOCKED",
       "blocked_by": [
-        "graph validation/topological planner",
-        "mixed desired/observed reconciliation oracle",
-        "destructive-action authorization fixture",
-        "partial/UNKNOWN interruption fixture"
+        "exact CI receipt for graph validation/topological planner",
+        "exact CI receipt for mixed desired/observed reconciliation and destruction safety",
+        "exact CI receipt for partial/APPLYING/UNKNOWN interruption controls",
+        "provider-backed reconciliation experiment; reference model is not provider evidence"
       ],
       "critical": [
         "UNKNOWN observation cannot trigger destructive guess",
@@ -326,7 +326,7 @@
         "unknown observation fixture",
         "destruction safety fixture"
       ],
-      "qualification": "SOTA passes 3-6 + generalized fixture contract complete; pure reconciliation reference model implemented"
+      "qualification": "SOTA passes 3-6 complete; pure reconciler now includes graph validation/topological ordering, exact destruction intent, target capability constraints and ambiguous CREATE/REPLACE interruption barriers; exact CI/provider evidence pending"
     },
     {
       "id": "BP-WP-B09",
