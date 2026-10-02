@@ -162,3 +162,80 @@ func TestNanoVMSAdapterMissingObservationIsExplicitlyNotFresh(t *testing.T) {
 		t.Fatalf("missing provider state was treated as fresh: %+v", observation)
 	}
 }
+
+
+type delayedNanoVMSTransport struct {
+	deploys       int
+	observations  int
+	sandbox       NanoVMSSandbox
+	visibleAfter  int
+}
+
+func (d *delayedNanoVMSTransport) Deploy(
+	_ context.Context,
+	_ NanoVMSDeployRequest,
+) (NanoVMSSandbox, error) {
+	d.deploys++
+	if d.sandbox.ID == "" {
+		d.sandbox = NanoVMSSandbox{ID: "sandbox-delayed", Name: "service", Status: "running"}
+	}
+	return d.sandbox, nil
+}
+
+func (d *delayedNanoVMSTransport) Stop(_ context.Context, _ string) error { return nil }
+
+func (d *delayedNanoVMSTransport) Observe(
+	_ context.Context,
+	id string,
+) (NanoVMSSandbox, bool, error) {
+	d.observations++
+	if id != d.sandbox.ID || d.observations <= d.visibleAfter {
+		return NanoVMSSandbox{}, false, nil
+	}
+	return d.sandbox, true, nil
+}
+
+func TestNanoVMSLostResponseReconciliationObservesBeforeAnySecondCreate(t *testing.T) {
+	transport := &delayedNanoVMSTransport{visibleAfter: 1}
+	adapter := nanoAdapter(transport)
+	artifactID := BuildArtifactID("artifact-1")
+	desired := DesiredResource{
+		ID: "service", Kind: DesiredResourceService,
+		ConfigDigest: "cfg", Target: "local-nanovms",
+		Lifecycle: LifecycleManage, Artifact: &artifactID,
+	}
+
+	// Provider mutation happened, but imagine the caller lost the response
+	// after persisting the external sandbox identity into its operation journal.
+	create, err := adapter.Apply(
+		context.Background(),
+		PlannedResourceAction{DesiredResourceID: "service", Action: ReconcileCreate},
+		&desired,
+		nil,
+	)
+	if err != nil { t.Fatal(err) }
+	if create.Realized == nil { t.Fatal("create returned no realized identity") }
+	if transport.deploys != 1 { t.Fatalf("deploys=%d", transport.deploys) }
+
+	// First provider lookup is visibility-uncertain. It must remain non-fresh
+	// rather than authorizing another CREATE.
+	first, err := adapter.Observe(context.Background(), *create.Realized)
+	if err != nil { t.Fatal(err) }
+	if first.Fresh || first.State != "unknown" {
+		t.Fatalf("first observation=%+v", first)
+	}
+	if transport.deploys != 1 {
+		t.Fatalf("observation caused duplicate deploy: %d", transport.deploys)
+	}
+
+	// Once provider visibility converges, observation resolves the same exact
+	// sandbox identity; no second mutation is needed.
+	second, err := adapter.Observe(context.Background(), *create.Realized)
+	if err != nil { t.Fatal(err) }
+	if !second.Fresh || second.State != "running" {
+		t.Fatalf("second observation=%+v", second)
+	}
+	if transport.deploys != 1 {
+		t.Fatalf("delayed visibility caused duplicate deploy: %d", transport.deploys)
+	}
+}
