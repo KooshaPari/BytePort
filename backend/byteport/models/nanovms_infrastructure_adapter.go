@@ -159,7 +159,7 @@ func (a NanoVMSInfrastructureAdapter) Apply(
 			Provider:          a.Provider,
 			ExternalID:        sandbox.ID,
 		}
-		return InfrastructureApplyResult{Realized: &out}, nil
+		return InfrastructureApplyResult{Outcome: InfrastructureApplyRealized, Realized: &out}, nil
 
 	case ReconcileDelete:
 		if realized == nil {
@@ -175,6 +175,7 @@ func (a NanoVMSInfrastructureAdapter) Apply(
 			return InfrastructureApplyResult{}, err
 		}
 		return InfrastructureApplyResult{
+			Outcome: InfrastructureApplyRealized,
 			ExternalOperation: &ExternalOperationRef{
 				Provider:   a.Provider,
 				TargetID:   a.TargetID,
