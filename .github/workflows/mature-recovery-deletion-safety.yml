@@ -1,0 +1,41 @@
+name: Mature Recovery Deletion Safety
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'backend/byteport/models/**'
+      - 'scripts/recovery/run_deletion_safety_oracle.py'
+      - '.github/workflows/mature-recovery-deletion-safety.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: recovery-deletion-safety-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  exact-deletion-boundary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: backend/byteport/go.mod
+          cache-dependency-path: backend/byteport/go.sum
+      - name: Require exact named deletion and integration controls
+        env:
+          RECOVERY_CANDIDATE: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: python scripts/recovery/run_deletion_safety_oracle.py --candidate "$RECOVERY_CANDIDATE" --output evidence/deletion-safety
+      - name: Preserve raw candidate-bound results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: deletion-safety-${{ github.run_id }}-${{ github.run_attempt }}
+          path: evidence/deletion-safety/
+          if-no-files-found: error

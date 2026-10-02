@@ -58,9 +58,9 @@ func nanoAdapter(transport NanoVMSTransport) NanoVMSInfrastructureAdapter {
 		Transport: transport,
 		Artifacts: fakeArtifactResolver{artifacts: map[BuildArtifactID]BuildArtifact{
 			"artifact-1": {
-				ID: "artifact-1",
+				ID:           "artifact-1",
 				ImmutableRef: "sha256:abc",
-				MediaKind: "oci-image",
+				MediaKind:    "oci-image",
 			},
 		}},
 		TargetID: "local-nanovms",
@@ -168,12 +168,11 @@ func TestNanoVMSAdapterMissingObservationIsExplicitlyNotFresh(t *testing.T) {
 	}
 }
 
-
 type delayedNanoVMSTransport struct {
-	deploys       int
-	observations  int
-	sandbox       NanoVMSSandbox
-	visibleAfter  int
+	deploys      int
+	observations int
+	sandbox      NanoVMSSandbox
+	visibleAfter int
 }
 
 func (d *delayedNanoVMSTransport) Deploy(
@@ -220,14 +219,22 @@ func TestNanoVMSLostResponseReconciliationObservesBeforeAnySecondCreate(t *testi
 		&desired,
 		nil,
 	)
-	if err != nil { t.Fatal(err) }
-	if create.Realized == nil { t.Fatal("create returned no realized identity") }
-	if transport.deploys != 1 { t.Fatalf("deploys=%d", transport.deploys) }
+	if err != nil {
+		t.Fatal(err)
+	}
+	if create.Realized == nil {
+		t.Fatal("create returned no realized identity")
+	}
+	if transport.deploys != 1 {
+		t.Fatalf("deploys=%d", transport.deploys)
+	}
 
 	// First provider lookup is visibility-uncertain. It must remain non-fresh
 	// rather than authorizing another CREATE.
 	first, err := adapter.Observe(context.Background(), *create.Realized)
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 	if first.Fresh || first.State != "unknown" {
 		t.Fatalf("first observation=%+v", first)
 	}
@@ -238,7 +245,9 @@ func TestNanoVMSLostResponseReconciliationObservesBeforeAnySecondCreate(t *testi
 	// Once provider visibility converges, observation resolves the same exact
 	// sandbox identity; no second mutation is needed.
 	second, err := adapter.Observe(context.Background(), *create.Realized)
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !second.Fresh || second.State != "running" {
 		t.Fatalf("second observation=%+v", second)
 	}
@@ -246,7 +255,6 @@ func TestNanoVMSLostResponseReconciliationObservesBeforeAnySecondCreate(t *testi
 		t.Fatalf("delayed visibility caused duplicate deploy: %d", transport.deploys)
 	}
 }
-
 
 type ambiguousNanoVMSTransport struct {
 	deploys int
@@ -259,7 +267,7 @@ func (a *ambiguousNanoVMSTransport) Deploy(
 	a.deploys++
 	return NanoVMSSandbox{}, &NanoVMSOutcomeUnknownError{
 		Operation: "deploy",
-		Cause: errors.New("connection reset after request body sent"),
+		Cause:     errors.New("connection reset after request body sent"),
 	}
 }
 
@@ -308,27 +316,32 @@ func TestNanoVMSAmbiguousCreateReturnsUnknownInsteadOfRetryableGenericError(t *t
 	}
 }
 
-
-type ambiguousStopNanoVMSTransport struct {
-	stops int
+type ambiguousDeleteNanoVMSTransport struct {
+	deletes int
+	stops   int
 }
 
-func (a *ambiguousStopNanoVMSTransport) Deploy(
+func (a *ambiguousDeleteNanoVMSTransport) Deploy(
 	_ context.Context,
 	_ NanoVMSDeployRequest,
 ) (NanoVMSSandbox, error) {
 	return NanoVMSSandbox{}, fmt.Errorf("unexpected deploy")
 }
 
-func (a *ambiguousStopNanoVMSTransport) Stop(_ context.Context, _ string) error {
+func (a *ambiguousDeleteNanoVMSTransport) Stop(_ context.Context, _ string) error {
 	a.stops++
+	return errors.New("unexpected Stop during DELETE")
+}
+
+func (a *ambiguousDeleteNanoVMSTransport) Delete(_ context.Context, _ string, operation string) error {
+	a.deletes++
 	return &NanoVMSOutcomeUnknownError{
-		Operation: "stop",
-		Cause:     errors.New("connection reset after stop request sent"),
+		Operation: operation,
+		Cause:     errors.New("connection reset after delete request sent"),
 	}
 }
 
-func (a *ambiguousStopNanoVMSTransport) Observe(
+func (a *ambiguousDeleteNanoVMSTransport) Observe(
 	_ context.Context,
 	_ string,
 ) (NanoVMSSandbox, bool, error) {
@@ -336,7 +349,7 @@ func (a *ambiguousStopNanoVMSTransport) Observe(
 }
 
 func TestNanoVMSAmbiguousDeleteReturnsUnknownWithExactSandboxIdentity(t *testing.T) {
-	transport := &ambiguousStopNanoVMSTransport{}
+	transport := &ambiguousDeleteNanoVMSTransport{}
 	adapter := nanoAdapter(transport)
 	realized := RealizedResource{
 		ID: "real-service", DesiredResourceID: "service",
@@ -362,7 +375,7 @@ func TestNanoVMSAmbiguousDeleteReturnsUnknownWithExactSandboxIdentity(t *testing
 		result.ExternalOperation.LookupKind != "nanovms-sandbox" {
 		t.Fatalf("missing exact sandbox reconciliation identity: %+v", result.ExternalOperation)
 	}
-	if transport.stops != 1 {
-		t.Fatalf("stops=%d want 1", transport.stops)
+	if transport.deletes != 1 || transport.stops != 0 {
+		t.Fatalf("deletes=%d stops=%d want one DELETE and no Stop", transport.deletes, transport.stops)
 	}
 }

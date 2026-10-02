@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 )
 
 // NanoVMSTransport is the narrow transport boundary needed to adapt the
@@ -13,6 +14,20 @@ type NanoVMSTransport interface {
 	Deploy(context.Context, NanoVMSDeployRequest) (NanoVMSSandbox, error)
 	Stop(context.Context, string) error
 	Observe(context.Context, string) (NanoVMSSandbox, bool, error)
+}
+
+// NanoVMSDeletionTransport is separate from Stop. Implement it only when the
+// provider contract supports actual resource removal and operation identity.
+// The generic HTTP transport intentionally does not claim this capability.
+// Acknowledgement alone is insufficient: Apply also observes the exact resource
+// after Delete and remains UNKNOWN while it is present or observation fails.
+type NanoVMSDeletionTransport interface {
+	Delete(context.Context, string, string) error
+}
+
+func nanoVMSNonemptyIdentity(value string) bool {
+	return strings.TrimSpace(value) != "" && strings.TrimSpace(value) == value &&
+		!strings.ContainsAny(value, "\x00\r\n\t")
 }
 
 // NanoVMSOutcomeUnknownError means the transport cannot determine whether a
@@ -30,11 +45,11 @@ func (e *NanoVMSOutcomeUnknownError) Error() string {
 func (e *NanoVMSOutcomeUnknownError) Unwrap() error { return e.Cause }
 
 type NanoVMSDeployRequest struct {
-	Name          string
-	Image         string
-	OperationID   string
-	ResourceID    string
-	ConfigDigest  string
+	Name         string
+	Image        string
+	OperationID  string
+	ResourceID   string
+	ConfigDigest string
 }
 
 type NanoVMSSandbox struct {
@@ -58,9 +73,11 @@ func (a NanoVMSInfrastructureAdapter) Capabilities(
 	_ context.Context,
 	targetID string,
 ) (TargetCapabilities, error) {
-	if targetID == "" || targetID != a.TargetID {
+	if !nanoVMSNonemptyIdentity(a.TargetID) || !nanoVMSNonemptyIdentity(a.Provider) ||
+		a.Transport == nil || targetID != a.TargetID {
 		return TargetCapabilities{}, fmt.Errorf("unknown NanoVMS target %q", targetID)
 	}
+	_, canDelete := a.Transport.(NanoVMSDeletionTransport)
 	return TargetCapabilities{
 		TargetID:        a.TargetID,
 		Provider:        a.Provider,
@@ -68,7 +85,7 @@ func (a NanoVMSInfrastructureAdapter) Capabilities(
 		SupportsCreate:  true,
 		SupportsUpdate:  false,
 		SupportsReplace: false,
-		SupportsDelete:  true,
+		SupportsDelete:  canDelete,
 	}, nil
 }
 
@@ -76,6 +93,12 @@ func (a NanoVMSInfrastructureAdapter) Observe(
 	ctx context.Context,
 	realized RealizedResource,
 ) (InfrastructureObservation, error) {
+	if err := a.validateInvocation(ctx); err != nil {
+		return InfrastructureObservation{}, err
+	}
+	if !nanoVMSNonemptyIdentity(realized.ID) || !nanoVMSNonemptyIdentity(realized.DesiredResourceID) {
+		return InfrastructureObservation{}, fmt.Errorf("NanoVMS observation requires complete realized identity")
+	}
 	if realized.TargetID != a.TargetID {
 		return InfrastructureObservation{}, fmt.Errorf(
 			"realized target %q does not match NanoVMS target %q",
@@ -83,14 +106,14 @@ func (a NanoVMSInfrastructureAdapter) Observe(
 			a.TargetID,
 		)
 	}
-	if realized.Provider != "" && realized.Provider != a.Provider {
+	if realized.Provider != a.Provider {
 		return InfrastructureObservation{}, fmt.Errorf(
 			"realized provider %q does not match NanoVMS provider %q",
 			realized.Provider,
 			a.Provider,
 		)
 	}
-	if realized.ExternalID == "" {
+	if !nanoVMSNonemptyIdentity(realized.ExternalID) {
 		return InfrastructureObservation{}, fmt.Errorf("NanoVMS realized resource has no sandbox ID")
 	}
 
@@ -124,22 +147,56 @@ func (a NanoVMSInfrastructureAdapter) Observe(
 	}, nil
 }
 
+// validateInvocation rejects local precondition failures before any provider I/O.
+func (a NanoVMSInfrastructureAdapter) validateInvocation(ctx context.Context) error {
+	if ctx == nil {
+		return fmt.Errorf("NanoVMS invocation context is required")
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if a.Transport == nil || !nanoVMSNonemptyIdentity(a.TargetID) || !nanoVMSNonemptyIdentity(a.Provider) {
+		return fmt.Errorf("NanoVMS adapter requires transport and exact target/provider identity")
+	}
+	return nil
+}
+
+func (a NanoVMSInfrastructureAdapter) unknownMutation(id, lookup string) InfrastructureApplyResult {
+	return InfrastructureApplyResult{
+		Outcome: InfrastructureApplyUnknown,
+		ExternalOperation: &ExternalOperationRef{
+			Provider: a.Provider, TargetID: a.TargetID, ExternalID: id, LookupKind: lookup,
+		},
+	}
+}
+
 func (a NanoVMSInfrastructureAdapter) Apply(
 	ctx context.Context,
 	action PlannedResourceAction,
 	desired *DesiredResource,
 	realized *RealizedResource,
 ) (InfrastructureApplyResult, error) {
+	if err := a.validateInvocation(ctx); err != nil {
+		return InfrastructureApplyResult{}, err
+	}
 	switch action.Action {
 	case ReconcileCreate:
 		if desired == nil || realized != nil {
 			return InfrastructureApplyResult{}, fmt.Errorf("NanoVMS CREATE requires desired state only")
 		}
-		if action.OperationID == "" {
+		if !nanoVMSNonemptyIdentity(string(action.OperationID)) {
 			return InfrastructureApplyResult{}, fmt.Errorf("NanoVMS CREATE requires runtime operation identity")
 		}
 		if desired.Target != a.TargetID {
 			return InfrastructureApplyResult{}, fmt.Errorf("NanoVMS CREATE target mismatch")
+		}
+		if !nanoVMSNonemptyIdentity(desired.ID) || action.DesiredResourceID != desired.ID || action.RealizedResourceID != "" {
+			return InfrastructureApplyResult{}, fmt.Errorf("NanoVMS CREATE action and desired identity disagree")
+		}
+		switch desired.Lifecycle {
+		case LifecycleCreateObserve, LifecycleManage, LifecycleOrphanOnRemove, LifecycleDestroyOnExplicitIntent:
+		default:
+			return InfrastructureApplyResult{}, fmt.Errorf("NanoVMS CREATE is not authorized by lifecycle %q", desired.Lifecycle)
 		}
 		if desired.Artifact == nil || *desired.Artifact == "" || a.Artifacts == nil {
 			return InfrastructureApplyResult{}, fmt.Errorf(
@@ -177,8 +234,8 @@ func (a NanoVMSInfrastructureAdapter) Apply(
 			}
 			return InfrastructureApplyResult{}, err
 		}
-		if sandbox.ID == "" {
-			return InfrastructureApplyResult{}, fmt.Errorf("NanoVMS CREATE returned no sandbox ID")
+		if !nanoVMSNonemptyIdentity(sandbox.ID) {
+			return a.unknownMutation(string(action.OperationID), "byteport-operation"), nil
 		}
 		out := RealizedResource{
 			ID:                "nanovms:" + sandbox.ID,
@@ -190,40 +247,41 @@ func (a NanoVMSInfrastructureAdapter) Apply(
 		return InfrastructureApplyResult{Outcome: InfrastructureApplyRealized, Realized: &out}, nil
 
 	case ReconcileDelete:
-		if realized == nil {
-			return InfrastructureApplyResult{}, fmt.Errorf("NanoVMS DELETE requires exact realized state")
+		if realized == nil || !nanoVMSNonemptyIdentity(realized.ID) ||
+			!nanoVMSNonemptyIdentity(realized.DesiredResourceID) ||
+			!nanoVMSNonemptyIdentity(string(action.OperationID)) ||
+			action.RealizedResourceID != realized.ID || action.DesiredResourceID != realized.DesiredResourceID ||
+			realized.TargetID != a.TargetID || realized.Provider != a.Provider ||
+			!nanoVMSNonemptyIdentity(realized.ExternalID) {
+			return InfrastructureApplyResult{}, fmt.Errorf("NanoVMS DELETE requires exact action/operation/desired/realized/provider/target/sandbox identities")
 		}
-		if action.OperationID == "" {
-			return InfrastructureApplyResult{}, fmt.Errorf("NanoVMS DELETE requires runtime operation identity")
+		if desired != nil && (desired.ID != realized.DesiredResourceID || desired.Target != a.TargetID || desired.Lifecycle != LifecycleDestroyOnExplicitIntent) {
+			return InfrastructureApplyResult{}, fmt.Errorf("NanoVMS DELETE conflicts with the supplied desired resource")
 		}
-		if realized.TargetID != a.TargetID || realized.Provider != a.Provider ||
-			realized.ExternalID == "" {
-			return InfrastructureApplyResult{}, fmt.Errorf(
-				"NanoVMS DELETE requires exact provider/target/sandbox identity",
-			)
+		deleter, supported := a.Transport.(NanoVMSDeletionTransport)
+		if !supported {
+			return InfrastructureApplyResult{}, fmt.Errorf("NanoVMS DELETE unsupported: Stop does not remove a resource")
 		}
-		if err := a.Transport.Stop(ctx, realized.ExternalID); err != nil {
+		if err := deleter.Delete(ctx, realized.ExternalID, string(action.OperationID)); err != nil {
 			var unknown *NanoVMSOutcomeUnknownError
 			if errors.As(err, &unknown) {
-				return InfrastructureApplyResult{
-					Outcome: InfrastructureApplyUnknown,
-					ExternalOperation: &ExternalOperationRef{
-						Provider:   a.Provider,
-						TargetID:   a.TargetID,
-						ExternalID: realized.ExternalID,
-						LookupKind: "nanovms-sandbox",
-					},
-				}, nil
+				return a.unknownMutation(realized.ExternalID, "nanovms-sandbox"), nil
 			}
 			return InfrastructureApplyResult{}, err
+		}
+		_, found, err := a.Transport.Observe(ctx, realized.ExternalID)
+		if err != nil || found {
+			return a.unknownMutation(realized.ExternalID, "nanovms-sandbox"), nil
 		}
 		return InfrastructureApplyResult{
 			Outcome: InfrastructureApplyRealized,
 			ExternalOperation: &ExternalOperationRef{
-				Provider:   a.Provider,
-				TargetID:   a.TargetID,
-				ExternalID: realized.ExternalID,
-				LookupKind: "nanovms-stop",
+				Provider: a.Provider, TargetID: a.TargetID,
+				ExternalID: realized.ExternalID, LookupKind: "nanovms-delete",
+			},
+			Observation: &InfrastructureObservation{
+				RealizedResourceID: realized.ID, TargetID: a.TargetID, Provider: a.Provider,
+				State: "absent", Fresh: true,
 			},
 		}, nil
 
