@@ -38,9 +38,10 @@ type NanoVMSDeployRequest struct {
 }
 
 type NanoVMSSandbox struct {
-	ID     string
-	Name   string
-	Status string
+	ID           string
+	Name         string
+	Status       string
+	ConfigDigest string
 }
 
 // NanoVMSInfrastructureAdapter is a candidate production-adapter boundary.
@@ -117,6 +118,7 @@ func (a NanoVMSInfrastructureAdapter) Observe(
 		RealizedResourceID: realized.ID,
 		TargetID:           a.TargetID,
 		Provider:           a.Provider,
+		ConfigDigest:       sandbox.ConfigDigest,
 		State:              sandbox.Status,
 		Fresh:              true,
 	}, nil
