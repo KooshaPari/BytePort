@@ -203,7 +203,11 @@ func TestInterruptedCreateWithContradictoryExternalTargetIsNotExactMatch(t *test
 		ID: "db", Kind: DesiredResourceManaged, ConfigDigest: "v1",
 		Target: "prod", Lifecycle: LifecycleManage,
 	}}}
-	for _, state := range []RuntimeOperationState{RuntimeOperationApplying, RuntimeOperationUnknown, RuntimeOperationReconciling} {
+	for _, state := range []RuntimeOperationState{
+		RuntimeOperationApplying,
+		RuntimeOperationUnknown,
+		RuntimeOperationReconciling,
+	} {
 		plan, err := PlanReconciliationWithInterruptions(
 			graph, nil, ReconciliationPolicy{},
 			[]InterruptedResourceOperation{{
@@ -230,7 +234,11 @@ func TestInterruptedCreateWithContradictoryProviderIsNotExactMatch(t *testing.T)
 		ID: "db", Kind: DesiredResourceManaged, ConfigDigest: "v1",
 		Target: "prod", Lifecycle: LifecycleManage,
 	}}}
-	for _, state := range []RuntimeOperationState{RuntimeOperationApplying, RuntimeOperationUnknown, RuntimeOperationReconciling} {
+	for _, state := range []RuntimeOperationState{
+		RuntimeOperationApplying,
+		RuntimeOperationUnknown,
+		RuntimeOperationReconciling,
+	} {
 		plan, err := PlanReconciliationWithInterruptions(
 			graph, nil, ReconciliationPolicy{},
 			[]InterruptedResourceOperation{{
