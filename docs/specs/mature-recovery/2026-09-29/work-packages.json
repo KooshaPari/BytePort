@@ -202,7 +202,8 @@
       ],
       "merge_gate": "BLOCKED",
       "blocked_by": [
-        "portable artifact/provenance prototype"
+        "independently verifiable provenance attestation remains open",
+        "selected-app production build/runtime integration remains separate"
       ],
       "evidence_required": [
         "immutable artifact",
@@ -211,7 +212,8 @@
       ],
       "critical": [
         "Preserve Selected-app build integration mature identity/invariants; do not bypass the documented merge gate"
-      ]
+      ],
+      "qualification": "Immutable artifact identity/runtime chain and wrong-manifest artifact lineage guards implemented; provenance attestation is still explicitly unqualified"
     },
     {
       "id": "BP-WP-B05",
@@ -313,7 +315,7 @@
       ],
       "merge_gate": "BLOCKED",
       "blocked_by": [
-        "exact CI receipt for post-qualification NanoVMS adapter and ambiguous-create controls",
+        "exact CI receipt for operation-bound disposable snapshot-to-destroy lifecycle",
         "production NanoVMS HTTP transport wiring remains separate",
         "production destructive execution remains gated by exact provider authorization",
         "network/security authority unresolved"
@@ -329,7 +331,7 @@
         "unknown observation fixture",
         "destruction safety fixture"
       ],
-      "qualification": "REFERENCE + PROVIDER-FIXTURE QUALIFIED on a9b0749b3146400934b09237ab625d0952692ae4/run 36927029714; current candidate adds typed immutable-artifact resolution, delayed-visibility no-duplicate-create, and explicit UNKNOWN outcome for ambiguous NanoVMS CREATE, pending exact run"
+      "qualification": "REFERENCE + PROVIDER-FIXTURE QUALIFIED on a9b0749b3146400934b09237ab625d0952692ae4/run 36927029714; current candidate adds explicit RuntimeOperationID binding, artifact-manifest lineage validation, ambiguity-safe NanoVMS CREATE, restart NOOP, and exact authorized disposable DELETE pending exact run"
     },
     {
       "id": "BP-WP-B09",
