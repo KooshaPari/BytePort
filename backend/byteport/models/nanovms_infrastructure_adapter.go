@@ -31,8 +31,13 @@ type NanoVMSSandbox struct {
 // NanoVMSInfrastructureAdapter is a candidate production-adapter boundary.
 // It is not wired into /deploy yet: artifact authority and production
 // destructive authorization remain separate gates.
+type BuildArtifactResolver interface {
+	ResolveBuildArtifact(context.Context, BuildArtifactID) (BuildArtifact, bool, error)
+}
+
 type NanoVMSInfrastructureAdapter struct {
 	Transport NanoVMSTransport
+	Artifacts BuildArtifactResolver
 	TargetID  string
 	Provider  string
 }
@@ -120,14 +125,23 @@ func (a NanoVMSInfrastructureAdapter) Apply(
 		if desired.Target != a.TargetID {
 			return InfrastructureApplyResult{}, fmt.Errorf("NanoVMS CREATE target mismatch")
 		}
-		if desired.Artifact == nil || desired.Artifact.Digest == "" {
+		if desired.Artifact == nil || *desired.Artifact == "" || a.Artifacts == nil {
 			return InfrastructureApplyResult{}, fmt.Errorf(
 				"NanoVMS CREATE requires an authorized immutable artifact",
 			)
 		}
+		artifact, found, err := a.Artifacts.ResolveBuildArtifact(ctx, *desired.Artifact)
+		if err != nil {
+			return InfrastructureApplyResult{}, fmt.Errorf("resolve build artifact: %w", err)
+		}
+		if !found || artifact.ID != *desired.Artifact || artifact.ImmutableRef == "" {
+			return InfrastructureApplyResult{}, fmt.Errorf(
+				"NanoVMS CREATE artifact is missing or has no immutable reference",
+			)
+		}
 		sandbox, err := a.Transport.Deploy(ctx, NanoVMSDeployRequest{
 			Name:         desired.ID,
-			Image:        desired.Artifact.Digest,
+			Image:        artifact.ImmutableRef,
 			OperationID:  action.DesiredResourceID,
 			ResourceID:   desired.ID,
 			ConfigDigest: desired.ConfigDigest,
