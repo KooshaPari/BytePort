@@ -169,8 +169,7 @@
       ],
       "merge_gate": "BLOCKED",
       "blocked_by": [
-        "exact CI receipt for immutable source/strict manifest/inert graph projection",
-        "integration ahead of build/runtime remains blocked until qualification"
+        "integration into build/runtime production path remains a separate authorization gate"
       ],
       "evidence_required": [
         "branch move",
@@ -191,7 +190,7 @@
         "Invalid/unknown/path-escape/port errors stop before runtime mutation",
         "BUILD/ENV parsing does not authorize execution or secret use"
       ],
-      "qualification": "Exact-ref resolver, strict exact-byte manifest revision, and explicit-target graph projection implemented; BUILD/ENV remain parsed but inert at graph stage; exact CI receipt pending"
+      "qualification": "QUALIFIED on exact candidate a9b0749b3146400934b09237ab625d0952692ae4 by BytePort Mature Recovery Oracle run 36927029714: immutable source, strict exact-byte manifest, explicit-target graph projection and BUILD/ENV inertness passed"
     },
     {
       "id": "BP-WP-B04",
@@ -300,7 +299,8 @@
         "mixed-resource graph fixture",
         "target capability fixture",
         "plan-vs-realized fixture"
-      ]
+      ],
+      "qualification": "QUALIFIED on exact candidate a9b0749b3146400934b09237ab625d0952692ae4 by BytePort Mature Recovery Oracle run 36927029714"
     },
     {
       "id": "BP-WP-B08",
@@ -313,11 +313,9 @@
       ],
       "merge_gate": "BLOCKED",
       "blocked_by": [
-        "exact CI receipt for graph validation/topological planner",
-        "exact CI receipt for mixed desired/observed reconciliation and destruction safety",
-        "exact CI receipt for partial/APPLYING/UNKNOWN interruption controls",
-        "exact CI receipt for provider-backed canonical reconcile execution",
-        "heterogeneous multi-target orchestration remains separate from single-target provider execution"
+        "production adapter integration remains separate from the qualified fixture provider",
+        "destructive production execution remains gated by exact provider authorization",
+        "network/security authority unresolved"
       ],
       "critical": [
         "UNKNOWN observation cannot trigger destructive guess",
@@ -330,7 +328,7 @@
         "unknown observation fixture",
         "destruction safety fixture"
       ],
-      "qualification": "Canonical checked planner, exact destruction intent, interruption barriers, target capability constraints and single-target provider-backed execution experiment implemented; exact CI pending"
+      "qualification": "REFERENCE + PROVIDER-FIXTURE QUALIFIED on exact candidate a9b0749b3146400934b09237ab625d0952692ae4 by run 36927029714: graph validation/topology, mixed reconciliation, destruction safety, interruption UNKNOWN barriers, provider-backed canonical execution and heterogeneous target stages passed"
     },
     {
       "id": "BP-WP-B09",
