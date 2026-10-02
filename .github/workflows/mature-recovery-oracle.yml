@@ -139,7 +139,7 @@ jobs:
           go-version-file: backend/byteport/go.mod
           cache-dependency-path: backend/byteport/go.sum
       - name: Stable retry conflict and lost-response controls
-        run: go test ./routes -run '^(TestDeployOperationIDReplaysRealizedResourceWithoutSecondProviderCall|TestDeployOperationIDRejectsDifferentFingerprintBeforeProviderMutation|TestDeployPersistsApplyingOperationBeforeProviderTransportFailure)$' -count=1 -v
+        run: go test ./routes -run '^(TestDeployOperationIDReplaysRealizedResourceWithoutSecondProviderCall|TestDeployOperationIDRejectsDifferentFingerprintBeforeProviderMutation|TestDeployPersistsApplyingOperationBeforeProviderTransportFailure|TestDeploySuccessfulButMalformedProviderResponseRemainsUnknown|TestDeploySuccessfulResponseWithoutSandboxIDRemainsUnknown)$' -count=1 -v
 
   source-manifest-prototype:
     name: B03 source and manifest prototype
