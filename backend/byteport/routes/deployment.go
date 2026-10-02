@@ -237,7 +237,19 @@ func DeployProject(c *gin.Context) {
 	// Translate NanoVMS SandboxResponse → BytePort Project
 	var sandboxResp nvmsSandboxResponse
 	if err := json.Unmarshal(body, &sandboxResp); err != nil {
+		models.DB.Model(&journal).Updates(map[string]any{
+			"state":      models.RuntimeOperationUnknown,
+			"last_error": "provider returned an unreadable successful deploy response",
+		})
 		respondInternalError(c, "Failed to parse sandbox response")
+		return
+	}
+	if sandboxResp.ID == "" {
+		models.DB.Model(&journal).Updates(map[string]any{
+			"state":      models.RuntimeOperationUnknown,
+			"last_error": "provider returned success without sandbox identity",
+		})
+		respondInternalError(c, "Provider returned success without sandbox identity")
 		return
 	}
 
