@@ -9,6 +9,7 @@ import (
 // reconciliation experiment did for one planned action.
 type InfrastructureActionExecution struct {
 	Action      PlannedResourceAction
+	Attempted   bool
 	Applied     bool
 	Observed    *InfrastructureObservation
 	ApplyResult *InfrastructureApplyResult
@@ -140,17 +141,74 @@ func reconcileOnceWithTargetAdapter(
 		desiredByID[desired.ID] = desired
 	}
 
+	// Preflight every realized identity before the first provider mutation.
+	// A later wrong identity must not be discovered after earlier actions have
+	// already changed external state.
+	for _, action := range plan.Actions {
+		if action.RealizedResourceID == "" {
+			continue
+		}
+		value, ok := realized[action.RealizedResourceID]
+		if !ok {
+			return InfrastructureExecutionReceipt{}, fmt.Errorf(
+				"%s %q missing exact realized resource %q",
+				action.Action,
+				action.DesiredResourceID,
+				action.RealizedResourceID,
+			)
+		}
+		if value.TargetID != targetID {
+			return InfrastructureExecutionReceipt{}, fmt.Errorf(
+				"%s %q realized target mismatch: got %q want %q",
+				action.Action,
+				action.DesiredResourceID,
+				value.TargetID,
+				targetID,
+			)
+		}
+		if caps.Provider != "" && value.Provider != "" && value.Provider != caps.Provider {
+			return InfrastructureExecutionReceipt{}, fmt.Errorf(
+				"%s %q realized provider mismatch: got %q want %q",
+				action.Action,
+				action.DesiredResourceID,
+				value.Provider,
+				caps.Provider,
+			)
+		}
+	}
+
 	receipt := InfrastructureExecutionReceipt{
 		Plan:         plan,
 		Capabilities: caps,
 		Executions:   make([]InfrastructureActionExecution, 0, len(plan.Actions)),
 	}
+	resolved := make(map[string]bool, len(plan.Actions))
 
 	for _, action := range plan.Actions {
 		execution := InfrastructureActionExecution{Action: action}
 
+		if desired, ok := desiredByID[action.DesiredResourceID]; ok {
+			for _, dependencyID := range desired.DependsOn {
+				if !resolved[dependencyID] {
+					receipt.Executions = append(receipt.Executions, execution)
+					return receipt, fmt.Errorf(
+						"%s %q blocked by unresolved dependency %q",
+						action.Action,
+						action.DesiredResourceID,
+						dependencyID,
+					)
+				}
+			}
+		}
+
 		switch action.Action {
-		case ReconcileUnknown, ReconcileNoop:
+		case ReconcileUnknown:
+			resolved[action.DesiredResourceID] = false
+			receipt.Executions = append(receipt.Executions, execution)
+			continue
+
+		case ReconcileNoop:
+			resolved[action.DesiredResourceID] = true
 			receipt.Executions = append(receipt.Executions, execution)
 			continue
 
@@ -181,6 +239,7 @@ func reconcileOnceWithTargetAdapter(
 				)
 			}
 			execution.Observed = &observation
+			resolved[action.DesiredResourceID] = observation.Fresh
 			receipt.Executions = append(receipt.Executions, execution)
 			continue
 		}
@@ -193,33 +252,7 @@ func reconcileOnceWithTargetAdapter(
 
 		var current *RealizedResource
 		if action.RealizedResourceID != "" {
-			value, ok := realized[action.RealizedResourceID]
-			if !ok {
-				return InfrastructureExecutionReceipt{}, fmt.Errorf(
-					"%s %q missing exact realized resource %q",
-					action.Action,
-					action.DesiredResourceID,
-					action.RealizedResourceID,
-				)
-			}
-			if value.TargetID != targetID {
-				return InfrastructureExecutionReceipt{}, fmt.Errorf(
-					"%s %q realized target mismatch: got %q want %q",
-					action.Action,
-					action.DesiredResourceID,
-					value.TargetID,
-					targetID,
-				)
-			}
-			if caps.Provider != "" && value.Provider != "" && value.Provider != caps.Provider {
-				return InfrastructureExecutionReceipt{}, fmt.Errorf(
-					"%s %q realized provider mismatch: got %q want %q",
-					action.Action,
-					action.DesiredResourceID,
-					value.Provider,
-					caps.Provider,
-				)
-			}
+			value := realized[action.RealizedResourceID]
 			copy := value
 			current = &copy
 		}
@@ -256,15 +289,18 @@ func reconcileOnceWithTargetAdapter(
 			)
 		}
 
+		execution.Attempted = true
 		result, err := adapter.Apply(ctx, action, desired, current)
 		if err != nil {
-			return InfrastructureExecutionReceipt{}, fmt.Errorf(
+			receipt.Executions = append(receipt.Executions, execution)
+			return receipt, fmt.Errorf(
 				"apply %s %q: %w",
 				action.Action,
 				action.DesiredResourceID,
 				err,
 			)
 		}
+		execution.ApplyResult = &result
 		switch result.Outcome {
 		case InfrastructureApplyUnknown:
 			if result.Realized != nil {
@@ -343,8 +379,8 @@ func reconcileOnceWithTargetAdapter(
 			}
 		}
 
-		execution.Applied = true
-		execution.ApplyResult = &result
+		execution.Applied = result.Outcome == InfrastructureApplyRealized
+		resolved[action.DesiredResourceID] = execution.Applied
 		receipt.Executions = append(receipt.Executions, execution)
 	}
 
