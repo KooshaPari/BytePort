@@ -1,0 +1,9 @@
+# BytePort mature-recovery experiment manifest.
+# This is NOT the canonical odin.nvms schema.
+experiment_version: 1
+service:
+  name: mature-recovery-app
+  runtime: oci
+  port: 80
+build:
+  context: tests/fixtures/mature-recovery-app
