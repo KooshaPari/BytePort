@@ -622,3 +622,213 @@ func TestProviderBackedReconcileRejectsMissingApplyOutcome(t *testing.T) {
 		t.Fatal("missing apply outcome was accepted")
 	}
 }
+
+
+type sequencedApplyAdapter struct {
+	caps      TargetCapabilities
+	calls     []string
+	unknownOn string
+	errorOn   string
+}
+
+func (a *sequencedApplyAdapter) Capabilities(
+	_ context.Context,
+	_ string,
+) (TargetCapabilities, error) {
+	return a.caps, nil
+}
+
+func (a *sequencedApplyAdapter) Observe(
+	_ context.Context,
+	realized RealizedResource,
+) (InfrastructureObservation, error) {
+	return InfrastructureObservation{
+		RealizedResourceID: realized.ID,
+		TargetID:           realized.TargetID,
+		Provider:           realized.Provider,
+		ConfigDigest:       "observed",
+		State:              "running",
+		Fresh:              true,
+	}, nil
+}
+
+func (a *sequencedApplyAdapter) Apply(
+	_ context.Context,
+	action PlannedResourceAction,
+	desired *DesiredResource,
+	_ *RealizedResource,
+) (InfrastructureApplyResult, error) {
+	a.calls = append(a.calls, action.DesiredResourceID)
+	if action.DesiredResourceID == a.errorOn {
+		return InfrastructureApplyResult{}, fmt.Errorf("fixture provider failure")
+	}
+	if action.DesiredResourceID == a.unknownOn {
+		return InfrastructureApplyResult{
+			Outcome: InfrastructureApplyUnknown,
+			ExternalOperation: &ExternalOperationRef{
+				Provider:   a.caps.Provider,
+				TargetID:   a.caps.TargetID,
+				ExternalID: string(action.OperationID),
+				LookupKind: "operation",
+			},
+		}, nil
+	}
+	if desired == nil {
+		return InfrastructureApplyResult{}, fmt.Errorf("fixture expected desired state")
+	}
+	return InfrastructureApplyResult{
+		Outcome: InfrastructureApplyRealized,
+		Realized: &RealizedResource{
+			ID:                "real-" + desired.ID,
+			DesiredResourceID: desired.ID,
+			TargetID:          desired.Target,
+			Provider:          a.caps.Provider,
+			ExternalID:        "ext-" + desired.ID,
+		},
+	}, nil
+}
+
+func TestProviderUnknownDoesNotCountAsAppliedOrReleaseDependentMutation(t *testing.T) {
+	graph := DesiredResourceGraph{
+		ID: "g-dependent-unknown",
+		Resources: []DesiredResource{
+			{
+				ID: "network", Kind: DesiredResourceNetwork, ConfigDigest: "net-v1",
+				Target: "target-1", Lifecycle: LifecycleManage,
+			},
+			{
+				ID: "service", Kind: DesiredResourceService, ConfigDigest: "svc-v1",
+				Target: "target-1", Lifecycle: LifecycleManage,
+				DependsOn: []string{"network"},
+			},
+		},
+	}
+	adapter := &sequencedApplyAdapter{
+		caps:      fullFixtureCapabilities(),
+		unknownOn: "network",
+	}
+
+	receipt, err := ReconcileOnceWithTargetAdapterOperation(
+		context.Background(),
+		"runtime-op",
+		graph,
+		nil,
+		map[string]RealizedResource{},
+		ReconciliationPolicy{},
+		nil,
+		"target-1",
+		adapter,
+	)
+	if err == nil {
+		t.Fatal("dependent mutation proceeded after UNKNOWN prerequisite")
+	}
+	if len(adapter.calls) != 1 || adapter.calls[0] != "network" {
+		t.Fatalf("provider calls=%v want only unresolved prerequisite", adapter.calls)
+	}
+	if len(receipt.Executions) != 2 {
+		t.Fatalf("executions=%+v", receipt.Executions)
+	}
+	if !receipt.Executions[0].Attempted || receipt.Executions[0].Applied {
+		t.Fatalf("UNKNOWN prerequisite receipt=%+v", receipt.Executions[0])
+	}
+	if receipt.Executions[1].Attempted || receipt.Executions[1].Applied {
+		t.Fatalf("blocked dependent was attempted: %+v", receipt.Executions[1])
+	}
+}
+
+func TestProviderFailurePreservesEarlierExecutionReceipts(t *testing.T) {
+	graph := DesiredResourceGraph{
+		ID: "g-partial-receipt",
+		Resources: []DesiredResource{
+			{
+				ID: "first", Kind: DesiredResourceManaged, ConfigDigest: "v1",
+				Target: "target-1", Lifecycle: LifecycleManage,
+			},
+			{
+				ID: "second", Kind: DesiredResourceManaged, ConfigDigest: "v1",
+				Target: "target-1", Lifecycle: LifecycleManage,
+			},
+		},
+	}
+	adapter := &sequencedApplyAdapter{
+		caps:    fullFixtureCapabilities(),
+		errorOn: "second",
+	}
+
+	receipt, err := ReconcileOnceWithTargetAdapterOperation(
+		context.Background(),
+		"runtime-op",
+		graph,
+		nil,
+		map[string]RealizedResource{},
+		ReconciliationPolicy{},
+		nil,
+		"target-1",
+		adapter,
+	)
+	if err == nil {
+		t.Fatal("second provider failure was hidden")
+	}
+	if len(receipt.Executions) != 2 {
+		t.Fatalf("partial receipt lost history: %+v", receipt.Executions)
+	}
+	if !receipt.Executions[0].Attempted || !receipt.Executions[0].Applied {
+		t.Fatalf("first successful mutation missing: %+v", receipt.Executions[0])
+	}
+	if !receipt.Executions[1].Attempted || receipt.Executions[1].Applied {
+		t.Fatalf("failed mutation receipt wrong: %+v", receipt.Executions[1])
+	}
+}
+
+func TestLaterWrongRealizedIdentityFailsBeforeAnyProviderMutation(t *testing.T) {
+	graph := DesiredResourceGraph{
+		ID: "g-preflight",
+		Resources: []DesiredResource{
+			{
+				ID: "create-first", Kind: DesiredResourceManaged, ConfigDigest: "v1",
+				Target: "target-1", Lifecycle: LifecycleManage,
+			},
+			{
+				ID: "update-later", Kind: DesiredResourceManaged, ConfigDigest: "v2",
+				Target: "target-1", Lifecycle: LifecycleManage,
+			},
+		},
+	}
+	observed := []ObservedResourceState{{
+		DesiredResourceID:  "update-later",
+		RealizedResourceID: "real-later",
+		TargetID:           "target-1",
+		Provider:           "fixture",
+		ConfigDigest:       "v1",
+		Fresh:              true,
+		Lifecycle:          LifecycleManage,
+	}}
+	realized := map[string]RealizedResource{
+		"real-later": {
+			ID: "real-later", DesiredResourceID: "update-later",
+			TargetID: "target-1", Provider: "wrong-provider", ExternalID: "ext-later",
+		},
+	}
+	adapter := &sequencedApplyAdapter{caps: fullFixtureCapabilities()}
+
+	receipt, err := ReconcileOnceWithTargetAdapterOperation(
+		context.Background(),
+		"runtime-op",
+		graph,
+		observed,
+		realized,
+		ReconciliationPolicy{},
+		nil,
+		"target-1",
+		adapter,
+	)
+	if err == nil {
+		t.Fatal("wrong later realized identity was accepted")
+	}
+	if len(adapter.calls) != 0 {
+		t.Fatalf("preflight occurred after provider mutation: %v", adapter.calls)
+	}
+	if len(receipt.Executions) != 0 {
+		t.Fatalf("preflight failure fabricated execution history: %+v", receipt.Executions)
+	}
+}
