@@ -201,3 +201,5 @@ jobs:
           cache-dependency-path: backend/byteport/go.sum
       - name: Exact identity ambiguity and observation controls
         run: go test ./models -run '^TestNanoVMSHTTPTransport' -count=1 -v
+      - name: Generalized adapter plus HTTP lifecycle
+        run: go test ./models -run '^TestGeneralizedNanoVMSHTTPLifecycle' -count=1 -v
