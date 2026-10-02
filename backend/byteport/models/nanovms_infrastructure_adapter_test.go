@@ -306,3 +306,62 @@ func TestNanoVMSAmbiguousCreateReturnsUnknownInsteadOfRetryableGenericError(t *t
 		t.Fatalf("deploys=%d want 1", transport.deploys)
 	}
 }
+
+
+type ambiguousStopNanoVMSTransport struct {
+	stops int
+}
+
+func (a *ambiguousStopNanoVMSTransport) Deploy(
+	_ context.Context,
+	_ NanoVMSDeployRequest,
+) (NanoVMSSandbox, error) {
+	return NanoVMSSandbox{}, fmt.Errorf("unexpected deploy")
+}
+
+func (a *ambiguousStopNanoVMSTransport) Stop(_ context.Context, _ string) error {
+	a.stops++
+	return &NanoVMSOutcomeUnknownError{
+		Operation: "stop",
+		Cause:     errors.New("connection reset after stop request sent"),
+	}
+}
+
+func (a *ambiguousStopNanoVMSTransport) Observe(
+	_ context.Context,
+	_ string,
+) (NanoVMSSandbox, bool, error) {
+	return NanoVMSSandbox{}, false, nil
+}
+
+func TestNanoVMSAmbiguousDeleteReturnsUnknownWithExactSandboxIdentity(t *testing.T) {
+	transport := &ambiguousStopNanoVMSTransport{}
+	adapter := nanoAdapter(transport)
+	realized := RealizedResource{
+		ID: "real-service", DesiredResourceID: "service",
+		TargetID: "local-nanovms", Provider: "nanovms", ExternalID: "sandbox-1",
+	}
+	result, err := adapter.Apply(
+		context.Background(),
+		PlannedResourceAction{
+			OperationID: "op-delete", DesiredResourceID: "service",
+			RealizedResourceID: realized.ID, Action: ReconcileDelete,
+		},
+		nil,
+		&realized,
+	)
+	if err != nil {
+		t.Fatalf("ambiguous delete escaped as generic retryable error: %v", err)
+	}
+	if result.Outcome != InfrastructureApplyUnknown || result.Realized != nil {
+		t.Fatalf("result=%+v", result)
+	}
+	if result.ExternalOperation == nil ||
+		result.ExternalOperation.ExternalID != "sandbox-1" ||
+		result.ExternalOperation.LookupKind != "nanovms-sandbox" {
+		t.Fatalf("missing exact sandbox reconciliation identity: %+v", result.ExternalOperation)
+	}
+	if transport.stops != 1 {
+		t.Fatalf("stops=%d want 1", transport.stops)
+	}
+}
