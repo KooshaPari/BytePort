@@ -55,7 +55,7 @@ func (f *fixtureInfrastructureAdapter) Apply(
 			Provider:          f.caps.Provider,
 			ExternalID:        "ext-" + desired.ID,
 		}
-		return InfrastructureApplyResult{Realized: &out}, nil
+		return InfrastructureApplyResult{Outcome: InfrastructureApplyRealized, Realized: &out}, nil
 
 	case ReconcileUpdate, ReconcileReplace:
 		if desired == nil || realized == nil {
@@ -63,7 +63,7 @@ func (f *fixtureInfrastructureAdapter) Apply(
 		}
 		out := *realized
 		out.DesiredResourceID = desired.ID
-		return InfrastructureApplyResult{Realized: &out}, nil
+		return InfrastructureApplyResult{Outcome: InfrastructureApplyRealized, Realized: &out}, nil
 
 	case ReconcileDelete:
 		if realized == nil {
@@ -71,6 +71,7 @@ func (f *fixtureInfrastructureAdapter) Apply(
 		}
 		f.deleteSawNilDesired = desired == nil
 		return InfrastructureApplyResult{
+			Outcome: InfrastructureApplyRealized,
 			ExternalOperation: &ExternalOperationRef{
 				Provider:   f.caps.Provider,
 				TargetID:   f.caps.TargetID,
