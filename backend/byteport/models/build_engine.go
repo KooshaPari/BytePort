@@ -31,3 +31,8 @@ type BuildEngine interface {
 	Capabilities(context.Context) BuildEngineCapabilities
 	Build(context.Context, BuildRequest) (BuildResult, error)
 }
+
+
+type BuildArtifactResolver interface {
+	ResolveBuildArtifact(context.Context, BuildArtifactID) (BuildArtifact, bool, error)
+}
