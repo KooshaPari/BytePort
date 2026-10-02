@@ -137,6 +137,9 @@ func (a NanoVMSInfrastructureAdapter) Apply(
 		if desired == nil || realized != nil {
 			return InfrastructureApplyResult{}, fmt.Errorf("NanoVMS CREATE requires desired state only")
 		}
+		if action.OperationID == "" {
+			return InfrastructureApplyResult{}, fmt.Errorf("NanoVMS CREATE requires runtime operation identity")
+		}
 		if desired.Target != a.TargetID {
 			return InfrastructureApplyResult{}, fmt.Errorf("NanoVMS CREATE target mismatch")
 		}
@@ -157,7 +160,7 @@ func (a NanoVMSInfrastructureAdapter) Apply(
 		sandbox, err := a.Transport.Deploy(ctx, NanoVMSDeployRequest{
 			Name:         desired.ID,
 			Image:        artifact.ImmutableRef,
-			OperationID:  action.DesiredResourceID,
+			OperationID:  string(action.OperationID),
 			ResourceID:   desired.ID,
 			ConfigDigest: desired.ConfigDigest,
 		})
@@ -169,7 +172,7 @@ func (a NanoVMSInfrastructureAdapter) Apply(
 					ExternalOperation: &ExternalOperationRef{
 						Provider:   a.Provider,
 						TargetID:   a.TargetID,
-						ExternalID: action.DesiredResourceID,
+						ExternalID: string(action.OperationID),
 						LookupKind: "byteport-operation",
 					},
 				}, nil
@@ -191,6 +194,9 @@ func (a NanoVMSInfrastructureAdapter) Apply(
 	case ReconcileDelete:
 		if realized == nil {
 			return InfrastructureApplyResult{}, fmt.Errorf("NanoVMS DELETE requires exact realized state")
+		}
+		if action.OperationID == "" {
+			return InfrastructureApplyResult{}, fmt.Errorf("NanoVMS DELETE requires runtime operation identity")
 		}
 		if realized.TargetID != a.TargetID || realized.Provider != a.Provider ||
 			realized.ExternalID == "" {
