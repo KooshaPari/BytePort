@@ -265,6 +265,49 @@ func reconcileOnceWithTargetAdapter(
 				err,
 			)
 		}
+		switch result.Outcome {
+		case InfrastructureApplyUnknown:
+			if result.Realized != nil {
+				return InfrastructureExecutionReceipt{}, fmt.Errorf(
+					"UNKNOWN %s %q fabricated realized state",
+					action.Action,
+					action.DesiredResourceID,
+				)
+			}
+			if result.ExternalOperation == nil {
+				return InfrastructureExecutionReceipt{}, fmt.Errorf(
+					"UNKNOWN %s %q lacks reconciliation operation identity",
+					action.Action,
+					action.DesiredResourceID,
+				)
+			}
+		case InfrastructureApplyRealized:
+			switch action.Action {
+			case ReconcileCreate, ReconcileUpdate, ReconcileReplace:
+				if result.Realized == nil {
+					return InfrastructureExecutionReceipt{}, fmt.Errorf(
+						"REALIZED %s %q returned no realized resource",
+						action.Action,
+						action.DesiredResourceID,
+					)
+				}
+			case ReconcileDelete:
+				if result.ExternalOperation == nil {
+					return InfrastructureExecutionReceipt{}, fmt.Errorf(
+						"REALIZED DELETE %q returned no provider operation/resource receipt",
+						action.DesiredResourceID,
+					)
+				}
+			}
+		default:
+			return InfrastructureExecutionReceipt{}, fmt.Errorf(
+				"provider returned invalid apply outcome %q for %s %q",
+				result.Outcome,
+				action.Action,
+				action.DesiredResourceID,
+			)
+		}
+
 		if result.ExternalOperation != nil {
 			if result.ExternalOperation.TargetID != targetID {
 				return InfrastructureExecutionReceipt{}, fmt.Errorf(
