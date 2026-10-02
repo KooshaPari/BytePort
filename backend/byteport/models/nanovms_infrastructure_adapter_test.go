@@ -2,6 +2,7 @@ package models
 
 import (
 	"context"
+	"errors"
 	"testing"
 )
 
@@ -237,5 +238,66 @@ func TestNanoVMSLostResponseReconciliationObservesBeforeAnySecondCreate(t *testi
 	}
 	if transport.deploys != 1 {
 		t.Fatalf("delayed visibility caused duplicate deploy: %d", transport.deploys)
+	}
+}
+
+
+type ambiguousNanoVMSTransport struct {
+	deploys int
+}
+
+func (a *ambiguousNanoVMSTransport) Deploy(
+	_ context.Context,
+	_ NanoVMSDeployRequest,
+) (NanoVMSSandbox, error) {
+	a.deploys++
+	return NanoVMSSandbox{}, &NanoVMSOutcomeUnknownError{
+		Operation: "deploy",
+		Cause: errors.New("connection reset after request body sent"),
+	}
+}
+
+func (a *ambiguousNanoVMSTransport) Stop(_ context.Context, _ string) error {
+	return nil
+}
+
+func (a *ambiguousNanoVMSTransport) Observe(
+	_ context.Context,
+	_ string,
+) (NanoVMSSandbox, bool, error) {
+	return NanoVMSSandbox{}, false, nil
+}
+
+func TestNanoVMSAmbiguousCreateReturnsUnknownInsteadOfRetryableGenericError(t *testing.T) {
+	transport := &ambiguousNanoVMSTransport{}
+	adapter := nanoAdapter(transport)
+	artifactID := BuildArtifactID("artifact-1")
+	desired := DesiredResource{
+		ID: "service", Kind: DesiredResourceService,
+		ConfigDigest: "cfg", Target: "local-nanovms",
+		Lifecycle: LifecycleManage, Artifact: &artifactID,
+	}
+	result, err := adapter.Apply(
+		context.Background(),
+		PlannedResourceAction{DesiredResourceID: "service", Action: ReconcileCreate},
+		&desired,
+		nil,
+	)
+	if err != nil {
+		t.Fatalf("ambiguous provider outcome escaped as generic retryable error: %v", err)
+	}
+	if result.Outcome != InfrastructureApplyUnknown {
+		t.Fatalf("outcome=%q want UNKNOWN", result.Outcome)
+	}
+	if result.Realized != nil {
+		t.Fatalf("ambiguous create fabricated realized identity: %+v", result.Realized)
+	}
+	if result.ExternalOperation == nil ||
+		result.ExternalOperation.Provider != "nanovms" ||
+		result.ExternalOperation.TargetID != "local-nanovms" {
+		t.Fatalf("missing reconciliation identity: %+v", result.ExternalOperation)
+	}
+	if transport.deploys != 1 {
+		t.Fatalf("deploys=%d want 1", transport.deploys)
 	}
 }
