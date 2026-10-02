@@ -3,8 +3,10 @@ package routes
 import (
 	"byteport/models"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -60,4 +62,75 @@ func TestDeployPersistsApplyingOperationBeforeProviderTransportFailure(t *testin
 	var op models.RuntimeOperationRecord
 	if err:=models.DB.First(&op,"id = ?","op-lost").Error;err!=nil{t.Fatal(err)}
 	if op.State!=models.RuntimeOperationUnknown { t.Fatalf("state=%s want UNKNOWN",op.State) }
+}
+
+
+func TestDeploySuccessfulButMalformedProviderResponseRemainsUnknown(t *testing.T) {
+	testDB(t)
+	alice := models.User{UUID: "alice-uuid"}
+	old := nvmsHTTPClient
+	nvmsHTTPClient = &http.Client{Transport: recoveryRoundTripperFunc(func(*http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusCreated,
+			Body:       io.NopCloser(strings.NewReader("{not-json")),
+			Header:     make(http.Header),
+		}, nil
+	})}
+	t.Cleanup(func() { nvmsHTTPClient = old })
+
+	w := httptest.NewRecorder()
+	DeployProject(handlerContext(w, "/deploy", `{"operation_id":"op-malformed-success","name":"app","platform":"linux"}`, alice, true))
+	if w.Code != http.StatusInternalServerError {
+		t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
+	}
+
+	var op models.RuntimeOperationRecord
+	if err := models.DB.First(&op, "id = ?", "op-malformed-success").Error; err != nil {
+		t.Fatal(err)
+	}
+	if op.State != models.RuntimeOperationUnknown {
+		t.Fatalf("state=%s want UNKNOWN", op.State)
+	}
+	if op.ProviderResourceID != "" {
+		t.Fatalf("malformed response fabricated provider identity %q", op.ProviderResourceID)
+	}
+}
+
+func TestDeploySuccessfulResponseWithoutSandboxIDRemainsUnknown(t *testing.T) {
+	testDB(t)
+	alice := models.User{UUID: "alice-uuid"}
+	old := nvmsHTTPClient
+	nvmsHTTPClient = &http.Client{Transport: recoveryRoundTripperFunc(func(*http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusCreated,
+			Body:       io.NopCloser(strings.NewReader(`{"name":"app","status":"running"}`)),
+			Header:     make(http.Header),
+		}, nil
+	})}
+	t.Cleanup(func() { nvmsHTTPClient = old })
+
+	w := httptest.NewRecorder()
+	DeployProject(handlerContext(w, "/deploy", `{"operation_id":"op-missing-id","name":"app","platform":"linux"}`, alice, true))
+	if w.Code != http.StatusInternalServerError {
+		t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
+	}
+
+	var op models.RuntimeOperationRecord
+	if err := models.DB.First(&op, "id = ?", "op-missing-id").Error; err != nil {
+		t.Fatal(err)
+	}
+	if op.State != models.RuntimeOperationUnknown {
+		t.Fatalf("state=%s want UNKNOWN", op.State)
+	}
+	if op.ProviderResourceID != "" {
+		t.Fatalf("missing provider ID fabricated identity %q", op.ProviderResourceID)
+	}
+
+	var projects int64
+	if err := models.DB.Model(&models.Project{}).Where("owner = ?", alice.UUID).Count(&projects).Error; err != nil {
+		t.Fatal(err)
+	}
+	if projects != 0 {
+		t.Fatalf("ambiguous provider success persisted %d project rows", projects)
+	}
 }
