@@ -46,10 +46,6 @@ type NanoVMSSandbox struct {
 // NanoVMSInfrastructureAdapter is a candidate production-adapter boundary.
 // It is not wired into /deploy yet: artifact authority and production
 // destructive authorization remain separate gates.
-type BuildArtifactResolver interface {
-	ResolveBuildArtifact(context.Context, BuildArtifactID) (BuildArtifact, bool, error)
-}
-
 type NanoVMSInfrastructureAdapter struct {
 	Transport NanoVMSTransport
 	Artifacts BuildArtifactResolver
