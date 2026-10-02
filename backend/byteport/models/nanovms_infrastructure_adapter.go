@@ -2,6 +2,7 @@ package models
 
 import (
 	"context"
+	"errors"
 	"fmt"
 )
 
@@ -13,6 +14,20 @@ type NanoVMSTransport interface {
 	Stop(context.Context, string) error
 	Observe(context.Context, string) (NanoVMSSandbox, bool, error)
 }
+
+// NanoVMSOutcomeUnknownError means the transport cannot determine whether a
+// mutation reached/committed at the provider. Callers must reconcile rather
+// than blindly retry the mutation.
+type NanoVMSOutcomeUnknownError struct {
+	Operation string
+	Cause     error
+}
+
+func (e *NanoVMSOutcomeUnknownError) Error() string {
+	return fmt.Sprintf("NanoVMS %s outcome unknown: %v", e.Operation, e.Cause)
+}
+
+func (e *NanoVMSOutcomeUnknownError) Unwrap() error { return e.Cause }
 
 type NanoVMSDeployRequest struct {
 	Name          string
@@ -147,6 +162,18 @@ func (a NanoVMSInfrastructureAdapter) Apply(
 			ConfigDigest: desired.ConfigDigest,
 		})
 		if err != nil {
+			var unknown *NanoVMSOutcomeUnknownError
+			if errors.As(err, &unknown) {
+				return InfrastructureApplyResult{
+					Outcome: InfrastructureApplyUnknown,
+					ExternalOperation: &ExternalOperationRef{
+						Provider:   a.Provider,
+						TargetID:   a.TargetID,
+						ExternalID: action.DesiredResourceID,
+						LookupKind: "byteport-operation",
+					},
+				}, nil
+			}
 			return InfrastructureApplyResult{}, err
 		}
 		if sandbox.ID == "" {
