@@ -12,7 +12,15 @@ type InfrastructureObservation struct {
 	RawRef string `json:"raw_ref,omitempty"`
 }
 
+type InfrastructureApplyOutcome string
+
+const (
+	InfrastructureApplyRealized InfrastructureApplyOutcome = "REALIZED"
+	InfrastructureApplyUnknown InfrastructureApplyOutcome = "UNKNOWN"
+)
+
 type InfrastructureApplyResult struct {
+	Outcome InfrastructureApplyOutcome `json:"outcome,omitempty"`
 	Realized *RealizedResource `json:"realized_resource,omitempty"`
 	ExternalOperation *ExternalOperationRef `json:"external_operation,omitempty"`
 	Observation *InfrastructureObservation `json:"observation,omitempty"`
