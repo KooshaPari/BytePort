@@ -70,6 +70,7 @@ const (
 )
 
 type PlannedResourceAction struct {
+	OperationID RuntimeOperationID `json:"operation_id,omitempty"`
 	DesiredResourceID string `json:"desired_resource_id"`
 	RealizedResourceID string `json:"realized_resource_id,omitempty"`
 	Action ReconciliationAction `json:"action"`
