@@ -74,7 +74,7 @@ func TestNanoVMSAdapterCreateRequiresImmutableArtifact(t *testing.T) {
 	}
 	_, err := adapter.Apply(
 		context.Background(),
-		PlannedResourceAction{DesiredResourceID: "service", Action: ReconcileCreate},
+		PlannedResourceAction{OperationID: "op-create", DesiredResourceID: "service", Action: ReconcileCreate},
 		&desired,
 		nil,
 	)
@@ -96,7 +96,7 @@ func TestNanoVMSAdapterCreateUsesArtifactDigestAndPreservesProviderIdentity(t *t
 	}
 	result, err := adapter.Apply(
 		context.Background(),
-		PlannedResourceAction{DesiredResourceID: "service", Action: ReconcileCreate},
+		PlannedResourceAction{OperationID: "op-create", DesiredResourceID: "service", Action: ReconcileCreate},
 		&desired,
 		nil,
 	)
@@ -124,7 +124,8 @@ func TestNanoVMSAdapterDeleteRequiresExactProviderIdentityBeforeStop(t *testing.
 	_, err := adapter.Apply(
 		context.Background(),
 		PlannedResourceAction{
-			DesiredResourceID: "service", RealizedResourceID: "r", Action: ReconcileDelete,
+			OperationID: "op-delete", DesiredResourceID: "service",
+			RealizedResourceID: "r", Action: ReconcileDelete,
 		},
 		nil,
 		&wrong,
@@ -210,7 +211,7 @@ func TestNanoVMSLostResponseReconciliationObservesBeforeAnySecondCreate(t *testi
 	// after persisting the external sandbox identity into its operation journal.
 	create, err := adapter.Apply(
 		context.Background(),
-		PlannedResourceAction{DesiredResourceID: "service", Action: ReconcileCreate},
+		PlannedResourceAction{OperationID: "op-create", DesiredResourceID: "service", Action: ReconcileCreate},
 		&desired,
 		nil,
 	)
@@ -279,7 +280,7 @@ func TestNanoVMSAmbiguousCreateReturnsUnknownInsteadOfRetryableGenericError(t *t
 	}
 	result, err := adapter.Apply(
 		context.Background(),
-		PlannedResourceAction{DesiredResourceID: "service", Action: ReconcileCreate},
+		PlannedResourceAction{OperationID: "op-create", DesiredResourceID: "service", Action: ReconcileCreate},
 		&desired,
 		nil,
 	)
