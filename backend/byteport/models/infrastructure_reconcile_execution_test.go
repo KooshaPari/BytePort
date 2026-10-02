@@ -494,3 +494,131 @@ func TestProviderBackedReconcileRejectsWrongTargetObservationBeforePlanning(t *t
 		t.Fatalf("wrong-target observation caused %d mutations", len(adapter.applied))
 	}
 }
+
+
+type invalidApplyOutcomeAdapter struct {
+	caps   TargetCapabilities
+	result InfrastructureApplyResult
+}
+
+func (a *invalidApplyOutcomeAdapter) Capabilities(
+	_ context.Context,
+	_ string,
+) (TargetCapabilities, error) {
+	return a.caps, nil
+}
+
+func (a *invalidApplyOutcomeAdapter) Observe(
+	_ context.Context,
+	_ RealizedResource,
+) (InfrastructureObservation, error) {
+	return InfrastructureObservation{}, fmt.Errorf("unexpected observe")
+}
+
+func (a *invalidApplyOutcomeAdapter) Apply(
+	_ context.Context,
+	_ PlannedResourceAction,
+	_ *DesiredResource,
+	_ *RealizedResource,
+) (InfrastructureApplyResult, error) {
+	return a.result, nil
+}
+
+func oneCreateGraph() DesiredResourceGraph {
+	return DesiredResourceGraph{
+		ID: "g-invalid-outcome",
+		Resources: []DesiredResource{{
+			ID:           "service",
+			Kind:         DesiredResourceService,
+			ConfigDigest: "v1",
+			Target:       "target-1",
+			Lifecycle:    LifecycleManage,
+		}},
+	}
+}
+
+func TestProviderBackedReconcileRejectsUnknownWithFabricatedRealizedState(t *testing.T) {
+	adapter := &invalidApplyOutcomeAdapter{
+		caps: fullFixtureCapabilities(),
+		result: InfrastructureApplyResult{
+			Outcome: InfrastructureApplyUnknown,
+			Realized: &RealizedResource{
+				ID:                "fabricated",
+				DesiredResourceID: "service",
+				TargetID:          "target-1",
+				Provider:          "fixture",
+				ExternalID:        "ext",
+			},
+			ExternalOperation: &ExternalOperationRef{
+				Provider: "fixture", TargetID: "target-1",
+				ExternalID: "op-1", LookupKind: "operation",
+			},
+		},
+	}
+	_, err := ReconcileOnceWithTargetAdapterOperation(
+		context.Background(),
+		"runtime-op",
+		oneCreateGraph(),
+		nil,
+		map[string]RealizedResource{},
+		ReconciliationPolicy{},
+		nil,
+		"target-1",
+		adapter,
+	)
+	if err == nil {
+		t.Fatal("UNKNOWN outcome with realized state was accepted")
+	}
+}
+
+func TestProviderBackedReconcileRejectsUnknownWithoutReconciliationIdentity(t *testing.T) {
+	adapter := &invalidApplyOutcomeAdapter{
+		caps: fullFixtureCapabilities(),
+		result: InfrastructureApplyResult{
+			Outcome: InfrastructureApplyUnknown,
+		},
+	}
+	_, err := ReconcileOnceWithTargetAdapterOperation(
+		context.Background(),
+		"runtime-op",
+		oneCreateGraph(),
+		nil,
+		map[string]RealizedResource{},
+		ReconciliationPolicy{},
+		nil,
+		"target-1",
+		adapter,
+	)
+	if err == nil {
+		t.Fatal("UNKNOWN outcome without external operation identity was accepted")
+	}
+}
+
+func TestProviderBackedReconcileRejectsMissingApplyOutcome(t *testing.T) {
+	adapter := &invalidApplyOutcomeAdapter{
+		caps: fullFixtureCapabilities(),
+		result: InfrastructureApplyResult{
+			Realized: &RealizedResource{
+				ID:                "real-service",
+				DesiredResourceID: "service",
+				TargetID:          "target-1",
+				Provider:          "fixture",
+				ExternalID:        "ext-service",
+			},
+		},
+	}
+	_, err := ReconcileOnceWithTargetAdapterOperation(
+		context.Background(),
+		"runtime-op",
+		oneCreateGraph(),
+		nil,
+		map[string]RealizedResource{},
+		ReconciliationPolicy{},
+		nil,
+		"target-1",
+		adapter,
+	)
+	if err == nil {
+		t.Fatal("missing apply outcome was accepted")
+	}
+}
