@@ -33,7 +33,7 @@ func TestNanoVMSHTTPTransportDeployObserveStopExactIdentity(t *testing.T) {
 				}
 			}
 			w.WriteHeader(http.StatusCreated)
-			_, _ = w.Write([]byte(`{"id":"sandbox-1","name":"service","status":"running"}`))
+			_, _ = w.Write([]byte(`{"id":"sandbox-1","name":"service","status":"running","labels":{"byteport-config-digest":"cfg-1"}}`))
 		case r.Method == http.MethodGet && r.URL.Path == "/v1/sandboxes/sandbox-1":
 			_, _ = w.Write([]byte(
 				`{"id":"sandbox-1","name":"service","status":"running","labels":{"byteport-config-digest":"cfg-1"}}`,
