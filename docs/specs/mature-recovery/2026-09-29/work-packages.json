@@ -315,7 +315,7 @@
       ],
       "merge_gate": "BLOCKED",
       "blocked_by": [
-        "generalized adapter + HTTP lifecycle exact integration receipt",
+        "exact CI receipt for generalized adapter + HTTP lifecycle and ambiguous DELETE",
         "production /deploy routing remains on legacy handler",
         "production destructive execution remains gated by exact provider authorization",
         "network/security authority unresolved"
@@ -331,7 +331,7 @@
         "unknown observation fixture",
         "destruction safety fixture"
       ],
-      "qualification": "QUALIFIED reference/provider-fixture + generalized NanoVMS HTTP transport on exact candidate 55512980de366cfdfc4803d924d4d873d3b2b93d. BytePort Mature Recovery Oracle run 37041079674 PASS including job 110951073565 'B08 generalized NanoVMS HTTP transport'; Contract Integrity 37041079475 PASS; Artifact Chain 37041079328 PASS; Build Prototype 37041079633 PASS; Quality Gate 37041079683 PASS. Production /deploy replacement and destructive production authority remain explicitly unqualified."
+      "qualification": "Previously qualified reference/provider-fixture and generalized NanoVMS HTTP transport. Current candidate adds full generalized adapter+HTTP CREATE/OBSERVE/restart-NOOP/exact-DELETE lifecycle and maps ambiguous destructive stop to UNKNOWN with exact sandbox reconciliation identity. Exact candidate a108a3c60874b5782090426f0886a05c77715ede pending."
     },
     {
       "id": "BP-WP-B09",
