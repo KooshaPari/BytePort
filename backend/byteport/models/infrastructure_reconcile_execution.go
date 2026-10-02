@@ -2,6 +2,7 @@ package models
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 )
 
@@ -61,6 +62,21 @@ func ReconcileOnceWithTargetAdapterOperation(
 	return reconcileOnceWithTargetAdapter(
 		ctx, operationID, graph, observed, realized, policy, interruptions, targetID, adapter,
 	)
+}
+
+func deriveActionOperationID(
+	root RuntimeOperationID,
+	action PlannedResourceAction,
+) RuntimeOperationID {
+	payload := fmt.Sprintf(
+		"%s\x00%s\x00%s\x00%s",
+		root,
+		action.Action,
+		action.DesiredResourceID,
+		action.RealizedResourceID,
+	)
+	sum := sha256.Sum256([]byte(payload))
+	return RuntimeOperationID(fmt.Sprintf("%s:%x", root, sum[:8]))
 }
 
 func reconcileOnceWithTargetAdapter(
@@ -131,7 +147,7 @@ func reconcileOnceWithTargetAdapter(
 		for i := range plan.Actions {
 			switch plan.Actions[i].Action {
 			case ReconcileCreate, ReconcileUpdate, ReconcileReplace, ReconcileDelete:
-				plan.Actions[i].OperationID = operationID
+				plan.Actions[i].OperationID = deriveActionOperationID(operationID, plan.Actions[i])
 			}
 		}
 	}
