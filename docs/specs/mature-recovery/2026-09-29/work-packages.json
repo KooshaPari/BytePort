@@ -315,7 +315,8 @@
       ],
       "merge_gate": "BLOCKED",
       "blocked_by": [
-        "production NanoVMS HTTP transport wiring remains separate",
+        "exact CI receipt for generalized NanoVMS HTTP transport candidate",
+        "production /deploy routing remains on legacy handler",
         "production destructive execution remains gated by exact provider authorization",
         "network/security authority unresolved"
       ],
@@ -330,7 +331,7 @@
         "unknown observation fixture",
         "destruction safety fixture"
       ],
-      "qualification": "QUALIFIED on exact candidate f2d07a3408521ec18e0b62c0d31b952ddef3fd8c: BytePort Mature Recovery Oracle run 37020430727 PASS; Mature Recovery Contract Integrity 37020429356 PASS; Mature Recovery Artifact Chain 37020430210 PASS; Build Prototype 37020429529 PASS; Quality Gate 37020429634 PASS; Benchmarks 37020429469 PASS. Ordinary CI product gates Go test/build/vet/golangci-lint also PASS in run 37020429789; gofmt/pre-commit hygiene remains separately red. Qualification covers reference/provider-fixture reconciliation, exact identity preflight, UNKNOWN dependency blocking, partial receipts, artifact lineage, restart NOOP, exact authorized DELETE, and stable distinct per-mutation operation identity; it does not qualify production HTTP adapter wiring or destructive production authority."
+      "qualification": "QUALIFIED on exact candidate f2d07a3408521ec18e0b62c0d31b952ddef3fd8c: BytePort Mature Recovery Oracle run 37020430727 PASS; Mature Recovery Contract Integrity 37020429356 PASS; Mature Recovery Artifact Chain 37020430210 PASS; Build Prototype 37020429529 PASS; Quality Gate 37020429634 PASS; Benchmarks 37020429469 PASS. Ordinary CI product gates Go test/build/vet/golangci-lint also PASS in run 37020429789; gofmt/pre-commit hygiene remains separately red. Qualification covers reference/provider-fixture reconciliation, exact identity preflight, UNKNOWN dependency blocking, partial receipts, artifact lineage, restart NOOP, exact authorized DELETE, and stable distinct per-mutation operation identity; it does not qualify production HTTP adapter wiring or destructive production authority. Post-qualification follow-on adds a generalized NanoVMS HTTP transport candidate with exact identity/observation/ambiguity controls; this follow-on is pending its own exact run and does not invalidate the qualified reference/provider-fixture slice."
     },
     {
       "id": "BP-WP-B09",
