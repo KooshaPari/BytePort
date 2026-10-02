@@ -832,3 +832,76 @@ func TestLaterWrongRealizedIdentityFailsBeforeAnyProviderMutation(t *testing.T) 
 		t.Fatalf("preflight failure fabricated execution history: %+v", receipt.Executions)
 	}
 }
+
+
+func TestRootOperationDerivesStableDistinctMutationIDs(t *testing.T) {
+	root := RuntimeOperationID("root-operation")
+	first := PlannedResourceAction{
+		DesiredResourceID: "network",
+		Action:            ReconcileCreate,
+	}
+	second := PlannedResourceAction{
+		DesiredResourceID: "service",
+		Action:            ReconcileCreate,
+	}
+
+	firstID := deriveActionOperationID(root, first)
+	if firstID == "" || firstID == root {
+		t.Fatalf("first child operation ID was not derived: %q", firstID)
+	}
+	if again := deriveActionOperationID(root, first); again != firstID {
+		t.Fatalf("same mutation derived unstable operation IDs: %q vs %q", firstID, again)
+	}
+	secondID := deriveActionOperationID(root, second)
+	if secondID == firstID {
+		t.Fatalf("distinct mutations collided on operation ID %q", firstID)
+	}
+
+	replace := PlannedResourceAction{
+		DesiredResourceID:  "service",
+		RealizedResourceID: "real-service",
+		Action:             ReconcileReplace,
+	}
+	if replaceID := deriveActionOperationID(root, replace); replaceID == secondID {
+		t.Fatalf("create and replace identities collided: %q", replaceID)
+	}
+}
+
+func TestMultiResourceExecutionNeverReusesProviderOperationID(t *testing.T) {
+	graph := DesiredResourceGraph{
+		ID: "g-operation-identity",
+		Resources: []DesiredResource{
+			{
+				ID: "network", Kind: DesiredResourceNetwork, ConfigDigest: "net-v1",
+				Target: "target-1", Lifecycle: LifecycleManage,
+			},
+			{
+				ID: "service", Kind: DesiredResourceService, ConfigDigest: "svc-v1",
+				Target: "target-1", Lifecycle: LifecycleManage,
+			},
+		},
+	}
+	adapter := &sequencedApplyAdapter{caps: fullFixtureCapabilities()}
+	receipt, err := ReconcileOnceWithTargetAdapterOperation(
+		context.Background(),
+		"root-operation",
+		graph,
+		nil,
+		map[string]RealizedResource{},
+		ReconciliationPolicy{},
+		nil,
+		"target-1",
+		adapter,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(receipt.Executions) != 2 {
+		t.Fatalf("executions=%+v", receipt.Executions)
+	}
+	first := receipt.Executions[0].Action.OperationID
+	second := receipt.Executions[1].Action.OperationID
+	if first == "" || second == "" || first == second {
+		t.Fatalf("provider mutation operation IDs are not distinct: %q %q", first, second)
+	}
+}
