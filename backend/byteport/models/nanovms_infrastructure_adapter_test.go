@@ -5,6 +5,18 @@ import (
 	"testing"
 )
 
+type fakeArtifactResolver struct {
+	artifacts map[BuildArtifactID]BuildArtifact
+}
+
+func (f fakeArtifactResolver) ResolveBuildArtifact(
+	_ context.Context,
+	id BuildArtifactID,
+) (BuildArtifact, bool, error) {
+	artifact, ok := f.artifacts[id]
+	return artifact, ok, nil
+}
+
 type fakeNanoVMSTransport struct {
 	deploys []NanoVMSDeployRequest
 	stops   []string
@@ -40,8 +52,15 @@ func (f *fakeNanoVMSTransport) Observe(
 func nanoAdapter(transport NanoVMSTransport) NanoVMSInfrastructureAdapter {
 	return NanoVMSInfrastructureAdapter{
 		Transport: transport,
-		TargetID:  "local-nanovms",
-		Provider:  "nanovms",
+		Artifacts: fakeArtifactResolver{artifacts: map[BuildArtifactID]BuildArtifact{
+			"artifact-1": {
+				ID: "artifact-1",
+				ImmutableRef: "sha256:abc",
+				MediaKind: "oci-image",
+			},
+		}},
+		TargetID: "local-nanovms",
+		Provider: "nanovms",
 	}
 }
 
@@ -72,7 +91,7 @@ func TestNanoVMSAdapterCreateUsesArtifactDigestAndPreservesProviderIdentity(t *t
 	desired := DesiredResource{
 		ID: "service", Kind: DesiredResourceService,
 		ConfigDigest: "cfg", Target: "local-nanovms", Lifecycle: LifecycleManage,
-		Artifact: &ArtifactReference{Digest: "sha256:abc"},
+		Artifact: func() *BuildArtifactID { id := BuildArtifactID("artifact-1"); return &id }(),
 	}
 	result, err := adapter.Apply(
 		context.Background(),
