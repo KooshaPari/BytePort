@@ -4,13 +4,13 @@ import { API_PORT, ApiError, apiFetch, apiUrl, getApiBaseUrl, isBackendReachable
 const fetchMock = vi.fn();
 
 describe('getApiBaseUrl', () => {
+	afterEach(() => {
+		delete (globalThis as Record<string, unknown>).window;
+	});
+
 	it('falls back to localhost outside Tauri', () => {
 		// Vitest runs in node: no window, so no Tauri internals to detect.
 		expect(getApiBaseUrl()).toBe(`http://localhost:${API_PORT}`);
-	});
-
-	afterEach(() => {
-		delete (globalThis as Record<string, unknown>).window;
 	});
 
 	it('uses the Android emulator host loopback inside Tauri on android', () => {
