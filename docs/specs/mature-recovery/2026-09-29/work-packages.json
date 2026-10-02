@@ -315,7 +315,7 @@
       ],
       "merge_gate": "BLOCKED",
       "blocked_by": [
-        "exact CI receipt for operation-bound disposable snapshot-to-destroy lifecycle",
+        "exact CI receipt for identity-preflight/dependency/partial-receipt executor controls",
         "production NanoVMS HTTP transport wiring remains separate",
         "production destructive execution remains gated by exact provider authorization",
         "network/security authority unresolved"
@@ -331,7 +331,7 @@
         "unknown observation fixture",
         "destruction safety fixture"
       ],
-      "qualification": "REFERENCE + PROVIDER-FIXTURE QUALIFIED on a9b0749b3146400934b09237ab625d0952692ae4/run 36927029714; current candidate adds explicit RuntimeOperationID binding, artifact-manifest lineage validation, ambiguity-safe NanoVMS CREATE, restart NOOP, and exact authorized disposable DELETE pending exact run"
+      "qualification": "REFERENCE + PROVIDER-FIXTURE previously qualified; current candidate additionally preflights all realized identities before mutation, distinguishes attempted from applied UNKNOWN outcomes, blocks dependents on unresolved prerequisites, preserves partial execution receipts, and keeps malformed/identity-less provider success UNKNOWN. Exact current-candidate CI pending."
     },
     {
       "id": "BP-WP-B09",
