@@ -203,6 +203,18 @@ func (a NanoVMSInfrastructureAdapter) Apply(
 			)
 		}
 		if err := a.Transport.Stop(ctx, realized.ExternalID); err != nil {
+			var unknown *NanoVMSOutcomeUnknownError
+			if errors.As(err, &unknown) {
+				return InfrastructureApplyResult{
+					Outcome: InfrastructureApplyUnknown,
+					ExternalOperation: &ExternalOperationRef{
+						Provider:   a.Provider,
+						TargetID:   a.TargetID,
+						ExternalID: realized.ExternalID,
+						LookupKind: "nanovms-sandbox",
+					},
+				}, nil
+			}
 			return InfrastructureApplyResult{}, err
 		}
 		return InfrastructureApplyResult{
