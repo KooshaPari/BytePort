@@ -29,7 +29,9 @@ func (f *fakeNanoVMSTransport) Deploy(
 	req NanoVMSDeployRequest,
 ) (NanoVMSSandbox, error) {
 	f.deploys = append(f.deploys, req)
-	sandbox := NanoVMSSandbox{ID: "sandbox-1", Name: req.Name, Status: "running"}
+	sandbox := NanoVMSSandbox{
+		ID: "sandbox-1", Name: req.Name, Status: "running", ConfigDigest: req.ConfigDigest,
+	}
 	if f.seen == nil {
 		f.seen = map[string]NanoVMSSandbox{}
 	}
@@ -179,7 +181,9 @@ func (d *delayedNanoVMSTransport) Deploy(
 ) (NanoVMSSandbox, error) {
 	d.deploys++
 	if d.sandbox.ID == "" {
-		d.sandbox = NanoVMSSandbox{ID: "sandbox-delayed", Name: "service", Status: "running"}
+		d.sandbox = NanoVMSSandbox{
+			ID: "sandbox-delayed", Name: "service", Status: "running", ConfigDigest: "cfg",
+		}
 	}
 	return d.sandbox, nil
 }
