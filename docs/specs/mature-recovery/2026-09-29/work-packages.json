@@ -313,7 +313,8 @@
       ],
       "merge_gate": "BLOCKED",
       "blocked_by": [
-        "production NanoVMS transport wiring remains separate from fixture-qualified adapter",
+        "exact CI receipt for post-qualification NanoVMS adapter and ambiguous-create controls",
+        "production NanoVMS HTTP transport wiring remains separate",
         "production destructive execution remains gated by exact provider authorization",
         "network/security authority unresolved"
       ],
@@ -328,7 +329,7 @@
         "unknown observation fixture",
         "destruction safety fixture"
       ],
-      "qualification": "REFERENCE + PROVIDER-FIXTURE QUALIFIED on a9b0749b3146400934b09237ab625d0952692ae4/run 36927029714; post-qualification NanoVMS adapter candidate adds immutable BuildArtifact resolution, exact identity guards, and delayed-visibility/no-duplicate-create oracle pending exact run"
+      "qualification": "REFERENCE + PROVIDER-FIXTURE QUALIFIED on a9b0749b3146400934b09237ab625d0952692ae4/run 36927029714; current candidate adds typed immutable-artifact resolution, delayed-visibility no-duplicate-create, and explicit UNKNOWN outcome for ambiguous NanoVMS CREATE, pending exact run"
     },
     {
       "id": "BP-WP-B09",
