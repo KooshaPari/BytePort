@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- ci: drop `--legacy-peer-deps` from all workflows and `Taskfile.yml` (plain
+  `npm ci --ignore-scripts` verified clean) — reverses the earlier decision
+  recorded below; and untrack `frontend/web/.history` (2,765 snapshot files,
+  already root-gitignored).
+- test: wire `vitest@5` + `@vitest/coverage-v8` with a real `test:` script and
+  54 service-layer tests (97.61% lines); activate the Tier-2 `Service/E2E
+  coverage (≥60%)` check to read `target/coverage-service/coverage-summary.json`
+  and fail hard when missing (previously skipped, then parsing a shape that
+  never existed).
+- fix(ci): clear all 6 high `npm audit` findings (`devalue` override
+  5.9.2 → 5.9.4, `brace-expansion`/`joi` advisory fixes) — `npm audit` gate
+  reports `found 0 vulnerabilities`; repair Storybook 10 peer deps
+  (`build-storybook` succeeds) and remove `|| echo 'no tests yet'` self-masks.
+- build: pin `rust-toolchain.toml` to `1.99.0` — tracking rolling `stable`
+  made rustup swap components in place on runners and fail with
+  `rustfmt-preview ... conflict bin/cargo-fmt` inside `pre-commit`'s
+  cargo-clippy hook.
+- chore: apply pinned `ruff-format` (v0.6.9) to `scripts/doctor.py` and
+  `scripts/scorecard_ci.py`; move a mid-block `afterEach` in
+  `api.test.ts` (Sonar `typescript:S8782`); SonarCloud old-code issues
+  47 → 0, quality gate OK on all five conditions.
 - ci: scope the Tier-0 `Go fmt` check and the `pre-commit` (auto + manual)
   jobs to the PR diff (`git diff --name-only $BASE...$HEAD`) on `pull_request`
   events. On `push` events to `main` (or any branch fallback) they still run
