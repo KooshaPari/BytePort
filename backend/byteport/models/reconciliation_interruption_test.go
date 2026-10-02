@@ -196,27 +196,32 @@ func TestApplyingBeforeOutcomeResolutionAlsoFailsClosed(t *testing.T) {
 	}
 }
 
-
+// Names are retained for the existing explicit oracle selection. A provider
+// receipt that is not an exact match must not clear the product-journal barrier.
 func TestInterruptedCreateWithContradictoryExternalTargetIsNotExactMatch(t *testing.T) {
 	graph := DesiredResourceGraph{ID: "g", Resources: []DesiredResource{{
 		ID: "db", Kind: DesiredResourceManaged, ConfigDigest: "v1",
 		Target: "prod", Lifecycle: LifecycleManage,
 	}}}
-	plan, err := PlanReconciliationWithInterruptions(
-		graph, nil, ReconciliationPolicy{},
-		[]InterruptedResourceOperation{{
-			OperationID: "op-contradictory", DesiredResourceID: "db",
-			TargetID: "prod", Provider: "fixture",
-			Action: ReconcileCreate, State: RuntimeOperationUnknown,
-			ExternalOperation: &ExternalOperationRef{
-				Provider: "fixture", TargetID: "staging",
-				ExternalID: "provider-op-1", LookupKind: "operation",
-			},
-		}},
-	)
-	if err != nil { t.Fatal(err) }
-	if plan.Actions[0].Action != ReconcileCreate {
-		t.Fatalf("contradictory external target incorrectly matched exact interruption: %v", plan.Actions[0])
+	for _, state := range []RuntimeOperationState{RuntimeOperationApplying, RuntimeOperationUnknown, RuntimeOperationReconciling} {
+		plan, err := PlanReconciliationWithInterruptions(
+			graph, nil, ReconciliationPolicy{},
+			[]InterruptedResourceOperation{{
+				OperationID: "op-contradictory", DesiredResourceID: "db",
+				TargetID: "prod", Provider: "fixture",
+				Action: ReconcileCreate, State: state,
+				ExternalOperation: &ExternalOperationRef{
+					Provider: "fixture", TargetID: "staging",
+					ExternalID: "provider-op-1", LookupKind: "operation",
+				},
+			}},
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(plan.Actions) != 1 || plan.Actions[0].Action != ReconcileUnknown {
+			t.Fatalf("contradictory external target cleared unresolved %s mutation: %v", state, plan.Actions)
+		}
 	}
 }
 
@@ -225,20 +230,24 @@ func TestInterruptedCreateWithContradictoryProviderIsNotExactMatch(t *testing.T)
 		ID: "db", Kind: DesiredResourceManaged, ConfigDigest: "v1",
 		Target: "prod", Lifecycle: LifecycleManage,
 	}}}
-	plan, err := PlanReconciliationWithInterruptions(
-		graph, nil, ReconciliationPolicy{},
-		[]InterruptedResourceOperation{{
-			OperationID: "op-provider-mismatch", DesiredResourceID: "db",
-			TargetID: "prod", Provider: "provider-a",
-			Action: ReconcileCreate, State: RuntimeOperationReconciling,
-			ExternalOperation: &ExternalOperationRef{
-				Provider: "provider-b", TargetID: "prod",
-				ExternalID: "provider-op-2", LookupKind: "operation",
-			},
-		}},
-	)
-	if err != nil { t.Fatal(err) }
-	if plan.Actions[0].Action != ReconcileCreate {
-		t.Fatalf("contradictory provider incorrectly matched exact interruption: %v", plan.Actions[0])
+	for _, state := range []RuntimeOperationState{RuntimeOperationApplying, RuntimeOperationUnknown, RuntimeOperationReconciling} {
+		plan, err := PlanReconciliationWithInterruptions(
+			graph, nil, ReconciliationPolicy{},
+			[]InterruptedResourceOperation{{
+				OperationID: "op-provider-mismatch", DesiredResourceID: "db",
+				TargetID: "prod", Provider: "provider-a",
+				Action: ReconcileCreate, State: state,
+				ExternalOperation: &ExternalOperationRef{
+					Provider: "provider-b", TargetID: "prod",
+					ExternalID: "provider-op-2", LookupKind: "operation",
+				},
+			}},
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(plan.Actions) != 1 || plan.Actions[0].Action != ReconcileUnknown {
+			t.Fatalf("contradictory provider cleared unresolved %s mutation: %v", state, plan.Actions)
+		}
 	}
 }

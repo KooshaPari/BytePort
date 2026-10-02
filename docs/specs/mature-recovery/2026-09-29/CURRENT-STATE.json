@@ -22,14 +22,7 @@
     "BP_B02_PRODUCTION_JOURNAL": "QUALIFIED_RUN_36749551929_JOB_110004908884",
     "BP_B03_SOURCE_MANIFEST": "PROTOTYPE_IMPLEMENTED_EXACT_REF_FREEZE_STRICT_MANIFEST_DIGEST_VALIDATION_EXECUTION_PENDING"
   },
-  "blocking_findings": [
-    "BP-F01",
-    "BP-F02",
-    "BP-F03",
-    "BP-F04",
-    "BP-F05",
-    "BP-F06"
-  ],
+  "blocking_findings": ["BP-F01", "BP-F02", "BP-F03", "BP-F04", "BP-F05", "BP-F06"],
   "gates": {
     "source_ledger_resolved": "PASS_3_OPEN",
     "history_alias_falsification": "MULTI_PASS_OPEN",
@@ -62,5 +55,19 @@
     "Close explicit network mode and health/metrics exposure",
     "Advance portfolio projection/publisher experiment"
   ],
-  "pilot": "DEFERRED_UNTIL_BUILT_STAGE; not a substitute for design gate"
+  "pilot": "DEFERRED_UNTIL_BUILT_STAGE; not a substitute for design gate",
+  "latest_repair_review": {
+    "observed_on": "2026-10-02",
+    "reviewed_head": "e3616a4fbd5922aca3e723e8635ce1c5ba3c1564",
+    "run_id": 36994949936,
+    "job_id": 110807014416,
+    "actual_tested_checkout": null,
+    "qualification_status": "CRITICAL_COUNTEREXAMPLE_REPAIRED_FULL_NATIVE_REQUALIFICATION_REQUIRED",
+    "finding": "Contradictory external provider/target metadata cleared the matching unresolved CREATE barrier; prior tests incorrectly required CREATE",
+    "diagnostic_evidence": "Go 1.23.2 extracted-predicate source slice: two adversarial subcases failed before repair; all 3 tests passed after repair with -race",
+    "full_backend_tests": "NOT_RUN_LOCALLY",
+    "live_provider_acceptance": "NOT_QUALIFIED",
+    "ci_maintenance": "offline cancellation safety tests passed; remote cancellation not yet observed",
+    "report": "REPAIR-2026-10-02.md"
+  }
 }

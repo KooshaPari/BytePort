@@ -39,21 +39,10 @@ func interruptionMatchesAction(
 		return false
 	}
 
-	// If an external provider operation is known, its target must agree with
-	// the product journal. A contradictory receipt is itself ambiguous and
-	// cannot authorize a blind retry or be treated as an exact match.
-	if interruption.ExternalOperation != nil {
-		if interruption.ExternalOperation.TargetID != "" &&
-			interruption.ExternalOperation.TargetID != interruption.TargetID {
-			return false
-		}
-		if interruption.Provider != "" &&
-			interruption.ExternalOperation.Provider != "" &&
-			interruption.ExternalOperation.Provider != interruption.Provider {
-			return false
-		}
-	}
-
+	// This predicate identifies a safety barrier, not trusted external metadata.
+	// Once the product journal matches an unresolved mutation, contradictory
+	// provider metadata cannot make repeating that mutation safe.
+	// Keep the raw contradiction for investigation; never turn it into CREATE.
 	if action.Action == ReconcileReplace {
 		return action.RealizedResourceID != "" &&
 			interruption.RealizedResourceID == action.RealizedResourceID
