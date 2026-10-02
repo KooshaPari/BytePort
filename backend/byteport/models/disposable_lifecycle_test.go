@@ -140,9 +140,10 @@ SERVICES:
 		Provider:  "nanovms",
 	}
 
+	createRoot := RuntimeOperationID("runtime-create-e2e")
 	createReceipt, err := ReconcileOnceWithTargetAdapterOperation(
 		ctx,
-		"runtime-create-e2e",
+		createRoot,
 		graph,
 		nil,
 		map[string]RealizedResource{},
@@ -158,15 +159,22 @@ SERVICES:
 		t.Fatalf("create executions=%v", createReceipt.Executions)
 	}
 	createExecution := createReceipt.Executions[0]
+	expectedCreateOperation := deriveActionOperationID(
+		createRoot,
+		PlannedResourceAction{
+			DesiredResourceID: graph.Resources[0].ID,
+			Action:            ReconcileCreate,
+		},
+	)
 	if createExecution.Action.Action != ReconcileCreate ||
-		createExecution.Action.OperationID != "runtime-create-e2e" ||
+		createExecution.Action.OperationID != expectedCreateOperation ||
 		createExecution.ApplyResult == nil ||
 		createExecution.ApplyResult.Outcome != InfrastructureApplyRealized ||
 		createExecution.ApplyResult.Realized == nil {
 		t.Fatalf("create execution=%+v", createExecution)
 	}
 	if len(transport.deploys) != 1 ||
-		transport.deploys[0].OperationID != "runtime-create-e2e" ||
+		transport.deploys[0].OperationID != string(expectedCreateOperation) ||
 		transport.deploys[0].Image != "sha256:e2e" {
 		t.Fatalf("deploy receipt=%+v", transport.deploys)
 	}
@@ -245,9 +253,10 @@ SERVICES:
 		}},
 	}
 
+	deleteRoot := RuntimeOperationID("runtime-delete-e2e")
 	deleteReceipt, err := ReconcileOnceWithTargetAdapterOperation(
 		ctx,
-		"runtime-delete-e2e",
+		deleteRoot,
 		DesiredResourceGraph{
 			ID:       graph.ID + ":removed",
 			Manifest: graph.Manifest,
@@ -262,9 +271,17 @@ SERVICES:
 	if err != nil {
 		t.Fatal(err)
 	}
+	expectedDeleteOperation := deriveActionOperationID(
+		deleteRoot,
+		PlannedResourceAction{
+			DesiredResourceID:  graph.Resources[0].ID,
+			RealizedResourceID: realized.ID,
+			Action:             ReconcileDelete,
+		},
+	)
 	if len(deleteReceipt.Plan.Actions) != 1 ||
 		deleteReceipt.Plan.Actions[0].Action != ReconcileDelete ||
-		deleteReceipt.Plan.Actions[0].OperationID != "runtime-delete-e2e" {
+		deleteReceipt.Plan.Actions[0].OperationID != expectedDeleteOperation {
 		t.Fatalf("delete plan=%+v", deleteReceipt.Plan.Actions)
 	}
 	if len(transport.stops) != 1 || transport.stops[0] != realized.ExternalID {
