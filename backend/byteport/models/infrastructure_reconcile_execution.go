@@ -22,12 +22,49 @@ type InfrastructureExecutionReceipt struct {
 	Executions   []InfrastructureActionExecution
 }
 
-// ReconcileOnceWithTargetAdapter is a bounded provider-backed B08 experiment.
-// It uses the canonical checked/interruption-aware planner, constrains that plan
-// to one explicit target, then invokes only actions the plan actually
-// authorized. UNKNOWN and NOOP never cause provider mutation.
+// ReconcileOnceWithTargetAdapter is the operation-neutral fixture entrypoint.
+// It is retained for pure/provider-fixture qualification where no durable
+// mutation journal is being asserted.
 func ReconcileOnceWithTargetAdapter(
 	ctx context.Context,
+	graph DesiredResourceGraph,
+	observed []ObservedResourceState,
+	realized map[string]RealizedResource,
+	policy ReconciliationPolicy,
+	interruptions []InterruptedResourceOperation,
+	targetID string,
+	adapter InfrastructureTargetAdapter,
+) (InfrastructureExecutionReceipt, error) {
+	return reconcileOnceWithTargetAdapter(
+		ctx, "", graph, observed, realized, policy, interruptions, targetID, adapter,
+	)
+}
+
+// ReconcileOnceWithTargetAdapterOperation binds one explicit durable runtime
+// operation identity to every provider mutation in this reconciliation pass.
+// Pure planning never invents this identity.
+func ReconcileOnceWithTargetAdapterOperation(
+	ctx context.Context,
+	operationID RuntimeOperationID,
+	graph DesiredResourceGraph,
+	observed []ObservedResourceState,
+	realized map[string]RealizedResource,
+	policy ReconciliationPolicy,
+	interruptions []InterruptedResourceOperation,
+	targetID string,
+	adapter InfrastructureTargetAdapter,
+) (InfrastructureExecutionReceipt, error) {
+	if operationID == "" {
+		return InfrastructureExecutionReceipt{}, fmt.Errorf("runtime operation ID is required")
+	}
+	return reconcileOnceWithTargetAdapter(
+		ctx, operationID, graph, observed, realized, policy, interruptions, targetID, adapter,
+	)
+}
+
+func reconcileOnceWithTargetAdapter(
+	ctx context.Context,
+	operationID RuntimeOperationID,
 	graph DesiredResourceGraph,
 	observed []ObservedResourceState,
 	realized map[string]RealizedResource,
@@ -88,6 +125,15 @@ func ReconcileOnceWithTargetAdapter(
 		return InfrastructureExecutionReceipt{}, err
 	}
 	plan = ConstrainPlanToTarget(plan, caps)
+
+	if operationID != "" {
+		for i := range plan.Actions {
+			switch plan.Actions[i].Action {
+			case ReconcileCreate, ReconcileUpdate, ReconcileReplace, ReconcileDelete:
+				plan.Actions[i].OperationID = operationID
+			}
+		}
+	}
 
 	desiredByID := make(map[string]DesiredResource, len(graph.Resources))
 	for _, desired := range graph.Resources {
