@@ -155,6 +155,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   worklog data, not source), and the `eyJhbGciOiJIUzI1NiIs...` placeholder
   in `API_REFERENCE.md`. Verified locally: gitleaks 8.30 against the full
   483-commit history reports 0 leaks, 222MB scanned.
+- deps(frontend): add npm `overrides` for `postcss-selector-parser` (^7.1.6)
+  and `source-map-js` (^1.2.2) in `frontend/web/package.json`. Closes the
+  pre-existing 3 `npm audit (frontend/web)` findings (1 high source-map-js
+  event-loop DoS, 2 moderate postcss-selector-parser quadratic-complexity
+  CPU exhaustion) that re-broke the Audit workflow on every push to main.
+  The `overrides` approach forces every transitive copy of these packages
+  to a safe version, so upstream packages that pinned to vulnerable ranges
+  (`@tailwindcss/typography` 0.5.5+, etc.) get the fixed copy without
+  forcing a top-level downgrade. Verified: `npm audit` reports 0
+  vulnerabilities; svelte-check 0 errors / 0 warnings; vitest 54/54 pass.
 
 - test(go): dedupe `backend/byteport/routes/loadtest_test.go` (201 → 160 lines)
   by extracting two helpers into a new
