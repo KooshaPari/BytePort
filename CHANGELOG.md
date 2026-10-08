@@ -133,6 +133,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   a single `if !bindJSON(c, &req, "") { return }` line.
 ### Fixed
 
+- ci(audit,security-scan): fix `cargo-audit` 403 "Resource not accessible by
+  integration" on the weekly cron. Root cause: `rustsec/audit-check@v2` posts
+  GitHub issues when advisories are found on `schedule` events, but neither
+  workflow granted `issues: write`. Added the permission and an `ignore:`
+  field carrying the 17 RUSTSEC IDs already justified in `deny.toml` plus
+  2 more (RUSTSEC-2024-0429 glib unsound, RUSTSEC-2026-0190 anyhow
+  downcast_mut) so the cron doesn't flood the issue tracker with re-posted
+  unmaintained warnings. Verified locally: `cargo audit --ignore RUSTSEC-...`
+  with the 19 IDs returns 0 vulnerabilities, 0 warnings, exit 0. Closes the
+  red scheduled runs observed Oct 3/5/7 (`37112275774`, `37302783988`,
+  `37617710714`) and the Oct 5 Security Scan failure (`37303263760`).
+- ci(gitleaks): rewrite `.gitleaks.toml` to use global `paths` allowlists
+  instead of `targetRules`-scoped ones. The old scope missed the `private-key`
+  rule (tripped on `target/debug/deps/*.rmeta` build artefacts containing
+  PKCS#8 docstring literals) and any future uncatalogued rule. New allowlists
+  cover: `.history/` (139 historical findings in 3 Aug 2024 commits), the
+  full-history `byteport-ghkey.pem` (operator-gated rotation tracked in
+  handover §6), `docs/sessions/20260914-integration-evidence/INTEGRATION_EVIDENCE.md`
+  (operator-gated 64-hex token), `docs/worklogs/data/` (observational
+  worklog data, not source), and the `eyJhbGciOiJIUzI1NiIs...` placeholder
+  in `API_REFERENCE.md`. Verified locally: gitleaks 8.30 against the full
+  483-commit history reports 0 leaks, 222MB scanned.
+
 - test(go): dedupe `backend/byteport/routes/loadtest_test.go` (201 → 160 lines)
   by extracting two helpers into a new
   `backend/byteport/routes/helpers_test.go` (43 lines):
