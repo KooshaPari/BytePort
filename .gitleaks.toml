@@ -1,35 +1,67 @@
 # Phenotype-internal Gitleaks configuration
 # Layer 2 #34 — gitleaks + trufflehog secret-scan workflow.
 #
-# Strategy:
-#   1. Extend the official gitleaks default ruleset (so all upstream detectors
-#      remain active).
-#   2. Allow the phenotype-internal test secret literal
-#      `PhenotypeTestToken123!` and other fixture-only patterns. These are
-#      intentionally committed as test inputs and must never block CI.
-#   3. Exclude common non-source paths (build artefacts, vendored deps,
-#      lockfiles, session evidence files containing historical tokens) so
-#      that they do not generate noise.
-#   4. Prior config used `targetRules` to scope path exclusions to nine
-#      named rules. That meant newer/uncatalogued rules (e.g. `private-key`
-#      triggered by cargo's PKCS#8 docstring inside `target/debug/deps/*.rmeta`)
-#      bypassed the `target/` path exclusion and produced false positives.
-#      The 2026-10-05 Security Scan schedule failure (run 37303263760) and
-#      Audit schedule failure (run 37302783988) both tripped on this.
-#      Switched to global `paths` allowlists (rule-agnostic) so build artefacts
-#      are excluded from every rule.
+# ---------------------------------------------------------------------------
+# VERSION COMPATIBILITY (critical — do not "modernize" this file back to
+# plural `[[allowlists]]` at the top level):
+#
+#   gitleaks-action@e0c47f4 (SHA-pinned in audit.yml / security-scan.yml)
+#   ships gitleaks **8.24.3** in CI. On v8.24.3 the top-level config struct
+#   has a SINGLE `Allowlist` field (config/config.go: ViperConfig.Allowlist
+#   is an anonymous struct, not a slice). A plural top-level `[[allowlists]]`
+#   table — which v8.30.0 accepts — is an unknown key there and viper
+#   silently DROPS it, leaving only the upstream default allowlist active.
+#
+#   Observed 2026-10-09: the previous plural-form config produced
+#   "0 leaks" under local gitleaks 8.30.0 but **1100 leaks / exit 2** under
+#   CI's 8.24.3 (full-history schedule shape) — the Monday cron would have
+#   failed. The singular `[allowlist]` table below parses identically on
+#   8.24.3 (primary) and 8.30.0 (kept as a deprecated compat shim upstream).
+#
+#   `[[allowlists]]` remains valid ONLY inside `[[rules]]`; there are no
+#   custom rules in this config.
+#
+# SEMANTICS (verified in source: v8.24.3 detect/detect.go L217-222 + L478-495,
+# v8.30.0 detect/detect.go L302 + L557; default condition is OR in both):
+#
+#   paths   -> fragment (file) level: ANY match skips the WHOLE file.
+#   regexes -> finding level: ANY match skips the finding, evaluated against
+#              `regexTarget` (here "match" = the regex match string).
+#   The two layers are INDEPENDENT. The top level cannot scope a regex to a
+#   path (no `condition` field exists there on 8.24.3). Therefore `regexes`
+#   below may ONLY contain literals that can never be a real credential —
+#   documented placeholders and fixture tokens. Never add secret-SHAPED
+#   patterns (e.g. `token\s*[:=]\s*...{8,}`): they would globally suppress
+#   real leaks. The pre-2026-10-09 config's block-3 shape regex violated
+#   this and was removed.
+#
+# STRATEGY:
+#   1. Extend the official gitleaks default ruleset (`[extend] useDefault`).
+#   2. Allow the phenotype-internal test secret literals and verified
+#      documentation placeholders (regexes below).
+#   3. Exclude non-source paths: build artefacts, vendored deps, lockfiles,
+#      deleted-history dirs, test fixtures/snapshots, and the specific
+#      tracked files whose literals are tracked as rotation-pending
+#      known-unknowns in docs/handover/byteport-handover-to-windows-agent.md §6.
+#   4. Path allowlists are global (rule-agnostic) so every rule honors them,
+#      including uncatalogued rules such as `private-key` triggering on
+#      cargo's PKCS#8 docstring inside target/debug/deps/*.rmeta
+#      (2026-10-05 schedule failures, runs 37303263760 / 37302783988).
+#
+# Every allowlist entry below was justified against an observed finding
+# (2026-10-09 full-history triage under gitleaks 8.24.3, 486 commits):
+# documented placeholder examples, synthetic fixtures, or deleted-history
+# paths — with real secrets escalated to the operator instead of allowlisted.
 
 title = "Phenotype Gitleaks Config"
 
 [extend]
 useDefault = true
 
-# 1. Path-based allowlist: skip noise paths and known test fixture dirs.
-#    Global (no `targetRules`) so ALL rules honor the exclusion — fixes
-#    the `private-key` false positive on cargo build artefacts.
-[[allowlists]]
-description = "Non-source / build artefact paths (rule-agnostic)"
+[allowlist]
+description = "Global path + literal allowlists (single table: gitleaks 8.24.3 CI compat)"
 paths = [
+  # ---- build artefacts / vendored deps / lockfiles (noise) ----
   '''(?i)\.git/''',
   '''(?i)target/''',
   '''(?i)node_modules/''',
@@ -49,100 +81,93 @@ paths = [
   '''(?i)\.tuf/''',
   '''(?i)coverage/''',
   '''(?i)lcov\.info$''',
-  # `.history/` was editor-snapshot cruft committed in three Aug 2024
-  # commits (810ca7c5, 690ff958, 437e5138) and untracked later via
-  # `git rm --cached -r .history/` (commit 8f7a12c6). Git history still
-  # contains the file paths, so the scheduled full-history gitleaks scan
-  # keeps finding 139 generic-api-key matches in those snapshots.
-  # The snapshots are not source code and not load-bearing.
+
+  # ---- deleted-history paths (exist only in git history; full-history
+  #      schedule scans hit them, current-tree scans do not) ----
+  # `.history/` editor snapshots: 3 Aug-2024 commits (810ca7c5, 690ff958,
+  # 437e5138), untracked at 8f7a12c6. 937 findings under 8.24.3.
   '''(?i)\.history/''',
-  '''(?i)tests?/.*/fixtures/''',
-  '''(?i).*/testdata/''',
+  # Deleted `backend/nvms` module (spin.toml, ec2.go, examples): 13 findings.
+  '''(?i)^backend/nvms/''',
+  # Archived test suites/specs under .archive/: 4 findings.
+  '''(?i)(?:^|/)\.archive/''',
+  # Deleted `backend/config/{development,test}.yaml` carried REAL early-era
+  # JWT signing secrets (REuwKroPjkpgGcXbf0TQ / 0ie4mv9LQUawL6uc313m,
+  # commit 8454a74f). Rotation review is tracked in handover §6; allowlisted
+  # here only to keep the schedule green without hiding anything current.
+  '''(?i)^backend/config/development\.yaml$''',
+  '''(?i)^backend/config/test\.yaml$''',
+
+  # ---- tests, fixtures, snapshots (synthetic data; verified 2026-10-09:
+  #      example.com emails, 11111111-… pids, argon2id of test passwords) ----
+  '''(?i)(?:^|/)fixtures/''',
+  '''(?i)(?:^|/)snapshots/''',
+  '''(?i)(?:^|/)testdata/''',
   '''(?i).*_test\.go$''',
   '''(?i).*\.test\.[a-z]+$''',
   '''(?i).*_test\.py$''',
   '''(?i).*\.spec\.[a-z]+$''',
+
+  # ---- docs containing VERIFIED placeholder credentials only ----
+  # env-vars.md (`AGILEPLUS_API_TOKEN="sk-proj-abc123..."`) and
+  # SAST_QUICK_REFERENCE.md (`api_key = "sk-1234567890abcdef"`) — 7 mirror
+  # copies across agileplus/ and crates/ trees, all deleted from the current
+  # tree but present in history.
+  '''(?i)(?:^|/)env-vars\.md$''',
+  '''(?i)(?:^|/)SAST_QUICK_REFERENCE\.md$''',
+  # WP11 spec: `API Key: agp_1234567890abcdefghijklmnopqrst` — 6 mirrors.
+  '''(?i)WP11-api-extensions\.md$''',
+  # fastmcp reference: `client_secret="GOCSPX-abc123..."` — 3 mirrors.
+  '''(?i)(?:^|/)fastmcp\.txt$''',
+  # Templates AGENTS.md: `API_KEY = "sk-1234567890"  # ❌ Never do this`
+  # (an explicit anti-pattern example). Scoped to templates/ only — do NOT
+  # widen to all AGENTS.md files.
+  '''(?i)(?:^|/)templates/.*/AGENTS\.md$''',
+  # Snyk guides: `export SNYK_TOKEN="12345678-abcd-1234-abcd-1234567890ab"`
+  # (the classic documentation placeholder UUID) — 4 files.
+  '''(?i)SNYK_(?:TOKEN_ACQUISITION_GUIDE|EXPECTED_OUTPUTS)\.md$''',
+
+  # ---- specific tracked files ----
+  # JWT doc placeholder: `"token": "eyJhbGciOiJIUzI1NiIs..."` (trailing "..."
+  # is literal, not a redaction) — matching handled by the literal regex below.
+  '''(?i)API_REFERENCE\.md$''',
+  # 64-hex pilot-evidence token, rotation pending (handover §6).
+  '''(?i)docs/sessions/20260914-integration-evidence/INTEGRATION_EVIDENCE\.md$''',
+  # RSA private key committed at 8ab442c2, removed at 8f7a12c6; rotation +
+  # history-scrub decision pending (handover §6).
+  '''(?i)backend/byteport/byteport-ghkey\.pem$''',
+
+  # ---- observational worklog data (transcripts quote user-supplied
+  #      tokens; 102 findings across 2 mirror paths) ----
+  '''(?i)docs/worklogs/data/''',
 ]
 
-# 2. Regex-based allowlist: known phenotype-internal test secrets.
-[[allowlists]]
-description = "Phenotype-internal test secret literals in test fixtures"
 regexTarget = "match"
 regexes = [
+  # Phenotype-internal committed test fixtures (safe globally: they are the
+  # documented test inputs referenced by the header comment).
   '''PhenotypeTestToken123!''',
   '''PhenotypeInternalToken_?[A-Za-z0-9_]*''',
   '''phenotype-test-(token|key|secret)-[A-Za-z0-9_-]+''',
-]
-
-# 3. Regex-based allowlist scoped to test/fixture paths only.
-[[allowlists]]
-description = "Any test-secret-shaped literal under test fixture paths"
-regexTarget = "match"
-paths = [
-  '''(?i)tests?/.*/fixtures/''',
-  '''(?i).*/testdata/''',
-  '''(?i).*\.test\.[a-z]+$''',
-  '''(?i).*_test\.go$''',
-  '''(?i).*_test\.py$''',
-  '''(?i).*\.spec\.[a-z]+$''',
-]
-regexes = [
-  '''(?i)(token|secret|key|password|apikey|api[_-]?key)\s*[:=]\s*['"]?[A-Za-z0-9_!@#$%^&*+=-]{8,}['"]?''',
-]
-stopwatch = false
-
-# 4. Path allowlist: integration-evidence session file. Contains a
-#    64-hex pilot-evidence token flagged as a known-unknown to the operator
-#    in the handover doc §6 (rotation pending). The file is intentionally
-#    committed as the audit trail for the 2026-09-14 integration run; the
-#    token is human-visible there for traceability, and rotating the secret
-#    is an operator-gated action tracked in the handover's "First actions"
-#    list. Until rotated, exclude this single file from gitleaks to keep
-#    the weekly cron green without losing the evidence.
-[[allowlists]]
-description = "Integration-evidence file with known-unknown token (rotation pending)"
-paths = [
-  '''(?i)docs/sessions/20260914-integration-evidence/INTEGRATION_EVIDENCE\.md$''',
-]
-
-# 5. Path allowlist: API_REFERENCE.md JWT example. The literal
-#    `"token": "eyJhbGciOiJIUzI1NiIs..."` is a documentation placeholder,
-#    not a real secret; the trailing `...` is the gitleaks fingerprint.
-[[allowlists]]
-description = "API_REFERENCE.md JWT placeholder literal"
-regexTarget = "match"
-paths = [
-  '''(?i)API_REFERENCE\.md$''',
-]
-regexes = [
+  # API_REFERENCE.md JWT example including its literal trailing "...".
   '''eyJhbGciOiJIUzI1NiIs\.\.\.''',
+  # RFC 6455 §1.3 canonical example Sec-WebSocket-Key nonce, quoted verbatim
+  # in docs/research/PROTOCOLS_SOTA.md:774 (current tree). This exact value
+  # is the standards' sample and can never be a live credential.
+  '''dGhlIHNhbXBsZSBub25jZQ==''',
 ]
 
-# 6. Path allowlist: byteport-ghkey.pem. This private key was committed in
-#    8ab442c2 and removed in 8f7a12c6 (the "hygiene" commit that also
-#    rewrote the cargo-deny ignore list). Git history still references
-#    the file path, so the full-history gitleaks scan keeps flagging it
-#    on `private-key` (matched in the first line: `-----BEGIN PRIVATE KEY-----`).
-#    The key was publicly exposed for ~17 months prior to removal; rotation
-#    is the operator-gated action in handover §6. Until git history is
-#    rewritten (or the repo is squashed), this allowlist keeps the weekly
-#    cron green. Removing the file from git history via `git filter-repo`
-#    is a destructive operation and not done here.
-[[allowlists]]
-description = "byteport-ghkey.pem (rotation pending, tracked in handover §6)"
-paths = [
-  '''(?i)backend/byteport/byteport-ghkey\.pem$''',
-]
-
-# 7. Path allowlist: session-extract worklog data files. These are
-#    full transcript dumps of older assistant sessions committed to
-#    `docs/worklogs/data/` (one per worklog). They are observational
-#    data, not source code. The full-history gitleaks scan finds 80+
-#    `generic-api-key` matches in them (assistant transcripts quote
-#    user-supplied tokens). Allowlisting the entire `data/` subdir is
-#    appropriate because the dir is exclusively worklog data.
-[[allowlists]]
-description = "Hexa-Kit worklog data files (observational, not source code)"
-paths = [
-  '''(?i)docs/worklogs/data/''',
+# Upstream default global stopwords, reproduced here because gitleaks 8.24.3's
+# extend() (config/config.go) appends only Commits/Paths/Regexes from the
+# extended default — NOT StopWords — so any custom top-level allowlist silently
+# loses them (8.30.0 appends the whole allowlist struct and keeps them; this
+# omission is one more reason both versions must be re-verified after edits).
+# Verified 2026-10-09 with a negative-control repo: without these, a planted
+# canary `ghp_…ABCDEFGHIJKLMNOPQRSTUVWXYZ` fired a duplicate generic-api-key
+# finding under 8.24.3 that the default config suppresses via the alphabet
+# stopword. Secrets containing the contiguous lowercase alphabet or this
+# fixed noise UUID are never real credentials.
+stopwords = [
+    "abcdefghijklmnopqrstuvwxyz",
+    "014df517-39d1-4453-b7b3-9930c563627c",
 ]

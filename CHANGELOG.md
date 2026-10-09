@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- ci(gitleaks): rewrite `.gitleaks.toml` to the singular top-level `[allowlist]`
+  form — gitleaks 8.24.3 (the version shipped by the SHA-pinned
+  `gitleaks-action`) silently discards a plural top-level `[[allowlists]]`
+  table, so the 2026-10-08 config rewrite validated as 0 leaks under local
+  gitleaks 8.30.0 but would have produced **1100 leaks / exit 2** on the
+  Monday full-history schedule run. Also: remove the block-3 secret-SHAPED
+  regex that would have globally suppressed real `token=…` findings under
+  OR semantics (top-level regexes cannot be path-scoped on 8.24.3), restore
+  the two upstream default `stopwords` that 8.24.3's `extend()` drops for
+  any custom config, and add path allowlists for deleted-history dirs
+  (`backend/nvms/`, `.archive/`, fixture/snapshot/doc-placeholder paths)
+  after a file-by-file triage of all 1100 findings. Verified under **both**
+  gitleaks 8.24.3 and 8.30.0 on the full 486-commit/222MB history (0 leaks,
+  exit 0) plus a negative-control repo (planted ghp_/xoxb-/PEM canaries all
+  caught, exact parity with upstream default). Two newly surfaced real
+  secrets in history (`backend/config/{development,test}.yaml` JWT signing
+  secrets, commit `8454a74f`) are escalated for rotation in the handover
+  §6 rather than silently hidden.
+
 ### Changed
 
 - ci: drop `--legacy-peer-deps` from all workflows and `Taskfile.yml` (plain
