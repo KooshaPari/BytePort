@@ -2,6 +2,8 @@ module byteport
 
 go 1.26.0
 
+toolchain go1.26.9
+
 require (
 	aidanwoods.dev/go-paseto v1.6.0
 	github.com/aws/aws-sdk-go v1.55.8
