@@ -33,7 +33,7 @@ jobs:
           cache-dependency-path: frontend/web/package-lock.json
 
       - name: Install
-        run: npm ci --ignore-scripts --legacy-peer-deps
+        run: npm ci --ignore-scripts
 
       - name: Install Playwright
         run: ./node_modules/.bin/playwright install --with-deps chromium

@@ -516,21 +516,15 @@ def _render_markdown(report, threshold) -> None:
         f"**Score:** {report['score']}/{report['total']} ({report['percentage']:.1f}%)\n"
     )
     if report["skipped"]:
-        print(
-            f"**Skipped:** {report['skipped']} enterprise pillars (excluded)\n"
-        )
+        print(f"**Skipped:** {report['skipped']} enterprise pillars (excluded)\n")
     print(f"**Threshold:** {threshold}\n")
-    print(
-        f"**Status:** {'PASS' if report['score'] >= threshold else 'FAIL'}\n"
-    )
+    print(f"**Status:** {'PASS' if report['score'] >= threshold else 'FAIL'}\n")
     print("## Results\n| ID | Pillar | Status |\n|---|--------|--------|")
     for r in report["results"]:
         if r.get("excluded"):
             print(f"| {r['id']} | {r['name']} | SKIP (enterprise) |")
         else:
-            print(
-                f"| {r['id']} | {r['name']} | {'PASS' if r['passed'] else 'FAIL'} |"
-            )
+            print(f"| {r['id']} | {r['name']} | {'PASS' if r['passed'] else 'FAIL'} |")
 
 
 def _render_text(report, threshold) -> None:
@@ -561,7 +555,6 @@ def _render_report(report, args) -> None:
 
 
 def main():
-
     parser = argparse.ArgumentParser(description="88-Pillar Scorecard Audit v2")
     parser.add_argument("path", help="Path to repository")
     parser.add_argument(
@@ -590,8 +583,6 @@ def main():
     exclude = list(args.exclude)
     if args.exclude_enterprise:
         exclude.extend(ENTERPRISE_EXCLUDE)
-
-
 
     try:
         report = audit_repo(args.path, exclude=exclude)

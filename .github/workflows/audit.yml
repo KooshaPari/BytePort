@@ -99,9 +99,18 @@ jobs:
     name: cargo-audit
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # `issues: write` is required so rustsec/audit-check can post an issue
+    # when it finds a new advisory. Without it, the action errors out
+    # with "Resource not accessible by integration" and the schedule fails
+    # every Monday (observed 2026-10-05: runs 37112275774 + 37302783988).
+    # `ignore:` carries the 17 RUSTSEC IDs from `deny.toml` (already
+    # justified there) plus 2 more (glib unsound, anyhow downcast_mut)
+    # so the weekly cron doesn't flood the issue tracker with re-posted
+    # warnings. Any *new* advisory (not in this list) will still surface.
     permissions:
       contents: read
       checks: write
+      issues: write
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -109,6 +118,7 @@ jobs:
         uses: rustsec/audit-check@69366f33c96575abad1ee0dba8212993eecbe998 # v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          ignore: 'RUSTSEC-2024-0370,RUSTSEC-2024-0411,RUSTSEC-2024-0412,RUSTSEC-2024-0413,RUSTSEC-2024-0414,RUSTSEC-2024-0415,RUSTSEC-2024-0416,RUSTSEC-2024-0417,RUSTSEC-2024-0418,RUSTSEC-2024-0419,RUSTSEC-2024-0420,RUSTSEC-2024-0429,RUSTSEC-2025-0057,RUSTSEC-2025-0075,RUSTSEC-2025-0080,RUSTSEC-2025-0081,RUSTSEC-2025-0098,RUSTSEC-2025-0100,RUSTSEC-2026-0190'
 
   # ---------- Cargo semver ----------
   cargo-semver:
@@ -146,7 +156,7 @@ jobs:
           cache-dependency-path: frontend/web/package-lock.json
       - name: Install dependencies (npm ci)
         working-directory: frontend/web
-        run: npm ci --ignore-scripts --no-audit --no-fund --legacy-peer-deps
+        run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Run npm audit (high+ only)
         working-directory: frontend/web
         run: npm audit --audit-level=high
@@ -164,7 +174,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: '1.25'
+          go-version: '1.26.9'
           cache-dependency-path: |
             backend/byteport/go.sum
       - name: Run govulncheck (byteport)

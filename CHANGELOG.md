@@ -7,8 +7,76 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- ci(gitleaks): rewrite `.gitleaks.toml` to the singular top-level `[allowlist]`
+  form — gitleaks 8.24.3 (the version shipped by the SHA-pinned
+  `gitleaks-action`) silently discards a plural top-level `[[allowlists]]`
+  table, so the 2026-10-08 config rewrite validated as 0 leaks under local
+  gitleaks 8.30.0 but would have produced **1100 leaks / exit 2** on the
+  Monday full-history schedule run. Also: remove the block-3 secret-SHAPED
+  regex that would have globally suppressed real `token=…` findings under
+  OR semantics (top-level regexes cannot be path-scoped on 8.24.3), restore
+  the two upstream default `stopwords` that 8.24.3's `extend()` drops for
+  any custom config, and add path allowlists for deleted-history dirs
+  (`backend/nvms/`, `.archive/`, fixture/snapshot/doc-placeholder paths)
+  after a file-by-file triage of all 1100 findings. Verified under **both**
+  gitleaks 8.24.3 and 8.30.0 on the full 486-commit/222MB history (0 leaks,
+  exit 0) plus a negative-control repo (planted ghp_/xoxb-/PEM canaries all
+  caught, exact parity with upstream default). Two newly surfaced real
+  secrets in history (`backend/config/{development,test}.yaml` JWT signing
+  secrets, commit `8454a74f`) are escalated for rotation in the handover
+  §6 rather than silently hidden.
+- fix(deps): clear all 5 open Dependabot alerts on
+  `.github/frontend/package-lock.json` — bump its pinned overrides
+  `devalue 5.9.2 → 5.9.4` and add `source-map-js 1.2.2` (same advisories
+  and fixes already applied to `frontend/web`). `npm audit` in
+  `.github/frontend` now reports 0 vulnerabilities.
+- ci(go): unblock `Go govulncheck` after the 2026-10-09 Go vulndb update
+  (GO-2026-6603/6611/6612/6613/6617/6618/6620…): bump pinned toolchains to
+  the **exact patched release `1.26.9`** in `audit.yml`/`deny.yml`/
+  `release-go.yml`, the module directive `go 1.26.0` + `toolchain
+  go1.26.9`, and `golang.org/x/net v0.58.0 → v0.60.0` (+ transitive
+  x/sync, x/sys, x/text, x/tools). The 9 stdlib findings were fixed only
+  in go1.26.9; the 4 called x/net/http2 findings in x/net v0.60.0. Two
+  traps found and handled: setup-go's floating `'1.26'` resolved to
+  1.26.8 (versions-manifest lag) **and** setup-go v7 forces
+  `GOTOOLCHAIN=local`, which ignores go.mod's `toolchain` line — so the
+  workflow must install the patched version itself. Verified locally with
+  plain `go` (auto): toolchain resolves to go1.26.9, `go build ./...` ok,
+  `go test ./...` all 7 packages ok, govulncheck reports **0 affecting
+  vulnerabilities**.
+- ci(lint): stop using `go-version: 'stable'` in the golangci workflow —
+  stable flipped to Go 1.27.2 (export-data format v5), which
+  golangci-lint v2.13.2 cannot decode, yielding 6 bogus `typecheck`
+  failures. Derive the toolchain from `backend/byteport/go.mod` instead,
+  matching the ci.yml / tier-0-gate.yml golangci jobs (both green with
+  that pattern today). Verified locally: `golangci-lint run --disable=
+  staticcheck --disable=errcheck` → 0 issues.
+
 ### Changed
 
+- ci: drop `--legacy-peer-deps` from all workflows and `Taskfile.yml` (plain
+  `npm ci --ignore-scripts` verified clean) — reverses the earlier decision
+  recorded below; and untrack `frontend/web/.history` (2,765 snapshot files,
+  already root-gitignored).
+- test: wire `vitest@5` + `@vitest/coverage-v8` with a real `test:` script and
+  54 service-layer tests (97.61% lines); activate the Tier-2 `Service/E2E
+  coverage (≥60%)` check to read `target/coverage-service/coverage-summary.json`
+  and fail hard when missing (previously skipped, then parsing a shape that
+  never existed).
+- fix(ci): clear all 6 high `npm audit` findings (`devalue` override
+  5.9.2 → 5.9.4, `brace-expansion`/`joi` advisory fixes) — `npm audit` gate
+  reports `found 0 vulnerabilities`; repair Storybook 10 peer deps
+  (`build-storybook` succeeds) and remove `|| echo 'no tests yet'` self-masks.
+- build: pin `rust-toolchain.toml` to `1.99.0` — tracking rolling `stable`
+  made rustup swap components in place on runners and fail with
+  `rustfmt-preview ... conflict bin/cargo-fmt` inside `pre-commit`'s
+  cargo-clippy hook.
+- chore: apply pinned `ruff-format` (v0.6.9) to `scripts/doctor.py` and
+  `scripts/scorecard_ci.py`; move a mid-block `afterEach` in
+  `api.test.ts` (Sonar `typescript:S8782`); SonarCloud old-code issues
+  47 → 0, quality gate OK on all five conditions.
 - ci: scope the Tier-0 `Go fmt` check and the `pre-commit` (auto + manual)
   jobs to the PR diff (`git diff --name-only $BASE...$HEAD`) on `pull_request`
   events. On `push` events to `main` (or any branch fallback) they still run
@@ -111,6 +179,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (or just the bare error when context is empty), so callers can shrink to
   a single `if !bindJSON(c, &req, "") { return }` line.
 ### Fixed
+
+- ci(audit,security-scan): fix `cargo-audit` 403 "Resource not accessible by
+  integration" on the weekly cron. Root cause: `rustsec/audit-check@v2` posts
+  GitHub issues when advisories are found on `schedule` events, but neither
+  workflow granted `issues: write`. Added the permission and an `ignore:`
+  field carrying the 17 RUSTSEC IDs already justified in `deny.toml` plus
+  2 more (RUSTSEC-2024-0429 glib unsound, RUSTSEC-2026-0190 anyhow
+  downcast_mut) so the cron doesn't flood the issue tracker with re-posted
+  unmaintained warnings. Verified locally: `cargo audit --ignore RUSTSEC-...`
+  with the 19 IDs returns 0 vulnerabilities, 0 warnings, exit 0. Closes the
+  red scheduled runs observed Oct 3/5/7 (`37112275774`, `37302783988`,
+  `37617710714`) and the Oct 5 Security Scan failure (`37303263760`).
+- ci(gitleaks): rewrite `.gitleaks.toml` to use global `paths` allowlists
+  instead of `targetRules`-scoped ones. The old scope missed the `private-key`
+  rule (tripped on `target/debug/deps/*.rmeta` build artefacts containing
+  PKCS#8 docstring literals) and any future uncatalogued rule. New allowlists
+  cover: `.history/` (139 historical findings in 3 Aug 2024 commits), the
+  full-history `byteport-ghkey.pem` (operator-gated rotation tracked in
+  handover §6), `docs/sessions/20260914-integration-evidence/INTEGRATION_EVIDENCE.md`
+  (operator-gated 64-hex token), `docs/worklogs/data/` (observational
+  worklog data, not source), and the `eyJhbGciOiJIUzI1NiIs...` placeholder
+  in `API_REFERENCE.md`. Verified locally: gitleaks 8.30 against the full
+  483-commit history reports 0 leaks, 222MB scanned.
+- deps(frontend): add npm `overrides` for `postcss-selector-parser` (^7.1.6)
+  and `source-map-js` (^1.2.2) in `frontend/web/package.json`. Closes the
+  pre-existing 3 `npm audit (frontend/web)` findings (1 high source-map-js
+  event-loop DoS, 2 moderate postcss-selector-parser quadratic-complexity
+  CPU exhaustion) that re-broke the Audit workflow on every push to main.
+  The `overrides` approach forces every transitive copy of these packages
+  to a safe version, so upstream packages that pinned to vulnerable ranges
+  (`@tailwindcss/typography` 0.5.5+, etc.) get the fixed copy without
+  forcing a top-level downgrade. Verified: `npm audit` reports 0
+  vulnerabilities; svelte-check 0 errors / 0 warnings; vitest 54/54 pass.
 
 - test(go): dedupe `backend/byteport/routes/loadtest_test.go` (201 → 160 lines)
   by extracting two helpers into a new

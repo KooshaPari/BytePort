@@ -23,7 +23,7 @@ Recommended bootstrap:
 # Run from the repository root. Each cd is independent of the previous one
 # (this block is meant to be copy-pasted line by line, not pasted all at once).
 rustup toolchain install stable --component rustfmt,clippy,rust-src
-(cd frontend/web && npm ci --legacy-peer-deps)
+(cd frontend/web && npm ci --ignore-scripts)
 (cd backend/byteport && go mod download)
 task build                             # build all three engines
 ```
