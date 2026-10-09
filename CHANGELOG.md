@@ -32,6 +32,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `devalue 5.9.2 → 5.9.4` and add `source-map-js 1.2.2` (same advisories
   and fixes already applied to `frontend/web`). `npm audit` in
   `.github/frontend` now reports 0 vulnerabilities.
+- ci(go): unblock `Go govulncheck` after the 2026-10-09 Go vulndb update
+  (GO-2026-6603/6611/6612/6613/6617/6618/6620…): bump pinned toolchains
+  `go-version: '1.25'` → `'1.26'` in `audit.yml`/`deny.yml`/`release-go.yml`,
+  the module directive `go 1.25.0` → `go 1.26.0`, and
+  `golang.org/x/net v0.58.0 → v0.60.0` (+ transitive x/sync, x/sys, x/text,
+  x/tools). The 9 stdlib findings fixed only in go1.26.9; the 4 called
+  x/net/http2 findings fixed in x/net v0.60.0. Verified locally with
+  `GOTOOLCHAIN=go1.26.9`: `go build ./...` ok, `go test ./...` all 7
+  packages ok, govulncheck reports **0 affecting vulnerabilities**.
 
 ### Changed
 
