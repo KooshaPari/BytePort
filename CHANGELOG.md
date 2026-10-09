@@ -46,6 +46,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   plain `go` (auto): toolchain resolves to go1.26.9, `go build ./...` ok,
   `go test ./...` all 7 packages ok, govulncheck reports **0 affecting
   vulnerabilities**.
+- ci(lint): stop using `go-version: 'stable'` in the golangci workflow —
+  stable flipped to Go 1.27.2 (export-data format v5), which
+  golangci-lint v2.13.2 cannot decode, yielding 6 bogus `typecheck`
+  failures. Derive the toolchain from `backend/byteport/go.mod` instead,
+  matching the ci.yml / tier-0-gate.yml golangci jobs (both green with
+  that pattern today). Verified locally: `golangci-lint run --disable=
+  staticcheck --disable=errcheck` → 0 issues.
 
 ### Changed
 
