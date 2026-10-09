@@ -22,8 +22,9 @@
 	},
 	"overrides": {
 		"cookie": "0.7.0",
-		"devalue": "5.9.2",
-		"postcss": "8.5.26"
+		"devalue": "5.9.4",
+		"postcss": "8.5.26",
+		"source-map-js": "1.2.2"
 	},
 	"type": "module"
 }

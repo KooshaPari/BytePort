@@ -27,6 +27,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   secrets in history (`backend/config/{development,test}.yaml` JWT signing
   secrets, commit `8454a74f`) are escalated for rotation in the handover
   §6 rather than silently hidden.
+- fix(deps): clear all 5 open Dependabot alerts on
+  `.github/frontend/package-lock.json` — bump its pinned overrides
+  `devalue 5.9.2 → 5.9.4` and add `source-map-js 1.2.2` (same advisories
+  and fixes already applied to `frontend/web`). `npm audit` in
+  `.github/frontend` now reports 0 vulnerabilities.
 
 ### Changed
 
