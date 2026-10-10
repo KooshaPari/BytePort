@@ -2,7 +2,7 @@
 
 Paste everything below this line into the existing BytePort agent on the Windows desktop.
 
-**Last updated 2026-10-09 06:38 PDT by macOS session** (gitleaks CI-compat rewrite + Dependabot-alert fix + Go vulndb/govulncheck fix + lint toolchain fix; HEAD `ac6d3768`, **18/18 push-set workflows green** on that SHA with cargo-deny as the one path-filtered standing-red (fix committed, re-verification armed); 0 open Dependabot alerts. **Pending operator inbox approvals (7 deferrals):** 3× `gh pr merge --squash` (#433/#430/#429), 3× `gh workflow run` (audit.yml, security-scan.yml, cargo-deny.yml), 1× `gh pr comment 431` dependabot-rebase nudge. **Automated Monday verifiers armed:** `sched_8fc315fa` (04:50 UTC, Audit+Security-Scan crons) and `sched_100258b2` (09:30 UTC, cargo-deny cron), both resuming this session with fix-forward steps.)
+**Last updated 2026-10-10 08:55 PDT by macOS session** (state as of writing: HEAD `19e6d8b4` — this document's own commit; **18/18 push-set workflows green** on it with cargo-deny as the one path-filtered standing-red (fix committed, re-verification armed); 0 open Dependabot alerts; both gitleaks versions (8.24.3 CI-pinned + 8.30.0) scan the full 493-commit history at 0 leaks. Always re-check live state with `git log`/`gh run list` — later commits supersede this line. **Pending operator inbox approvals (7 deferrals):** 3× `gh pr merge --squash` (#433/#430/#429), 3× `gh workflow run` (audit.yml, security-scan.yml, cargo-deny.yml), 1× `gh pr comment 431` dependabot-rebase nudge. **Automated Monday verifiers armed:** `sched_8fc315fa` (04:50 UTC, Audit+Security-Scan crons) and `sched_100258b2` (09:30 UTC, cargo-deny cron), both resuming this session with fix-forward steps.)
 
 ---
 
@@ -33,8 +33,8 @@ GitHub: `KooshaPari/BytePort`, project key `KooshaPari_BytePort` (SonarCloud rea
 
 ## 2. Sync state — fully synced
 
-- `origin/main` HEAD = `ac6d3768` "ci(lint): derive golangci toolchain from go.mod…" — same as local `main`. No unpushed commits. No stashes. Working tree clean. **This handover document is committed in-repo at `docs/handover/`** (operator directive 2026-10-09: everything pushed so any agent can resume via GitHub); it travels with the code from now on.
-- Ten commits ahead of `62cf7049` (the prior green-aggregate):
+- `origin/main` HEAD at time of writing = `19e6d8b4` "docs(handover): commit agent-handoff briefing in-repo…" — same as local `main`. No unpushed commits. No stashes. Working tree clean. (The doc commits ITSELF, so the successor commit that carries this text update is the new HEAD — always confirm with `git log`.)
+- Eleven commits ahead of `62cf7049` (the prior green-aggregate):
   | Commit | What |
   |---|---|
   | `dbee5c9b` | CHANGELOG 2026-10-02 phase |
@@ -47,6 +47,7 @@ GitHub: `KooshaPari/BytePort`, project key `KooshaPari_BytePort` (SonarCloud rea
   | `65ee2b3b` | go.mod `toolchain go1.26.9` pin |
   | `d485884e` | setup-go **exact `1.26.9`** at all 4 sites — floating `'1.26'` resolved to vulnerable 1.26.8 AND setup-go v7 forces `GOTOOLCHAIN=local` (ignores go.mod toolchain line) |
   | `ac6d3768` | lint.yml `go-version: 'stable'` → `go-version-file` — stable flipped to Go 1.27.2 whose export-data v5 breaks golangci-lint v2.13.2 (6 bogus typecheck failures) |
+  | `19e6d8b4` | **this handover document** committed in-repo (operator directive 2026-10-09: everything on GitHub for agent resume; sanitized for the public repo — SSH/network block removed, JWT literals redacted) |
 
 ## 3. The six commits that are already pushed and green
 
@@ -261,7 +262,7 @@ gh api repos/KooshaPari/BytePort/commits/main/check-runs?per_page=100 \
 gh pr diff <n>            # or: gh api repos/KooshaPari/BytePort/pulls/<n>/files
 ```
 
-This document (`docs/handover/`) is committed in-repo, so the briefing travels with the code. All commits through `ac6d3768` are pushed; there are **no Mac-only commits** (as of 2026-10-09; if you find one, `git format-patch -1 <sha> --stdout` on the Mac is a tested tiny-transfer path — get Mac SSH details from the operator, they are deliberately not stored in this public repo).
+This document (`docs/handover/`) is committed in-repo, so the briefing travels with the code. All commits through `19e6d8b4` are pushed; there are **no Mac-only commits** (as of 2026-10-10; if you find one, `git format-patch -1 <sha> --stdout` on the Mac is a tested tiny-transfer path — get Mac SSH details from the operator, they are deliberately not stored in this public repo).
 
 **Mac access (optional, operator-mediated).** SSH to the workstation exists but host/IP/key details are NOT recorded here (public repo). Ask the operator in chat; they will provide host, user, and the authorized-key step. When you have it: `ssh -o ServerAliveInterval=30`, one persistent control socket (`ssh -M -S <socket> -fnNT <host>`), never cat large files through the terminal — ask a subagent on the Mac for ≤400-word extracts, `scp` single files, or use `git show <sha>:<path>` piped to a file for exact bytes. Do NOT rsync the 1.9G clone anywhere.
 
