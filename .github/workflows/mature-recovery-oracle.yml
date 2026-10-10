@@ -1,0 +1,205 @@
+name: BytePort Mature Recovery Oracle
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "backend/byteport/routes/recovery_*_test.go"
+      - "backend/byteport/models/**"
+      - "scripts/recovery/**"
+      - "docs/specs/mature-recovery/**"
+      - ".github/workflows/mature-recovery-oracle.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: byteport-mature-recovery-oracle-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  provider-resource-identity:
+    name: BP-F03 provider identity regression
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend/byteport
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: backend/byteport/go.mod
+          cache-dependency-path: backend/byteport/go.sum
+      - name: Require historical counterexample to remain remediated
+        run: go test ./routes -run TestTerminateInstanceUsesPersistedProviderSandboxID -count=1 -v
+
+  persistence-window:
+    name: BP-F04 remote-success local-persistence-failure probe
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend/byteport
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: backend/byteport/go.mod
+          cache-dependency-path: backend/byteport/go.sum
+      - name: Reproduce remote side-effect window
+        run: go test ./routes -run '^TestRecoveryProbeRemoteDeploySurvivesLocalPersistenceFailure$' -count=1 -v
+
+  duplicate-deploy:
+    name: Duplicate deploy operation-identity probe
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend/byteport
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: backend/byteport/go.mod
+          cache-dependency-path: backend/byteport/go.sum
+      - name: Observe repeated request behavior
+        run: go test ./routes -run '^TestRecoveryProbeRepeatedDeployCreatesTwoRemoteOperations$' -count=1 -v
+
+  operation-journal-model:
+    name: BP-AD-01 operation journal executable model
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend/byteport
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: backend/byteport/go.mod
+          cache-dependency-path: backend/byteport/go.sum
+      - name: Validate retry and restart semantics
+        run: go test ./routes -run '^(TestRecoveryOperation|TestRecoveryApplying|TestRecoveryProviderIdentity)' -count=1 -v
+
+# execution-freeze-trigger: 2026-09-30T13
+
+  session-token-expiry:
+    name: Session token expiration oracle
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: backend/byteport
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: backend/byteport/go.mod
+          cache-dependency-path: backend/byteport/go.sum
+      - name: Verify expired session tokens are rejected
+        run: go test ./lib -run '^TestRecoverySessionTokenRejectsExpiredToken$' -count=1 -v
+
+  provider-stop-remediation:
+    name: BP-WP-B01 exact provider-stop remediation
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend/byteport
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: backend/byteport/go.mod
+          cache-dependency-path: backend/byteport/go.sum
+      - name: Exact provider identity and selection controls
+        run: go test ./routes -run '^(TestTerminateInstanceUsesPersistedProviderSandboxID|TestTerminateInstanceStopsOwnProject|TestTerminateInstanceRejectsZeroProviderResources|TestTerminateInstanceRejectsMultipleProviderResources)$' -count=1 -v
+
+  runtime-reconciliation-model:
+    name: B02 runtime reconciliation model
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend/byteport
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: backend/byteport/go.mod
+          cache-dependency-path: backend/byteport/go.sum
+      - name: Lost response delayed visibility and retry
+        run: go test ./models -run '^(TestRecoveryLostCreateResponseReconcilesWithoutSecondMutation|TestRecoveryDelayedVisibilityStaysUnknownUntilObserved|TestRecoveryRetryUsesSameOperationIdentity)$' -count=1 -v
+
+  production-operation-journal:
+    name: B02 production journal integration
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend/byteport
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: backend/byteport/go.mod
+          cache-dependency-path: backend/byteport/go.sum
+      - name: Stable retry conflict and lost-response controls
+        run: go test ./routes -run '^(TestDeployOperationIDReplaysRealizedResourceWithoutSecondProviderCall|TestDeployOperationIDRejectsDifferentFingerprintBeforeProviderMutation|TestDeployPersistsApplyingOperationBeforeProviderTransportFailure|TestDeploySuccessfulButMalformedProviderResponseRemainsUnknown|TestDeploySuccessfulResponseWithoutSandboxIDRemainsUnknown)$' -count=1 -v
+
+  source-manifest-prototype:
+    name: B03 source and manifest prototype
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend/byteport
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: backend/byteport/go.mod
+          cache-dependency-path: backend/byteport/go.sum
+      - name: Immutable ref and strict manifest controls
+        run: go test ./models -run '^(TestResolveGitSourceSnapshot|TestRecoveryManifest|TestHistoricalManifestProjectsIntoMatureDesiredGraph|TestHistoricalManifestImportRequiresExplicitTarget|TestHistoricalManifestGraphDoesNotAuthorizeBuildOrEnv)' -count=1 -v
+
+  infrastructure-graph-domain:
+    name: BP-WP-A07 infrastructure graph
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend/byteport
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: backend/byteport/go.mod
+          cache-dependency-path: backend/byteport/go.sum
+      - name: Generalized desired-resource identity controls
+        run: go test ./models -run '^(TestDesiredGraphAllowsNonArtifactInfrastructure|TestResourcePlanIsNotRealizedState|TestBareMetalIsTargetCapabilityNotResourceKind|TestUnknownReconciliationIsFirstClass|TestTargetAdapterResultCanReferenceProviderOperationWithoutCopyingState|TestInfrastructureObservationSeparatesFreshnessFromState|TestDeleteRequiresExactExplicitDestructionIntent|TestObserveOnlyNeverAllowsDelete)$' -count=1 -v
+
+  infrastructure-reconciliation-model:
+    name: B08 reconciliation reference model
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend/byteport
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: backend/byteport/go.mod
+          cache-dependency-path: backend/byteport/go.sum
+      - name: Mixed-resource reconciliation controls
+        run: go test ./models -run '^(TestReconciliationCreatesUpdatesAndNoopsExplicitly|TestStaleObservationProducesUnknownNotDestruction|TestMissingDesiredResourceDoesNotDeleteWithoutAuthorization|TestExplicitDestructionCanPlanExactDelete|TestObserveOnlyResourceCannotDeleteEvenWithIntent|TestImmutableMismatchPlansReplaceNotUpdate|TestUnsupportedTargetActionBecomesUnknown|TestSamePlanCanRemainValidOnMoreCapableTarget|TestDesiredResourceGraphTopologicalOrderRespectsDependencies|TestDesiredResourceGraphPreservesDeclarationOrderAmongReadyResources|TestDesiredResourceGraphRejectsDuplicateIDs|TestDesiredResourceGraphRejectsUnknownDependency|TestDesiredResourceGraphRejectsSelfDependency|TestDesiredResourceGraphRejectsCycles|TestCheckedReconciliationPlansDesiredActionsInTopologicalOrder|TestInterruptedCreateBecomesUnknownInsteadOfDuplicateCreate|TestInterruptedCreateForWrongTargetDoesNotSuppressRequestedTarget|TestInterruptedReplaceRequiresExactRealizedResourceIdentity|TestCompletedOrFailedOperationDoesNotRemainAmbiguityBarrier|TestApplyingBeforeOutcomeResolutionAlsoFailsClosed|TestInterruptedCreateWithContradictoryExternalTargetIsNotExactMatch|TestInterruptedCreateWithContradictoryProviderIsNotExactMatch|TestProviderBackedReconcileExecutesMixedCanonicalPlan|TestProviderBackedReconcileUnknownInterruptionDoesNotMutate|TestProviderBackedReconcileUnsupportedReplaceDoesNotMutate|TestProviderBackedReconcileRejectsMixedTargetGraph|TestProviderBackedReconcileRejectsWrongTargetRealizedBeforeDelete|TestProviderBackedReconcileRejectsWrongProviderRealizedBeforeUpdate|TestProviderBackedReconcileRejectsWrongProviderObservationBeforePlanning|TestProviderBackedReconcileRejectsWrongTargetObservationBeforePlanning|TestWrongTargetObservationBecomesUnknown|TestTargetExecutionStagesPreserveCrossTargetDependencies|TestTargetExecutionStagesGroupIndependentSameTargetResources|TestTargetExecutionStagesRejectMissingTarget|TestTargetExecutionStagesRetainCycleRejection|TestNanoVMSAdapterCreateRequiresImmutableArtifact|TestNanoVMSAdapterCreateUsesArtifactDigestAndPreservesProviderIdentity|TestNanoVMSAdapterDeleteRequiresExactProviderIdentityBeforeStop|TestNanoVMSAdapterDoesNotClaimUpdateOrReplace|TestNanoVMSAdapterMissingObservationIsExplicitlyNotFresh|TestNanoVMSLostResponseReconciliationObservesBeforeAnySecondCreate|TestNanoVMSAmbiguousCreateReturnsUnknownInsteadOfRetryableGenericError|TestNanoVMSAmbiguousDeleteReturnsUnknownWithExactSandboxIdentity|TestDesiredGraphArtifactLineageAcceptsExactManifestArtifact|TestDesiredGraphArtifactLineageRejectsWrongManifestBeforeProvider|TestDesiredGraphArtifactLineageRejectsResolverIdentitySubstitution|TestDesiredGraphArtifactLineageRejectsMutableOrMissingArtifactReference|TestDisposableLifecycleSnapshotToExactDestroyWithoutDuplicateCreate|TestProviderBackedReconcileRejectsUnknownWithFabricatedRealizedState|TestProviderBackedReconcileRejectsUnknownWithoutReconciliationIdentity|TestProviderBackedReconcileRejectsMissingApplyOutcome|TestProviderUnknownDoesNotCountAsAppliedOrReleaseDependentMutation|TestProviderFailurePreservesEarlierExecutionReceipts|TestLaterWrongRealizedIdentityFailsBeforeAnyProviderMutation|TestRootOperationDerivesStableDistinctMutationIDs|TestMultiResourceExecutionNeverReusesProviderOperationID)$' -count=1 -v
+
+
+  nanovms-http-transport:
+    name: B08 generalized NanoVMS HTTP transport
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend/byteport
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: backend/byteport/go.mod
+          cache-dependency-path: backend/byteport/go.sum
+      - name: Exact identity ambiguity and observation controls
+        run: go test ./models -run '^TestNanoVMSHTTPTransport' -count=1 -v
+      - name: Generalized adapter plus HTTP lifecycle
+        run: go test ./models -run '^TestGeneralizedNanoVMSHTTPLifecycle' -count=1 -v
