@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- release: cleared all four `v1.0.2` release-pipeline failures (found by
+cutting the tag): two real `-race` DATA RACEs in test scaffolding
+  (loadtest mock read `count` outside the mutex; un-stoppable
+  `StartTokenRefreshJob` racing fixture `models.DB` swap — signature now takes
+  a `stop <-chan struct{}`, production passes `nil`), goreleaser
+  `changelog.use: conventional` → `git` (v2 form), Generate-SBOM release-attach
+  needs job-scoped `contents: write`, and `rust-toolchain.toml` (1.99.0)
+  overrode the action's `stable` install so universal macOS builds lacked
+  `x86_64-apple-darwin` → explicit `rustup target add`. Verified: full
+  `go test -race ./...` 7/7 packages ok, goreleaser 2.18.3 release dry-run
+  green, and **released as v1.0.3** (15 assets: 6 backend binaries + 6 Tauri
+  desktop artifacts + installers; install.sh auto-updated to v1.0.3).
 - ci(gitleaks): rewrite `.gitleaks.toml` to the singular top-level `[allowlist]`
   form — gitleaks 8.24.3 (the version shipped by the SHA-pinned
   `gitleaks-action`) silently discards a plural top-level `[[allowlists]]`
