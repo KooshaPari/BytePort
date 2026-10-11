@@ -293,6 +293,7 @@ func refreshTokens() {
 		}
 	}
 }
+
 // StartTokenRefreshJob runs refreshTokens immediately, then roughly every
 // 7h45m, until stop is closed. A nil stop channel never fires, so production
 // (main.go) runs it for the life of the process; tests pass a channel and wait
