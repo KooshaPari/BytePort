@@ -164,7 +164,7 @@ func main() {
 	r := setupRouter()
 	//models.DB.Exec("Delete from users")
 
-	go lib.StartTokenRefreshJob()
+	go lib.StartTokenRefreshJob(nil)
 	addr := "0.0.0.0:" + resolvePort()
 	fmt.Printf("BytePort API Server listening on %s\n", addr)
 	if err := r.Run(addr); err != nil {

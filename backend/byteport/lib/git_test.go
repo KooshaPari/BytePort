@@ -503,11 +503,22 @@ func TestStartTokenRefreshJobInvokesRefreshTokens(t *testing.T) {
 	})
 	defer restore()
 
-	// StartTokenRefreshJob blocks forever; run it in a goroutine and exit
-	// once we see the first synchronous refreshTokens hit.
+	// StartTokenRefreshJob blocks forever; run it with a stop channel and shut
+	// it down before newLibTestDB's cleanup swaps models.DB back — otherwise
+	// the background refresh goroutine races the fixture teardown (DATA RACE
+	// under -race, caught by the release pipeline 2026-10-11). This cleanup is
+	// registered after newLibTestDB's, so LIFO ordering runs it first and <-done
+	// guarantees the goroutine finished its in-flight refreshTokens.
+	stop := make(chan struct{})
+	done := make(chan struct{})
 	go func() {
-		StartTokenRefreshJob()
+		defer close(done)
+		StartTokenRefreshJob(stop)
 	}()
+	t.Cleanup(func() {
+		close(stop)
+		<-done
+	})
 
 	deadline := time.Now().Add(2 * time.Second)
 	for time.Now().Before(deadline) {
@@ -520,8 +531,8 @@ func TestStartTokenRefreshJobInvokesRefreshTokens(t *testing.T) {
 	if atomic.LoadInt64(&hits) < 1 {
 		t.Fatal("StartTokenRefreshJob did not invoke refreshTokens synchronously; first-run refresh is missing")
 	}
-	// The job is still running; the test process will exit when the test
-	// binary does, killing the goroutine.
+	// The registered cleanup above stops the job and waits for it to exit
+	// before the DB fixture is restored.
 }
 
 // keep "strconv" imported so a future refactor can use strconv.Itoa

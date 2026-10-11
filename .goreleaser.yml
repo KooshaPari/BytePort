@@ -49,7 +49,10 @@ release:
   prerelease: auto
 
 changelog:
-  use: conventional
+  # 'conventional' is rejected by goreleaser 2.x at release time (v1.0.2 run
+  # 38105638097: "invalid changelog.use"); 'git' + the conventional-regexp
+  # groups below is the v2-supported form. Verified with goreleaser 2.18.3.
+  use: git
   sort: asc
   groups:
     - title: Features

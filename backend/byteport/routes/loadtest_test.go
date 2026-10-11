@@ -28,17 +28,18 @@ func mockNVMSLoadTest(tb testing.TB) *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		mu.Lock()
 		count++
+		n := count // read under the lock: concurrent handlers raced on count (DATA RACE, release pipeline 2026-10-11)
 		mu.Unlock()
 
 		// Simulate realistic NanoVMS latency (1-5ms)
-		time.Sleep(time.Duration(1+count%5) * time.Millisecond)
+		time.Sleep(time.Duration(1+n%5) * time.Millisecond)
 
 		w.Header().Set("Content-Type", "application/json")
 		switch r.Method {
 		case "POST":
 			w.WriteHeader(http.StatusCreated)
 			json.NewEncoder(w).Encode(map[string]interface{}{
-				"id":     fmt.Sprintf("sb-%d", count),
+				"id":     fmt.Sprintf("sb-%d", n),
 				"name":   "load-test",
 				"status": "running",
 			})

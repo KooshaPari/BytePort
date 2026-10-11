@@ -293,13 +293,23 @@ func refreshTokens() {
 		}
 	}
 }
-func StartTokenRefreshJob() {
+// StartTokenRefreshJob runs refreshTokens immediately, then roughly every
+// 7h45m, until stop is closed. A nil stop channel never fires, so production
+// (main.go) runs it for the life of the process; tests pass a channel and wait
+// for done so fixture teardown cannot race the background reader (DATA RACE
+// under -race, caught by the release pipeline 2026-10-11).
+func StartTokenRefreshJob(stop <-chan struct{}) {
 	refreshTokens()
 	ticker := time.NewTicker(7*time.Hour + 45*time.Minute)
 	defer ticker.Stop()
 
-	for range ticker.C {
-		log.Println("Checking For Git Token Refresh")
-		refreshTokens()
+	for {
+		select {
+		case <-stop:
+			return
+		case <-ticker.C:
+			log.Println("Checking For Git Token Refresh")
+			refreshTokens()
+		}
 	}
 }

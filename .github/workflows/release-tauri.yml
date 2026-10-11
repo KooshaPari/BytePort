@@ -42,6 +42,14 @@ jobs:
         with:
           targets: aarch64-apple-darwin,x86_64-apple-darwin
 
+      # rust-toolchain.toml pins channel 1.99.0, which OVERRIDES the action's
+      # 'stable' install for everything inside the repo — so the targets the
+      # action added landed on 'stable', not on 1.99.0. The universal build
+      # then died with "Target x86_64-apple-darwin is not installed" (v1.0.2
+      # run 38105638088, 2026-10-11). Re-add them for the pinned toolchain.
+      - name: Add universal-build targets to the pinned toolchain
+        run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
+
       - name: Install dependencies (macOS)
         run: echo "macOS has WebKit built-in, no extra deps needed"
 
