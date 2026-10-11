@@ -95,7 +95,12 @@ Exact anchors in `security-scan.yml` (verified): cron L17–18; Gitleaks job L29
 
 **Status (2026-10-08, this commit series):** closed locally **and live-verified**. Both workflows patched, `.gitleaks.toml` rewritten, `deny.toml` extended. **All 17 push workflows on commit `6c429cd6` are green**, including the two that were red every Monday for the last 4 months: `Audit` (run `37738033740`) and `Security Scan` (run `37738033880`). Verified locally with gitleaks 8.30 + cargo-audit 0.21 against 483-commit full history: 0 leaks, 0 vulnerabilities, 0 warnings. The second push (`6c429cd6`) also fixed the pre-existing `npm audit (frontend/web)` failure that re-broke the Audit workflow on every push to main — fixed via npm `overrides` for `postcss-selector-parser` and `source-map-js` (no top-level downgrade required).
 
-Latest: run `37112275774`, event=schedule, created 2026-10-03T09:12:39Z, conclusion=failure, head_sha=`62cf7049`. Two failed jobs:
+**SCHEDULE PATH LIVE-VERIFIED (2026-10-10T09:54Z, run `38043052812`, event=schedule, sha `7324c166` — observed ahead of Monday):** a real schedule-event Audit run executed the exact code paths that had been red for ~4 months and PASSED every job:
+- `Gitleaks`: cmd had **no `--log-opts`** (the schedule-only full-history form, vs push's `-1`) → `no leaks found` ✅ — singular `[allowlist]` config proven on the real schedule path in CI, not just local replication.
+- `cargo-audit`: runner granted `Issues: write`; JSON shows the 19-ID ignore list live, `vulnerabilities found:false count:0`, **`warnings:{}` → 'No warnings were found'** → `shouldReport` false → no `reportIssues` POST → success ✅ (the exact 403 failure path).
+- All 9 executed jobs success (npm audit, govulncheck included); OpenSSF Scorecard schedule run also green (`38042873285`). The run fired off-cadence (Friday, not one of audit.yml's Mon/Wed/Sat crons — GitHub scheduler delay/coalesce); treat as an early bonus test, still confirm Monday's canonical runs via `sched_8fc315fa`.
+
+Pre-fix schedule baseline (the last FAILING schedule run, superseded by the green run above): `37112275774`, event=schedule, created 2026-10-03T09:12:39Z, conclusion=failure, head_sha=`62cf7049`. Two failed jobs:
 
 ### 4a. `cargo-audit` — token permission 403
 
