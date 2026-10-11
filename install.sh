@@ -12,7 +12,7 @@ set -euo pipefail
 GITHUB_REPO="KooshaPari/BytePort"
 BINARY_NAME="byteport-cli"
 INSTALL_DIR="${INSTALL_DIR:-$HOME/.local/bin}"
-LATEST_VERSION=""  # auto-detected from GitHub API
+LATEST_VERSION="v1.0.3"
 
 # curl hardening: HTTPS-only for request and redirect protocols (shared constant).
 CURL_HTTPS_ONLY=(--proto '=https' --proto-redir '=https')
