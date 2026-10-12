@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- DAG YAML serialization now uses serde-saphyr, removing deprecated serde_yaml
+  and unmaintained unsafe-libyaml (RUSTSEC-2024-0449, #434).
+
 - release: cleared all four `v1.0.2` release-pipeline failures (found by
 cutting the tag): two real `-race` DATA RACEs in test scaffolding
   (loadtest mock read `count` outside the mutex; un-stoppable
