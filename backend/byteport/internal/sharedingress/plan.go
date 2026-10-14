@@ -117,7 +117,11 @@ func BuildPlan(in PlanInput) (Plan, error) {
 		switch {
 		case hasLive && !hasDesired:
 			if !isManaged(managed, live.owner) {
-				p.Conflicts = append(p.Conflicts, conflictFor(live, "", "desired state would remove a resource owned outside the managed scope"))
+				p.Conflicts = append(p.Conflicts, conflictFor(
+					live,
+					"",
+					"desired state would remove a resource owned outside the managed scope",
+				))
 				continue
 			}
 			p.Changes = append(p.Changes, Change{
@@ -127,7 +131,12 @@ func BuildPlan(in PlanInput) (Plan, error) {
 
 		case !hasLive && hasDesired:
 			if !isManaged(managed, desired.owner) {
-				p.Conflicts = append(p.Conflicts, conflictFor(desired, desired.owner, "desired state adds a resource owned outside the managed scope"))
+				p.Conflicts = append(p.Conflicts, Conflict{
+					ResourceType: desired.resourceType,
+					Key:          desired.key,
+					Reason:       "desired state adds a resource owned outside the managed scope",
+					DesiredOwner: desired.owner,
+				})
 				continue
 			}
 			p.Changes = append(p.Changes, Change{
@@ -150,7 +159,11 @@ func BuildPlan(in PlanInput) (Plan, error) {
 				continue
 			}
 			if !isManaged(managed, live.owner) {
-				p.Conflicts = append(p.Conflicts, conflictFor(live, desired.owner, "desired state would mutate a resource owned outside the managed scope"))
+				p.Conflicts = append(p.Conflicts, conflictFor(
+					live,
+					desired.owner,
+					"desired state would mutate a resource owned outside the managed scope",
+				))
 				continue
 			}
 			p.Changes = append(p.Changes, Change{
@@ -192,8 +205,77 @@ func ValidateSnapshot(s Snapshot) error {
 	if strings.TrimSpace(s.Tunnel.ID) == "" {
 		return errors.New("tunnel.id is required")
 	}
+
+	if strings.EqualFold(strings.TrimSpace(s.Provider), "cloudflare") {
+		if err := validateCloudflareRoutes(s.Routes); err != nil {
+			return err
+		}
+		for _, record := range s.DNS {
+			if strings.TrimSpace(record.ID) == "" {
+				return fmt.Errorf(
+					"cloudflare DNS record %q %q requires provider record id",
+					record.Name,
+					record.Type,
+				)
+			}
+		}
+	}
+
+	for _, app := range s.AccessApps {
+		seenPrecedence := make(map[int]string, len(app.PolicyRefs))
+		for _, policy := range app.PolicyRefs {
+			if policy.Precedence <= 0 {
+				return fmt.Errorf(
+					"access app %q policy %q requires positive precedence",
+					app.Domain,
+					policy.ID,
+				)
+			}
+			if previous, exists := seenPrecedence[policy.Precedence]; exists {
+				return fmt.Errorf(
+					"access app %q policies %q and %q share precedence %d",
+					app.Domain,
+					previous,
+					policy.ID,
+					policy.Precedence,
+				)
+			}
+			seenPrecedence[policy.Precedence] = policy.ID
+		}
+	}
+
 	_, err := flatten(s)
 	return err
+}
+
+func validateCloudflareRoutes(routes []Route) error {
+	if len(routes) == 0 {
+		return errors.New("cloudflare snapshot requires at least one ingress route")
+	}
+
+	catchAll := -1
+	for position, route := range routes {
+		if strings.TrimSpace(route.Service) == "" {
+			return fmt.Errorf("cloudflare route at position %d has empty service", position)
+		}
+		if strings.TrimSpace(route.Hostname) == "" && strings.TrimSpace(route.Path) == "" {
+			if catchAll >= 0 {
+				return errors.New("cloudflare snapshot contains multiple catch-all routes")
+			}
+			catchAll = position
+		}
+	}
+	if catchAll < 0 {
+		return errors.New("cloudflare snapshot requires a catch-all route")
+	}
+	if catchAll != len(routes)-1 {
+		return fmt.Errorf(
+			"cloudflare catch-all route must be last: position %d of %d",
+			catchAll,
+			len(routes),
+		)
+	}
+	return nil
 }
 
 type resource struct {
@@ -218,51 +300,61 @@ func flatten(s Snapshot) (map[string]resource, error) {
 		return nil
 	}
 
-	for _, r := range s.Routes {
-		key := routeKey(r)
+	for position, route := range s.Routes {
+		key := routeKey(route)
 		fp, err := stableJSON(struct {
+			Position    int    `json:"position"`
 			Service     string `json:"service"`
 			Audience    string `json:"audience,omitempty"`
 			AccessAppID string `json:"access_app_id,omitempty"`
-		}{r.Service, r.Audience, r.AccessAppID})
+		}{position, route.Service, route.Audience, route.AccessAppID})
 		if err != nil {
 			return nil, err
 		}
-		if err := add(resource{"route", key, r.Owner, fp}); err != nil {
+		if err := add(resource{"route", key, route.Owner, fp}); err != nil {
 			return nil, err
 		}
 	}
 
-	for _, r := range s.DNS {
-		key := strings.ToLower(strings.TrimSpace(r.Name)) + "|" + strings.ToUpper(strings.TrimSpace(r.Type))
+	for _, record := range s.DNS {
+		key := dnsKey(s.Provider, record)
 		fp, err := stableJSON(struct {
+			Name    string `json:"name"`
+			Type    string `json:"type"`
 			Content string `json:"content"`
 			Proxied bool   `json:"proxied"`
 			ZoneID  string `json:"zone_id,omitempty"`
-		}{r.Content, r.Proxied, r.ZoneID})
+		}{
+			strings.ToLower(strings.TrimSpace(record.Name)),
+			strings.ToUpper(strings.TrimSpace(record.Type)),
+			record.Content,
+			record.Proxied,
+			record.ZoneID,
+		})
 		if err != nil {
 			return nil, err
 		}
-		if err := add(resource{"dns", key, r.Owner, fp}); err != nil {
+		if err := add(resource{"dns", key, record.Owner, fp}); err != nil {
 			return nil, err
 		}
 	}
 
-	for _, a := range s.AccessApps {
-		key := strings.ToLower(strings.TrimSpace(a.Domain))
-		policies := append([]PolicyRef(nil), a.PolicyRefs...)
-		sort.Slice(policies, func(i, j int) bool { return policies[i].ID < policies[j].ID })
+	for _, app := range s.AccessApps {
+		key := strings.ToLower(strings.TrimSpace(app.Domain))
+		// PolicyRefs deliberately retain provider order and explicit precedence.
+		// Reordering or changing precedence is authorization drift.
+		policies := append([]PolicyRef(nil), app.PolicyRefs...)
 		fp, err := stableJSON(struct {
 			ID         string      `json:"id"`
 			Type       string      `json:"type"`
 			Audience   string      `json:"audience,omitempty"`
 			PolicyRefs []PolicyRef `json:"policy_refs,omitempty"`
 			SecretRef  *SecretRef  `json:"machine_secret,omitempty"`
-		}{a.ID, a.Type, a.Audience, policies, a.MachineSecret})
+		}{app.ID, app.Type, app.Audience, policies, app.MachineSecret})
 		if err != nil {
 			return nil, err
 		}
-		if err := add(resource{"access_app", key, a.Owner, fp}); err != nil {
+		if err := add(resource{"access_app", key, app.Owner, fp}); err != nil {
 			return nil, err
 		}
 	}
@@ -270,12 +362,25 @@ func flatten(s Snapshot) (map[string]resource, error) {
 	return out, nil
 }
 
-func routeKey(r Route) string {
-	host := strings.ToLower(strings.TrimSpace(r.Hostname))
+func routeKey(route Route) string {
+	host := strings.ToLower(strings.TrimSpace(route.Hostname))
 	if host == "" {
 		host = "<catch-all>"
 	}
-	return host + "|" + strings.TrimSpace(r.Path)
+	return host + "|" + strings.TrimSpace(route.Path)
+}
+
+func dnsKey(provider string, record DNSRecord) string {
+	if id := strings.TrimSpace(record.ID); id != "" {
+		return "id:" + id
+	}
+	return strings.Join([]string{
+		"fallback",
+		strings.TrimSpace(record.ZoneID),
+		strings.ToLower(strings.TrimSpace(record.Name)),
+		strings.ToUpper(strings.TrimSpace(record.Type)),
+		record.Content,
+	}, "|")
 }
 
 func stableJSON(v any) (string, error) {
