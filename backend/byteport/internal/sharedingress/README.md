@@ -11,8 +11,15 @@ API client and no apply/delete/update method in this package.
   secret **references** only; never secret values;
 - tunnel identity is immutable during import/adoption;
 - every mutable route, DNS record, and Access application has an explicit owner;
+- Cloudflare ingress route order is semantic: position is part of drift and the
+  single catch-all route must be terminal;
+- Cloudflare DNS records carry their provider record IDs so multiple records may
+  legitimately share the same name and type;
+- Access policy references preserve their ordered sequence and explicit unique,
+  positive precedence; policy reorder/precedence changes are authorization drift;
 - a plan is unsafe if it would add, update, or remove a resource whose owner is
   outside the caller's managed-owner scope;
+- desired-only conflicts do not invent a live owner;
 - ownership transfer is never inferred from desired state;
 - connectors are inventory evidence, not desired mutable resources;
 - changes/conflicts are sorted deterministically for review and audit;
