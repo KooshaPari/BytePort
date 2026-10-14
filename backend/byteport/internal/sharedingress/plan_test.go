@@ -31,11 +31,11 @@ func baseSnapshot() Snapshot {
 		},
 		DNS: []DNSRecord{
 			{
-				ID: "dns-tracera", Name: "tracera.example.com", Type: "CNAME",
+				ID: "dns-tracera", ZoneID: "zone-main", Name: "tracera.example.com", Type: "CNAME",
 				Content: "tunnel.example", Proxied: true, Owner: "tracera",
 			},
 			{
-				ID: "dns-other", Name: "other.example.com", Type: "CNAME",
+				ID: "dns-other", ZoneID: "zone-main", Name: "other.example.com", Type: "CNAME",
 				Content: "tunnel.example", Proxied: true, Owner: "other",
 			},
 		},
@@ -229,7 +229,7 @@ func TestDesiredOnlyUnmanagedConflictHasNoLiveOwner(t *testing.T) {
 	live := baseSnapshot()
 	desired := baseSnapshot()
 	desired.DNS = append(desired.DNS, DNSRecord{
-		ID: "dns-new", Name: "new.example.com", Type: "A",
+		ID: "dns-new", ZoneID: "zone-main", Name: "new.example.com", Type: "A",
 		Content: "192.0.2.10", Owner: "other",
 	})
 
@@ -241,7 +241,7 @@ func TestDesiredOnlyUnmanagedConflictHasNoLiveOwner(t *testing.T) {
 	}
 
 	for _, conflict := range plan.Conflicts {
-		if conflict.ResourceType == "dns" && conflict.Key == "id:dns-new" {
+		if conflict.ResourceType == "dns" && conflict.Key == "zone:zone-main|id:dns-new" {
 			if conflict.LiveOwner != "" || conflict.DesiredOwner != "other" {
 				t.Fatalf("unexpected owner audit fields %#v", conflict)
 			}
@@ -255,11 +255,11 @@ func TestCloudflareAllowsSameNameAndTypeWithDistinctRecordIDs(t *testing.T) {
 	snapshot := baseSnapshot()
 	snapshot.DNS = append(snapshot.DNS,
 		DNSRecord{
-			ID: "dns-a-1", Name: "multi.example.com", Type: "A",
+			ID: "dns-a-1", ZoneID: "zone-main", Name: "multi.example.com", Type: "A",
 			Content: "192.0.2.11", Owner: "tracera",
 		},
 		DNSRecord{
-			ID: "dns-a-2", Name: "multi.example.com", Type: "A",
+			ID: "dns-a-2", ZoneID: "zone-main", Name: "multi.example.com", Type: "A",
 			Content: "192.0.2.12", Owner: "tracera",
 		},
 	)
@@ -318,5 +318,28 @@ func TestDuplicateRouteKeyRejected(t *testing.T) {
 
 	if err := ValidateSnapshot(snapshot); err == nil {
 		t.Fatal("expected duplicate route key to be rejected")
+	}
+}
+
+
+func TestCloudflareDNSIdentityIncludesZone(t *testing.T) {
+	snapshot := baseSnapshot()
+	record := snapshot.DNS[0]
+	record.ID = snapshot.DNS[0].ID
+	record.ZoneID = "zone-secondary"
+	record.Name = snapshot.DNS[0].Name
+	snapshot.DNS = append(snapshot.DNS, record)
+
+	if err := ValidateSnapshot(snapshot); err != nil {
+		t.Fatalf("same provider record id in different zones must remain distinct: %v", err)
+	}
+}
+
+func TestCloudflareDNSRequiresZoneID(t *testing.T) {
+	snapshot := baseSnapshot()
+	snapshot.DNS[0].ZoneID = ""
+
+	if err := ValidateSnapshot(snapshot); err == nil {
+		t.Fatal("expected Cloudflare DNS record without zone ID to be rejected")
 	}
 }
