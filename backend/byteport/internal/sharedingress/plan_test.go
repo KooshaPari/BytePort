@@ -321,7 +321,6 @@ func TestDuplicateRouteKeyRejected(t *testing.T) {
 	}
 }
 
-
 func TestCloudflareDNSIdentityIncludesZone(t *testing.T) {
 	snapshot := baseSnapshot()
 	record := snapshot.DNS[0]
