@@ -39,7 +39,9 @@ use crate::schema::{SchemaEdge, SchemaNode};
 #[derive(Debug, Error)]
 pub enum DagSerError {
     #[error("YAML error: {0}")]
-    Yaml(#[from] serde_yaml::Error),
+    Yaml(#[from] serde_saphyr::Error),
+    #[error("YAML serialization error: {0}")]
+    YamlSerialize(#[from] serde_saphyr::SerializeError),
     #[error("JSON error: {0}")]
     Json(#[from] serde_json::Error),
 }
@@ -145,12 +147,12 @@ impl DagSchema {
 
     /// Serialize to a YAML string.
     pub fn to_yaml(&self) -> Result<String, DagSerError> {
-        Ok(serde_yaml::to_string(self)?)
+        Ok(serde_saphyr::to_string(self)?)
     }
 
     /// Deserialize from a YAML string.
     pub fn from_yaml(yaml: &str) -> Result<Self, DagSerError> {
-        Ok(serde_yaml::from_str(yaml)?)
+        Ok(serde_saphyr::from_str(yaml)?)
     }
 
     // -----------------------------------------------------------------------
