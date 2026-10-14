@@ -40,6 +40,9 @@ type Route struct {
 }
 
 type DNSRecord struct {
+	// ID is the provider's stable record identity. Cloudflare snapshots require
+	// it because several records may legitimately share the same name and type.
+	ID      string `json:"id,omitempty"`
 	Name    string `json:"name"`
 	Type    string `json:"type"`
 	Content string `json:"content"`
@@ -49,19 +52,20 @@ type DNSRecord struct {
 }
 
 type AccessApp struct {
-	ID            string         `json:"id"`
-	Domain        string         `json:"domain"`
-	Type          string         `json:"type"`
-	Owner         string         `json:"owner"`
-	Audience      string         `json:"audience,omitempty"`
-	PolicyRefs    []PolicyRef    `json:"policy_refs,omitempty"`
-	MachineSecret *SecretRef     `json:"machine_secret,omitempty"`
+	ID            string      `json:"id"`
+	Domain        string      `json:"domain"`
+	Type          string      `json:"type"`
+	Owner         string      `json:"owner"`
+	Audience      string      `json:"audience,omitempty"`
+	PolicyRefs    []PolicyRef `json:"policy_refs,omitempty"`
+	MachineSecret *SecretRef  `json:"machine_secret,omitempty"`
 }
 
 type PolicyRef struct {
 	ID           string   `json:"id"`
 	Name         string   `json:"name,omitempty"`
 	Decision     string   `json:"decision"`
+	Precedence   int      `json:"precedence"`
 	IncludeKinds []string `json:"include_kinds,omitempty"`
 	RequireKinds []string `json:"require_kinds,omitempty"`
 	ExcludeKinds []string `json:"exclude_kinds,omitempty"`
