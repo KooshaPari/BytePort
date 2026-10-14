@@ -1,0 +1,61 @@
+name: Format and test PR 439 once
+
+on:
+  push:
+    branches:
+      - feat/SD4-cloudflare-ingress-import-2026-10-14
+
+permissions:
+  contents: write
+
+jobs:
+  format-test:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: feat/SD4-cloudflare-ingress-import-2026-10-14
+          fetch-depth: 0
+
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: backend/byteport/go.mod
+
+      - name: Format exact allowlist
+        run: |
+          set -euo pipefail
+          files=(
+            backend/byteport/internal/sharedingress/types.go
+            backend/byteport/internal/sharedingress/plan.go
+            backend/byteport/internal/sharedingress/plan_test.go
+          )
+          gofmt -w "${files[@]}"
+
+          mapfile -t changed < <(git diff --name-only)
+          for f in "${changed[@]}"; do
+            allowed=0
+            for candidate in "${files[@]}"; do
+              if [ "$f" = "$candidate" ]; then
+                allowed=1
+                break
+              fi
+            done
+            if [ "$allowed" -ne 1 ]; then
+              echo "::error::gofmt changed unexpected path: $f"
+              exit 1
+            fi
+          done
+
+          if [ "${#changed[@]}" -gt 0 ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add -- "${files[@]}"
+            git commit -m "style(byteport): gofmt shared-ingress planner"
+            git push origin HEAD:feat/SD4-cloudflare-ingress-import-2026-10-14
+          fi
+
+      - name: Test shared-ingress planner
+        working-directory: backend/byteport
+        run: go test ./internal/sharedingress
