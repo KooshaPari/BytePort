@@ -281,6 +281,13 @@ func validateCloudflareSnapshot(snapshot Snapshot) error {
 
 func validateCloudflareDNS(records []DNSRecord) error {
 	for _, record := range records {
+		if strings.TrimSpace(record.ZoneID) == "" {
+			return fmt.Errorf(
+				"cloudflare DNS record %q %q requires zone id",
+				record.Name,
+				record.Type,
+			)
+		}
 		if strings.TrimSpace(record.ID) == "" {
 			return fmt.Errorf(
 				"cloudflare DNS record %q %q requires provider record id",
@@ -483,12 +490,13 @@ func routeKey(route Route) string {
 }
 
 func dnsKey(record DNSRecord) string {
+	zoneID := strings.TrimSpace(record.ZoneID)
 	if id := strings.TrimSpace(record.ID); id != "" {
-		return "id:" + id
+		return "zone:" + zoneID + "|id:" + id
 	}
 	return strings.Join([]string{
 		"fallback",
-		strings.TrimSpace(record.ZoneID),
+		zoneID,
 		strings.ToLower(strings.TrimSpace(record.Name)),
 		strings.ToUpper(strings.TrimSpace(record.Type)),
 		record.Content,
