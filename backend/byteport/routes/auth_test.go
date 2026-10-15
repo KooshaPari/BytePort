@@ -13,6 +13,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 // authTestRouter returns a gin engine with /login, /signup, /authenticate, and
@@ -568,6 +569,34 @@ func TestLinkHandlerRedirectsToGitHub(t *testing.T) {
 
 // TestUpdateLinkLocalProviderNoDecrypt covers the "local" provider branch:
 // when LLMConfig.Provider == "local", UpdateLink must skip the OpenAI
+// runUpdateLink seeds the given user and drives GET /update-link through the
+// UpdateLink handler, returning the decoded user record. Shared by the
+// decrypt and fresh-account UpdateLink tests.
+func runUpdateLink(t *testing.T, db *gorm.DB, user models.User) models.User {
+	t.Helper()
+	if err := db.Create(&user).Error; err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+
+	r := gin.New()
+	r.GET("/update-link", func(c *gin.Context) {
+		c.Set("user", user)
+		UpdateLink(c)
+	})
+	req := httptest.NewRequest(http.MethodGet, "/update-link", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 (body %s)", w.Code, w.Body.String())
+	}
+	var resp models.User
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("body not JSON: %v", err)
+	}
+	return resp
+}
+
 // decrypt and return the user with the credentials cleared.
 //
 // This is the path the UI hits when the user picks a local LLM and so has
@@ -592,26 +621,7 @@ func TestUpdateLinkLocalProviderNoDecrypt(t *testing.T) {
 			APIKey:       mustEncrypt(t, "portfolio-key"),
 		},
 	}
-	if err := db.Create(&user).Error; err != nil {
-		t.Fatalf("seed: %v", err)
-	}
-
-	r := gin.New()
-	r.GET("/update-link", func(c *gin.Context) {
-		c.Set("user", user)
-		UpdateLink(c)
-	})
-	req := httptest.NewRequest(http.MethodGet, "/update-link", nil)
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Fatalf("status = %d, want 200 (body %s)", w.Code, w.Body.String())
-	}
-	var resp models.User
-	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
-		t.Fatalf("body not JSON: %v", err)
-	}
+	resp := runUpdateLink(t, db, user)
 	if resp.AwsCreds.AccessKeyID != "AKIA-test" {
 		t.Errorf("AwsCreds.AccessKeyID = %q, want AKIA-test (was not decrypted)", resp.AwsCreds.AccessKeyID)
 	}
@@ -629,26 +639,7 @@ func TestUpdateLinkFreshUserReturnsEmptyCredentials(t *testing.T) {
 		Name:     "Fresh",
 		Password: "x",
 	}
-	if err := db.Create(&user).Error; err != nil {
-		t.Fatalf("seed: %v", err)
-	}
-
-	r := gin.New()
-	r.GET("/update-link", func(c *gin.Context) {
-		c.Set("user", user)
-		UpdateLink(c)
-	})
-	req := httptest.NewRequest(http.MethodGet, "/update-link", nil)
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Fatalf("status = %d, want 200 (body %s)", w.Code, w.Body.String())
-	}
-	var resp models.User
-	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
-		t.Fatalf("body not JSON: %v", err)
-	}
+	resp := runUpdateLink(t, db, user)
 	if resp.AwsCreds.AccessKeyID != "" || resp.AwsCreds.SecretAccessKey != "" {
 		t.Errorf("aws creds = %+v, want empty", resp.AwsCreds)
 	}
