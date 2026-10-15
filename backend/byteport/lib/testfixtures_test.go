@@ -47,8 +47,12 @@ func newLibTestDB(t *testing.T) *gorm.DB {
 // paths that InitAuthSystem and the token helpers exercise.
 func resetMockKeyring(t *testing.T) {
 	t.Helper()
+	resetKeyringFallback()
 	keyring.MockInit()
-	t.Cleanup(func() { keyring.MockInit() })
+	t.Cleanup(func() {
+		resetKeyringFallback()
+		keyring.MockInit()
+	})
 }
 
 // testEncryptionKeyBytes returns a deterministic 32-byte (AES-256) key. It is

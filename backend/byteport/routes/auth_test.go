@@ -617,6 +617,56 @@ func TestUpdateLinkLocalProviderNoDecrypt(t *testing.T) {
 	}
 }
 
+// TestUpdateLinkFreshUserReturnsEmptyCredentials covers a newly signed-up
+// account: GET /user/:id/creds must answer 200 with blank secrets. Seeding
+// the default provider and then failing the lookup used to return 500, so
+// the settings page could not load.
+func TestUpdateLinkFreshUserReturnsEmptyCredentials(t *testing.T) {
+	db := setupAuthDB(t)
+	user := models.User{
+		UUID:     uuid.NewString(),
+		Email:    "fresh@example.com",
+		Name:     "Fresh",
+		Password: "x",
+	}
+	if err := db.Create(&user).Error; err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+
+	r := gin.New()
+	r.GET("/update-link", func(c *gin.Context) {
+		c.Set("user", user)
+		UpdateLink(c)
+	})
+	req := httptest.NewRequest(http.MethodGet, "/update-link", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 (body %s)", w.Code, w.Body.String())
+	}
+	var resp models.User
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("body not JSON: %v", err)
+	}
+	if resp.AwsCreds.AccessKeyID != "" || resp.AwsCreds.SecretAccessKey != "" {
+		t.Errorf("aws creds = %+v, want empty", resp.AwsCreds)
+	}
+	if resp.Portfolio.RootEndpoint != "" || resp.Portfolio.APIKey != "" {
+		t.Errorf("portfolio = %+v, want empty", resp.Portfolio)
+	}
+	if resp.LLMConfig.Provider != defaultLLMProvider {
+		t.Errorf("provider = %q, want %q", resp.LLMConfig.Provider, defaultLLMProvider)
+	}
+	entry, ok := resp.LLMConfig.Providers[defaultLLMProvider]
+	if !ok {
+		t.Fatalf("providers = %#v, want an entry for %s", resp.LLMConfig.Providers, defaultLLMProvider)
+	}
+	if entry.APIKey != "" {
+		t.Errorf("provider api key = %q, want empty", entry.APIKey)
+	}
+}
+
 // TestUpdateLinkDecryptError covers the AWS decrypt failure branch: when
 // the stored AWS secret is not a valid AES payload, UpdateLink must
 // respond 500 with "Failed to decrypt AWS Access".
