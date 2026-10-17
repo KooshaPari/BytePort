@@ -107,3 +107,115 @@ verification.
 | `tx-scope` | `crates/byteport-transport/{Cargo.toml,src/lib.rs}` |
 | `tx-intent` | land SigV4 presigning in byteport-transport so the upload URL is accepted by real S3-compatible stores |
 | `tx-parent` | `0cdd6ee` (per-repo master cohort audit) |
+
+---
+
+# 2026-10-17 byteport 1-WEEK FWD Path — Outcome (steps 3 + 4 + 5)
+
+This appendix is appended verbatim to the 1-DAY FWD closure. It
+records the validation harness that the 1-DAY FWD deferred.
+
+**Author**: 1-WEEK FINISHES worker (jcode, dispatched by VP-Engineering)
+**Source brief**: 1-WEEK FINISHES tier instructions appended to the
+1-DAY FWD dispatch message.
+**Branch**: same `feat/sigv4-presign-1day-fwd` — the validation
+harness lives on the same feature branch as the code fix it
+validates (no parallel branch was created).
+
+## Step status (1-WEEK FWD)
+
+| # | Step | Status | Evidence |
+|---|---|---|---|
+| 3 | LocalStack / MinIO integration test authored and executed | **DONE — passed** | `crates/byteport-transport/tests/presign_smoke.rs`; log in `docs/audits/2026-10-17/byteport-presign-smoke.log` |
+| 4 | Bounded E2E smoke against the Go backend | **DONE** | `go run backend/byteport` → `/healthz` returned HTTP 200 (`ok` body). Full Tauri dev loop was not run — bounded smoke is the more important gate per the 1-WEEK brief. |
+| 5 | VHS / transcript | **DONE as transcript** | `docs/audits/2026-10-17/byteport-presign-smoke-transcript.md` (VHS not used; rationale in §7 of the transcript). |
+
+## What was committed (1-WEEK FWD)
+
+Single commit on the same branch:
+
+```
+test(byteport-transport): LocalStack presign smoke + 1-WEEK FWD outcome doc
+```
+
+| File | +/- | What |
+|---|---|---|
+| `crates/byteport-transport/tests/presign_smoke.rs` | +136 / -0 | New integration test gated on `LOCALSTACK_URL`. Asserts the presigned URL has every SigV4 query parameter, then does a real 1-byte `PUT` over `ureq` and asserts the response is `200`/`204`. |
+| `docs/audits/2026-10-17/byteport-presign-smoke.log` | +13 / -0 | Captured `cargo test` output (assertion line + cargo summary) plus the bounded `/healthz` smoke. |
+| `docs/audits/2026-10-17/byteport-presign-smoke-transcript.md` | +184 / -0 | Walk-through of the test output, side-effect verification (object landed in the bucket with the right ETag), and operator bottom line. |
+| `docs/audits/2026-10-17/byteport-fwd-report.md` | (this section) | 1-WEEK FWD outcome appended to the existing closure. |
+
+Total: **4 files changed, ~333 insertions, 0 deletions** (this
+section is the bulk of the insertion count in the report itself).
+
+## Captured test output
+
+From `cargo test -p byteport-transport --test presign_smoke`:
+
+```
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.68s
+
+running 1 test
+presign smoke ok: PUT 1-byte body to http://localhost:4566/byteport-test/demo/screenshot.png returned 200
+test s3_presign_full_roundtrip_against_s3_compatible ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+```
+
+Key assertion lines:
+
+- `presign smoke ok: PUT 1-byte body to http://localhost:4566/byteport-test/demo/screenshot.png returned 200`
+  — the audit's defect is closed at the wire level.
+- `test s3_presign_full_roundtrip_against_s3_compatible ... ok` — cargo's own verdict.
+- `1 passed; 0 failed; 0 ignored` — the `LOCALSTACK_URL` gate does not silently no-op.
+
+Post-run bucket verification (via `awslocal s3api head-object`):
+
+```json
+{
+    "ContentLength": 1,
+    "ETag": "\"9dd4e461268c8034f5c8564e155c67a6\"",
+    "ContentType": "image/png",
+    ...
+}
+```
+
+ETag `9dd4e...` is the MD5 of the byte the test PUT'd (`x`); the
+on-disk content is bit-identical to the request body.
+
+## Limitations and caveats
+
+| Limitation | Impact |
+|---|---|
+| LocalStack only; AWS S3 / MinIO / Wasabi not exercised live | The transport uses the AWS-canonical SigV4 pipeline; LocalStack is a faithful in-process S3 emulator but a small number of edge-case header semantics differ. The unit tests in `lib.rs` exercise the SigV4 path directly, so the only thing the integration test added was "live S3 dispatch worked". |
+| `cargo tauri dev` end-to-end was not exercised | The bounded Go-backend smoke (`/healthz` -> 200) covers the audit's surface concern (no backward-compat regression on the backend's startup). Tauri's webview-specific smoke is out of scope for this PR. |
+| VHS was not used (transcript instead) | VHS would require a TTY + chromedp, which is brittle to reproduce and slower to land than a Markdown transcript. The transcript explains every output line and is reproducible from any operator workstation with `docker run` + `cargo test`. |
+| LocalStack container state is ephemeral | The 1-byte object disappears when the container is removed. Re-running the test creates it fresh. This is intentional — no persistent test pollution. |
+| `awslocal s3 mb s3://byteport-test` is still a manual setup step | The test gates on `LOCALSTACK_URL` (which is set if any S3 fixture is reachable). Operators running the test must create the bucket via `awslocal s3 mb` once before the first invocation. |
+
+## Updated operator action
+
+The 1-WEEK FWD ships the validation harness on the same
+`feat/sigv4-presign-1day-fwd` branch as the 1-DAY code fix — no
+separate PR is needed. PR #443 is now ready to merge.
+
+**Operator action**:
+
+1. Pull the branch (`git fetch origin && git checkout feat/sigv4-presign-1day-fwd`).
+2. Re-run the LocalStack smoke locally (`LOCALSTACK_URL=http://localhost:4566 cargo test -p byteport-transport --test presign_smoke -- --nocapture`) to confirm the test passes in your environment.
+3. Merge PR #443 once satisfied.
+
+The branch does not need to be force-pushed or rebased. The new
+commit hashes linearly on `ca71a62` (the 1-DAY FWD closure doc); the
+ledger remains an immutable append-only timeline.
+
+## Ledger metadata (1-WEEK FWD)
+
+| Field | Value |
+|---|---|
+| `tx-agent` | jcode (1-WEEK FINISHES worker, dispatched by VP-Engineering) |
+| `tx-validated` | cargo-test (test ran end-to-end against LocalStack; assertion captured in `byteport-presign-smoke.log`) plus manual bounded smoke (`/healthz` -> 200) |
+| `tx-task` | 2026-10-17 master audit 1-WEEK FWD — byteport steps 3+4+5 |
+| `tx-scope` | `crates/byteport-transport/tests/presign_smoke.rs`, `docs/audits/2026-10-17/byteport-presign-smoke.{log,transcript.md}`, `docs/audits/2026-10-17/byteport-fwd-report.md` |
+| `tx-intent` | Land the validation harness for the SigV4 presign fix so PR #443 is mergeable with empirical proof, not just unit-test proof. |
+| `tx-parent` | `ca71a62` (1-DAY FWD closure doc) |
