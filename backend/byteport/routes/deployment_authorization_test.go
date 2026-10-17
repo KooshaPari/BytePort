@@ -88,7 +88,7 @@ func testDB(t *testing.T) *gorm.DB {
 	if err != nil {
 		t.Fatalf("open test database: %v", err)
 	}
-	if err := db.AutoMigrate(&models.User{}, &models.Project{}); err != nil {
+	if err := db.AutoMigrate(&models.User{}, &models.Project{}, &models.RuntimeOperationRecord{}); err != nil {
 		t.Fatalf("migrate test database: %v", err)
 	}
 
@@ -295,12 +295,16 @@ func TestTerminateInstanceStopsOwnProject(t *testing.T) {
 	stub := newNVMSStub(t)
 	alice := models.User{UUID: "alice-uuid"}
 
-	if err := db.Create(&models.Project{
+	project := models.Project{
 		UUID:  "alice-project",
 		ID:    "alice-project",
 		Owner: alice.UUID,
 		Name:  "alice-app",
-	}).Error; err != nil {
+	}
+	project.SetDeploy(map[string]models.Instance{
+		"default": {UUID: "alice-sandbox", Owner: alice.UUID, ResUUID: project.UUID},
+	})
+	if err := db.Create(&project).Error; err != nil {
 		t.Fatalf("seed alice's project: %v", err)
 	}
 

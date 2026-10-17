@@ -1,0 +1,160 @@
+name: Mature Recovery Artifact Chain
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "tests/fixtures/mature-recovery-app/**"
+      - ".github/workflows/mature-recovery-artifact.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: byteport-mature-recovery-artifact-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  source-artifact-runtime:
+    name: source manifest artifact runtime chain
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Initialize BuildKit builder
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker buildx version
+          docker buildx create --name byteport-recovery --driver docker-container --use
+          docker buildx inspect --bootstrap
+
+      - name: Compute immutable experiment inputs
+        id: inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          SRC="${GITHUB_SHA}"
+          MANIFEST="tests/fixtures/mature-recovery-app/experiment.manifest.yaml"
+          MDIGEST="sha256:$(sha256sum "$MANIFEST" | awk '{print $1}')"
+          NONCE_A="run-${GITHUB_RUN_ID}-a"
+          NONCE_B="run-${GITHUB_RUN_ID}-b"
+          {
+            echo "source_commit=$SRC"
+            echo "manifest_digest=$MDIGEST"
+            echo "nonce_a=$NONCE_A"
+            echo "nonce_b=$NONCE_B"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build fixture A with BuildKit metadata
+        id: build_a
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker buildx build             --load             --provenance=false             --metadata-file /tmp/build-a.json             --build-arg SOURCE_COMMIT="${{ steps.inputs.outputs.source_commit }}"             --build-arg MANIFEST_DIGEST="${{ steps.inputs.outputs.manifest_digest }}"             --build-arg FIXTURE_NONCE="${{ steps.inputs.outputs.nonce_a }}"             -t byteport-recovery:mutable             tests/fixtures/mature-recovery-app
+
+          ID_A="$(docker image inspect byteport-recovery:mutable --format '{{.Id}}')"
+          DIGEST_A="$(jq -r '."containerimage.digest" // empty' /tmp/build-a.json)"
+          test -n "$DIGEST_A"
+          case "$DIGEST_A" in sha256:*) ;; *) echo "invalid BuildKit digest: $DIGEST_A"; exit 1;; esac
+
+          {
+            echo "image_id_a=$ID_A"
+            echo "digest_a=$DIGEST_A"
+          } >> "$GITHUB_OUTPUT"
+          echo "Local image A: $ID_A"
+          echo "BuildKit digest A: $DIGEST_A"
+          jq . /tmp/build-a.json
+
+      - name: Run immutable artifact A and verify application subject
+        shell: bash
+        run: |
+          set -euo pipefail
+          CID="$(docker run -d -p 127.0.0.1:18080:80 "${{ steps.build_a.outputs.image_id_a }}")"
+          trap 'docker rm -f "$CID" >/dev/null 2>&1 || true' EXIT
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:18080/__byteport_probe -o /tmp/probe-a.json; then break; fi
+            sleep 1
+          done
+          test -s /tmp/probe-a.json
+          python3 - <<'PY'
+          import json, os
+          p=json.load(open('/tmp/probe-a.json'))
+          assert p['fixture']=='byteport-mature-recovery'
+          assert p['source_commit']==os.environ['SOURCE']
+          assert p['manifest_digest']==os.environ['MANIFEST']
+          assert p['fixture_nonce']==os.environ['NONCE']
+          print(json.dumps(p, sort_keys=True))
+          PY
+        env:
+          SOURCE: ${{ steps.inputs.outputs.source_commit }}
+          MANIFEST: ${{ steps.inputs.outputs.manifest_digest }}
+          NONCE: ${{ steps.inputs.outputs.nonce_a }}
+
+      - name: Replace mutable tag with fixture B
+        id: build_b
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker buildx build             --load             --provenance=false             --metadata-file /tmp/build-b.json             --build-arg SOURCE_COMMIT="${{ steps.inputs.outputs.source_commit }}"             --build-arg MANIFEST_DIGEST="${{ steps.inputs.outputs.manifest_digest }}"             --build-arg FIXTURE_NONCE="${{ steps.inputs.outputs.nonce_b }}"             -t byteport-recovery:mutable             tests/fixtures/mature-recovery-app
+
+          ID_B="$(docker image inspect byteport-recovery:mutable --format '{{.Id}}')"
+          DIGEST_B="$(jq -r '."containerimage.digest" // empty' /tmp/build-b.json)"
+          test -n "$DIGEST_B"
+          test "$ID_B" != "${{ steps.build_a.outputs.image_id_a }}"
+          test "$DIGEST_B" != "${{ steps.build_a.outputs.digest_a }}"
+          test "$(docker image inspect byteport-recovery:mutable --format '{{.Id}}')" = "$ID_B"
+          {
+            echo "image_id_b=$ID_B"
+            echo "digest_b=$DIGEST_B"
+          } >> "$GITHUB_OUTPUT"
+          echo "Mutable tag now resolves to B: $ID_B / $DIGEST_B"
+
+      - name: Prove immutable A identity survives mutable-tag replacement
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker image inspect "${{ steps.build_a.outputs.image_id_a }}" >/dev/null
+          CID="$(docker run -d -p 127.0.0.1:18081:80 "${{ steps.build_a.outputs.image_id_a }}")"
+          trap 'docker rm -f "$CID" >/dev/null 2>&1 || true' EXIT
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:18081/__byteport_probe -o /tmp/probe-old.json; then break; fi
+            sleep 1
+          done
+          test -s /tmp/probe-old.json
+          python3 - <<'PY'
+          import json, os
+          p=json.load(open('/tmp/probe-old.json'))
+          assert p['fixture_nonce']==os.environ['NONCE_A']
+          print('immutable A still identifies original artifact:', p['fixture_nonce'])
+          PY
+        env:
+          NONCE_A: ${{ steps.inputs.outputs.nonce_a }}
+
+      - name: Upload raw build evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: byteport-mature-recovery-buildkit-metadata
+          path: |
+            /tmp/build-a.json
+            /tmp/build-b.json
+          retention-days: 30
+
+      - name: Write evidence summary
+        shell: bash
+        run: |
+          {
+            echo "## BytePort mature-recovery artifact chain"
+            echo
+            echo "- SourceSnapshot: ${{ steps.inputs.outputs.source_commit }}"
+            echo "- ManifestRevision: ${{ steps.inputs.outputs.manifest_digest }}"
+            echo "- Local image A: ${{ steps.build_a.outputs.image_id_a }}"
+            echo "- BuildKit digest A: ${{ steps.build_a.outputs.digest_a }}"
+            echo "- Mutable replacement B: ${{ steps.build_b.outputs.image_id_b }}"
+            echo "- BuildKit digest B: ${{ steps.build_b.outputs.digest_b }}"
+            echo "- Runtime probe matched source/manifest/nonce for A."
+            echo "- Immutable local A remained runnable after mutable tag moved to B."
+            echo "- Provenance attestation: NOT VERIFIED in this chain; BP-WP-B04 remains blocked on separate attestation verification."
+          } >> "$GITHUB_STEP_SUMMARY"
