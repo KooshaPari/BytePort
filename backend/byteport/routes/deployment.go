@@ -175,7 +175,7 @@ func DeployProject(c *gin.Context) {
 	status, body, err := nvmsRequest("/v1/deploy", jsonBody)
 	if err != nil {
 		log.Printf("deploy: sandbox provisioning failed for project %s: %v", project.UUID, err)
-		respondInternalError(c, "Failed to deploy project: "+err.Error())
+		respondError(c, http.StatusBadGateway, "Sandbox service is unreachable")
 		return
 	}
 
@@ -256,7 +256,7 @@ func TerminateInstance(c *gin.Context) {
 	status, body, err := nvmsRequest(stopPath, nil)
 	if err != nil {
 		log.Printf("terminate: stopping sandbox for project %s failed: %v", project.UUID, err)
-		respondInternalError(c, "Failed to stop sandbox: "+err.Error())
+		respondError(c, http.StatusBadGateway, "Sandbox service is unreachable")
 		return
 	}
 

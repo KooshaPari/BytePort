@@ -107,6 +107,12 @@ docker compose up -d
 
 ## Troubleshooting
 
+**Backend won't start (no OS keyring):**
+On Linux the API stores PASETO signing keys in the Secret Service. If that
+service is missing or locked, the process keeps the keys in
+`$XDG_CONFIG_HOME/byteport/keyring.json` (mode `0600`) and logs the path.
+Set `BYTEPORT_KEYRING_FILE` to choose a different file.
+
 **Backend won't start (port in use):**
 ```bash
 lsof -i :8081

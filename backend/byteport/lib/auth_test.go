@@ -1,9 +1,11 @@
 package lib
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -212,6 +214,62 @@ func TestInitAuthSystemIsIdempotent(t *testing.T) {
 	}
 }
 
+// TestInitAuthSystemFallsBackToFileKeyring covers a host with no Secret
+// Service: startup must still mint keys, persist them at mode 0600, keep
+// them across a second init, and sign a token that validates.
+func TestInitAuthSystemFallsBackToFileKeyring(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "keyring.json")
+	t.Setenv("BYTEPORT_KEYRING_FILE", path)
+	t.Setenv("SERVICE_KEY", "")
+	keyring.MockInitWithError(errors.New("failed to unlock correct collection '/org/freedesktop/secrets/aliases/default'"))
+	t.Cleanup(func() {
+		resetKeyringFallback()
+		keyring.MockInit()
+	})
+
+	if err := InitAuthSystem(); err != nil {
+		t.Fatalf("InitAuthSystem: %v", err)
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("stat keyring file: %v", err)
+	}
+	if info.Mode().Perm() != 0o600 {
+		t.Fatalf("keyring file mode = %o, want 600", info.Mode().Perm())
+	}
+
+	before, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read keyring file: %v", err)
+	}
+	if err := InitAuthSystem(); err != nil {
+		t.Fatalf("second InitAuthSystem: %v", err)
+	}
+	after, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("reread keyring file: %v", err)
+	}
+	if string(before) != string(after) {
+		t.Fatal("second InitAuthSystem rewrote keys that were already stored")
+	}
+
+	token, err := GenerateToken(models.User{UUID: "user-1", Email: "a@example.com"})
+	if err != nil {
+		t.Fatalf("GenerateToken: %v", err)
+	}
+	ok, parsed, err := ValidateToken(token)
+	if err != nil || !ok {
+		t.Fatalf("ValidateToken ok=%v err=%v", ok, err)
+	}
+	got, err := parsed.GetString(claimUserID)
+	if err != nil {
+		t.Fatalf("user-id claim: %v", err)
+	}
+	if got != "user-1" {
+		t.Fatalf("user-id = %q, want user-1", got)
+	}
+}
+
 // TestGenerateSymmetricKeyProducesHexOfCorrectLength covers the only behavior
 // of generateSymmetricKey that callers care about: a 64-character hex string
 // consumable by paseto.V4SymmetricKeyFromHex. Output is also non-deterministic.
@@ -394,7 +452,7 @@ func TestAuthenticateRequestRejectsInvalidToken(t *testing.T) {
 
 // TestAuthMiddlewareRejectsMissingCookie covers the first branch of
 // AuthMiddleware: when the authToken cookie is absent, the handler must
-// respond 401 with "Authorization header missing" and abort the chain.
+// respond 401 with "session cookie missing" and abort the chain.
 func TestAuthMiddlewareRejectsMissingCookie(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	resetMockKeyring(t)
@@ -414,8 +472,8 @@ func TestAuthMiddlewareRejectsMissingCookie(t *testing.T) {
 	if w.Code != http.StatusUnauthorized {
 		t.Fatalf("status = %d, want 401 (body %s)", w.Code, w.Body.String())
 	}
-	if !strings.Contains(w.Body.String(), "Authorization header missing") {
-		t.Fatalf("body = %q, want it to mention Authorization header missing", w.Body.String())
+	if !strings.Contains(w.Body.String(), "session cookie missing") {
+		t.Fatalf("body = %q, want it to mention session cookie missing", w.Body.String())
 	}
 }
 
