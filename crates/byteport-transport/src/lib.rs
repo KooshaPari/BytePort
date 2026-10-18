@@ -265,6 +265,7 @@ impl UploadTransport for S3UploadTransport {
 /// `X-Amz-Credential`, `X-Amz-Date`, `X-Amz-Expires`,
 /// `X-Amz-SignedHeaders`, `X-Amz-Signature`, optional
 /// `X-Amz-Security-Token`) appended.
+#[allow(clippy::too_many_arguments)]
 fn presign_put_url(
     credentials: &Credentials,
     region: &str,
