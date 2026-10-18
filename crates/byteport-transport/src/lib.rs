@@ -38,8 +38,8 @@ use std::collections::BTreeMap;
 use std::time::Duration;
 
 use aws_credential_types::Credentials;
-use aws_sigv4::http_request::{sign, SignableBody, SignableRequest, SigningSettings};
 use aws_sigv4::http_request::SignatureLocation;
+use aws_sigv4::http_request::{sign, SignableBody, SignableRequest, SigningSettings};
 use aws_sigv4::sign::v4;
 use aws_smithy_runtime_api::client::identity::Identity;
 use serde::{Deserialize, Serialize};
@@ -101,11 +101,7 @@ impl S3UploadTransport {
     /// that pass only an endpoint/bucket/prefix keep working: the URL
     /// shape (`/{bucket}/{key}`) is unchanged. This is the
     /// backwards-compatible constructor.
-    pub fn new(
-        endpoint: impl Into<String>,
-        bucket: impl Into<String>,
-        key_prefix: Option<impl Into<String>>,
-    ) -> Self {
+    pub fn new(endpoint: impl Into<String>, bucket: impl Into<String>, key_prefix: Option<impl Into<String>>) -> Self {
         Self {
             endpoint: endpoint.into(),
             bucket: bucket.into(),
@@ -128,13 +124,7 @@ impl S3UploadTransport {
         region: impl Into<String>,
         presign_ttl: Option<Duration>,
     ) -> Self {
-        let credentials = Credentials::new(
-            access_key.into(),
-            secret_key.into(),
-            None,
-            None,
-            "byteport-transport",
-        );
+        let credentials = Credentials::new(access_key.into(), secret_key.into(), None, None, "byteport-transport");
         Self {
             endpoint: endpoint.into(),
             bucket: bucket.into(),
@@ -298,9 +288,8 @@ fn presign_put_url(
     // Build the signable request. The host header is what AWS will
     // canonicalise; we extract it from the base URL so virtual-hosted
     // and path-style endpoints both work.
-    let host = extract_host(base_url).ok_or_else(|| {
-        UploadTransportError::SigningFailed(format!("could not extract host from {base_url}"))
-    })?;
+    let host = extract_host(base_url)
+        .ok_or_else(|| UploadTransportError::SigningFailed(format!("could not extract host from {base_url}")))?;
     let content_length_str = content_length.to_string();
     let signable = SignableRequest::new(
         method,
@@ -315,8 +304,7 @@ fn presign_put_url(
     )
     .map_err(|e| UploadTransportError::SigningFailed(e.to_string()))?;
 
-    let output = sign(signable, &params)
-        .map_err(|e| UploadTransportError::SigningFailed(e.to_string()))?;
+    let output = sign(signable, &params).map_err(|e| UploadTransportError::SigningFailed(e.to_string()))?;
     let (instructions, _signature) = output.into_parts();
 
     let mut signed = http::Request::builder()
@@ -430,9 +418,9 @@ mod tests {
 
         assert_eq!(upload.method, "PUT");
         assert!(
-            upload.url.starts_with(
-                "https://examplebucket.s3.us-east-1.amazonaws.com/examplebucket/demo/screenshot.png"
-            ),
+            upload
+                .url
+                .starts_with("https://examplebucket.s3.us-east-1.amazonaws.com/examplebucket/demo/screenshot.png"),
             "base URL should be preserved; got: {}",
             upload.url
         );
@@ -542,10 +530,7 @@ mod tests {
             extract_host("http://localhost:8080/bucket/key"),
             Some("localhost".into()) // 8080 not a default port -> keep
         );
-        assert_eq!(
-            extract_host("https://localhost:443/x"),
-            Some("localhost".into())
-        );
+        assert_eq!(extract_host("https://localhost:443/x"), Some("localhost".into()));
         assert_eq!(extract_host("/relative/path"), None);
     }
 }

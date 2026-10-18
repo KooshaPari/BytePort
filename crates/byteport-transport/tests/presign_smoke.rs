@@ -52,15 +52,7 @@ fn s3_presign_full_roundtrip_against_s3_compatible() {
     let object_key = "demo/screenshot.png";
 
     // 1. Build a signed transport pointing at LocalStack.
-    let transport = S3UploadTransport::with_credentials(
-        &endpoint,
-        bucket,
-        Some(""),
-        "test",
-        "test",
-        "us-east-1",
-        None,
-    );
+    let transport = S3UploadTransport::with_credentials(&endpoint, bucket, Some(""), "test", "test", "us-east-1", None);
 
     // 2. Presign a single PUT for a 1-byte `image/png` body.
     let instruction = transport
@@ -90,10 +82,7 @@ fn s3_presign_full_roundtrip_against_s3_compatible() {
         "X-Amz-SignedHeaders=",
         "X-Amz-Signature=",
     ] {
-        assert!(
-            url.contains(param),
-            "missing presign query param {param:?} in {url}"
-        );
+        assert!(url.contains(param), "missing presign query param {param:?} in {url}");
     }
 
     // 4. PUT 1 byte to the signed URL with `ureq`. LocalStack returns
