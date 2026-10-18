@@ -483,8 +483,6 @@ mod tests {
         let mut settings = SigningSettings::default();
         settings.signature_location = SignatureLocation::QueryParams;
         settings.expires_in = Some(Duration::from_secs(3600));
-        settings.payload_checksum_kind = PayloadChecksumKind::Unsigned;
-
         let creds = Credentials::new(
             "AKIDEXAMPLE",
             "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY",
