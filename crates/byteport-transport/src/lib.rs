@@ -38,14 +38,13 @@ use std::collections::BTreeMap;
 use std::time::Duration;
 
 use aws_credential_types::Credentials;
-use aws_sigv4::http_request::SignatureLocation;
-use aws_sigv4::http_request::{sign, SignableBody, SignableRequest, SigningSettings};
-use aws_sigv4::sign::v4;
-use aws_smithy_runtime_api::client::identity::Identity;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 pub mod ports;
+mod presign;
+
+use presign::presign_put_url;
 
 pub type TransportResult<T> = Result<T, UploadTransportError>;
 
@@ -246,100 +245,6 @@ impl UploadTransport for S3UploadTransport {
     }
 }
 
-/// Sign an S3 PUT presigned URL using AWS SigV4.
-///
-/// `base_url` is the absolute endpoint URL (e.g.
-/// `https://s3.us-east-1.amazonaws.com/bucket/key`), `path` is the URL
-/// path component (`/bucket/key`). The function returns the same URL
-/// with the SigV4 query parameters (`X-Amz-Algorithm`,
-/// `X-Amz-Credential`, `X-Amz-Date`, `X-Amz-Expires`,
-/// `X-Amz-SignedHeaders`, `X-Amz-Signature`, optional
-/// `X-Amz-Security-Token`) appended.
-#[allow(clippy::too_many_arguments)]
-fn presign_put_url(
-    credentials: &Credentials,
-    region: &str,
-    method: &str,
-    base_url: &str,
-    path: &str,
-    content_type: &str,
-    content_length: u64,
-    ttl: Duration,
-) -> TransportResult<String> {
-    let mut settings = SigningSettings::default();
-    settings.signature_location = SignatureLocation::QueryParams;
-    settings.expires_in = Some(ttl);
-    // S3 presigned PUTs do not sign the payload; the canonical request's
-    // payload hash is the literal `UNSIGNED-PAYLOAD` (from SignableBody::UnsignedPayload).
-    // We do NOT set payload_checksum_kind; the default `NoHeader` matches S3's
-    // expectation that no `x-amz-content-sha256` query param is added for presigned URLs.
-
-    let identity: Identity = credentials.clone().into();
-    let params = v4::SigningParams::builder()
-        .identity(&identity)
-        .region(region)
-        .name("s3")
-        .time(std::time::SystemTime::now())
-        .settings(settings)
-        .build()
-        .map_err(|e| UploadTransportError::SigningFailed(e.to_string()))?
-        .into();
-
-    // Build the signable request. The host header is what AWS will
-    // canonicalise; we extract it from the base URL so virtual-hosted
-    // and path-style endpoints both work.
-    let host = extract_host(base_url)
-        .ok_or_else(|| UploadTransportError::SigningFailed(format!("could not extract host from {base_url}")))?;
-    let content_length_str = content_length.to_string();
-    let signable = SignableRequest::new(
-        method,
-        base_url,
-        [
-            ("host", host.as_str()),
-            ("content-length", &content_length_str),
-            ("content-type", content_type),
-        ]
-        .into_iter(),
-        SignableBody::UnsignedPayload,
-    )
-    .map_err(|e| UploadTransportError::SigningFailed(e.to_string()))?;
-
-    let output = sign(signable, &params).map_err(|e| UploadTransportError::SigningFailed(e.to_string()))?;
-    let (instructions, _signature) = output.into_parts();
-
-    let mut signed = http::Request::builder()
-        .method(method)
-        .uri(base_url)
-        .body(())
-        .map_err(|e| UploadTransportError::SigningFailed(e.to_string()))?;
-    instructions.apply_to_request_http1x(&mut signed);
-
-    let signed_uri = signed.uri().to_string();
-    let _ = path; // retained for the caller's contract — we sign via URI
-    Ok(signed_uri)
-}
-
-/// Extract the host (no scheme, no port) from an absolute URL. Returns
-/// `None` for relative URLs.
-fn extract_host(url: &str) -> Option<String> {
-    let scheme_end = url.find("://")?;
-    let after = &url[scheme_end + 3..];
-    let host_end = after.find('/').unwrap_or(after.len());
-    let host_port = &after[..host_end];
-    // Drop default ports if present; keep custom ports.
-    let host = if let Some(colon) = host_port.rfind(':') {
-        let port = &host_port[colon + 1..];
-        if port == "443" || port == "80" {
-            &host_port[..colon]
-        } else {
-            host_port
-        }
-    } else {
-        host_port
-    };
-    Some(host.to_string())
-}
-
 #[derive(Debug, Error, Clone, PartialEq, Eq)]
 pub enum UploadTransportError {
     #[error("upload object key cannot be empty")]
@@ -439,98 +344,5 @@ mod tests {
                 upload.url
             );
         }
-    }
-
-    /// Golden test: the AWS-published SigV4 test suite ships an
-    /// expected signature for a POST request signed against
-    /// `service` / `us-east-1` with the canonical request:
-    ///
-    /// ```text
-    /// POST
-    /// /
-    /// X-Amz-Algorithm=...&X-Amz-Credential=AKIDEXAMPLE%2F20150830%2Fus-east-1%2Fservice%2Faws4_request&X-Amz-Date=20150830T123600Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=content-length%3Bcontent-type%3Bhost
-    /// content-length:13
-    /// content-type:application/x-www-form-urlencoded
-    /// host:example.amazonaws.com
-    ///
-    /// content-length;content-type;host
-    /// 9095672bbd1f56dfc5b65f3e153adc8731a4a654192329106275f4c7b24d0b6e
-    /// ```
-    ///
-    /// with the expected signature
-    /// `89a40deed0f26f9461242825a082d2222717248abc7ab41f552ad84a94ad46e9`.
-    /// We use the same credentials / region / timestamp but our own
-    /// service (`s3`) and path, and confirm that the Signature query
-    /// parameter is a 64-character lowercase hex string. The exact
-    /// signature differs from the test-suite POST because the service
-    /// and canonical-request differ; the deterministic-property check
-    /// (64 hex chars, non-empty) proves the signing pipeline ran end
-    /// to end.
-    #[test]
-    fn s3_transport_signature_is_well_formed_hex() {
-        let mut settings = SigningSettings::default();
-        settings.signature_location = SignatureLocation::QueryParams;
-        settings.expires_in = Some(Duration::from_secs(3600));
-        let creds = Credentials::new(
-            "AKIDEXAMPLE",
-            "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY",
-            None,
-            None,
-            "test",
-        );
-        let identity: Identity = creds.into();
-        let params = v4::SigningParams::builder()
-            .identity(&identity)
-            .region("us-east-1")
-            .name("s3")
-            .time(std::time::SystemTime::UNIX_EPOCH) // deterministic time anchor
-            .settings(settings)
-            .build()
-            .expect("signing params")
-            .into();
-
-        let signable = SignableRequest::new(
-            "PUT",
-            "https://examplebucket.s3.us-east-1.amazonaws.com/examplebucket/key",
-            [
-                ("host", "examplebucket.s3.us-east-1.amazonaws.com"),
-                ("content-length", "0"),
-                ("content-type", "application/octet-stream"),
-            ]
-            .into_iter(),
-            SignableBody::UnsignedPayload,
-        )
-        .expect("signable request");
-
-        let (instructions, signature) = sign(signable, &params).expect("sign").into_parts();
-        assert_eq!(signature.len(), 64, "SigV4 signature must be 64 hex chars");
-        assert!(
-            signature.chars().all(|c| c.is_ascii_hexdigit()),
-            "signature must be hex; got {signature}"
-        );
-
-        // Ensure the query parameters carry the signature.
-        let mut req = http::Request::builder()
-            .method("PUT")
-            .uri("https://examplebucket.s3.us-east-1.amazonaws.com/examplebucket/key")
-            .body(())
-            .unwrap();
-        instructions.apply_to_request_http1x(&mut req);
-        let uri = req.uri().to_string();
-        assert!(uri.contains(&format!("X-Amz-Signature={signature}")));
-    }
-
-    #[test]
-    fn extract_host_strips_scheme_and_default_ports() {
-        assert_eq!(
-            extract_host("https://examplebucket.s3.amazonaws.com/bucket/key"),
-            Some("examplebucket.s3.amazonaws.com".into())
-        );
-        assert_eq!(
-            extract_host("http://localhost:8080/bucket/key"),
-            Some("localhost".into()) // 8080 not a default port -> keep
-        );
-        assert_eq!(extract_host("https://localhost:443/x"), Some("localhost".into()));
-        assert_eq!(extract_host("/relative/path"), None);
     }
 }
