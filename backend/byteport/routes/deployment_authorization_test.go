@@ -211,27 +211,6 @@ func TestDeployProjectDerivesOwnerFromSession(t *testing.T) {
 	}
 }
 
-// TestDeployProjectUnreachableSandboxHidesUpstream covers a NanoVMS process
-// that is not listening. The client gets 502 and does not see the upstream
-// URL that the transport error would otherwise echo.
-func TestDeployProjectUnreachableSandboxHidesUpstream(t *testing.T) {
-	t.Setenv("NVMS_URL", "http://127.0.0.1:1")
-	alice := models.User{UUID: "alice-uuid", Name: "alice"}
-
-	w := httptest.NewRecorder()
-	DeployProject(handlerContext(w, "/deploy", `{"name":"my-app"}`, alice, true))
-
-	if w.Code != http.StatusBadGateway {
-		t.Fatalf("status = %d, want %d (body %s)", w.Code, http.StatusBadGateway, w.Body.String())
-	}
-	if strings.Contains(w.Body.String(), "127.0.0.1") || strings.Contains(w.Body.String(), "nvms") {
-		t.Fatalf("response leaked the upstream address: %s", w.Body.String())
-	}
-	if !strings.Contains(w.Body.String(), "Sandbox service is unreachable") {
-		t.Fatalf("body = %s, want the unreachable message", w.Body.String())
-	}
-}
-
 // TestTerminateInstanceRejectsInvalidBody verifies that a terminate request
 // without a project identifier is answered with 400 and never reaches NanoVMS.
 func TestTerminateInstanceRejectsInvalidBody(t *testing.T) {

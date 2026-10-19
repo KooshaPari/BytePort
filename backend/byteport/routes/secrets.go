@@ -71,16 +71,16 @@ func decryptUserPlatformSecrets(user models.User) (models.AwsCreds, models.Portf
 		portfolio models.Portfolio
 		err       error
 	)
-	if aws.AccessKeyID, err = decryptStoredSecret(user.AwsCreds.AccessKeyID); err != nil {
+	if aws.AccessKeyID, err = lib.DecryptSecret(user.AwsCreds.AccessKeyID); err != nil {
 		return aws, portfolio, &platformSecretError{Field: fieldAWSAccessKeyID, Op: "decrypt", Err: err}
 	}
-	if aws.SecretAccessKey, err = decryptStoredSecret(user.AwsCreds.SecretAccessKey); err != nil {
+	if aws.SecretAccessKey, err = lib.DecryptSecret(user.AwsCreds.SecretAccessKey); err != nil {
 		return aws, portfolio, &platformSecretError{Field: fieldAWSSecretAccessKey, Op: "decrypt", Err: err}
 	}
-	if portfolio.RootEndpoint, err = decryptStoredSecret(user.Portfolio.RootEndpoint); err != nil {
+	if portfolio.RootEndpoint, err = lib.DecryptSecret(user.Portfolio.RootEndpoint); err != nil {
 		return aws, portfolio, &platformSecretError{Field: fieldPortfolioURL, Op: "decrypt", Err: err}
 	}
-	if portfolio.APIKey, err = decryptStoredSecret(user.Portfolio.APIKey); err != nil {
+	if portfolio.APIKey, err = lib.DecryptSecret(user.Portfolio.APIKey); err != nil {
 		return aws, portfolio, &platformSecretError{Field: fieldPortfolioAPIKey, Op: "decrypt", Err: err}
 	}
 	return aws, portfolio, nil
@@ -109,14 +109,4 @@ func encryptUserPlatformSecrets(aws models.AwsCreds, portfolio models.Portfolio)
 		return encAWS, encPortfolio, &platformSecretError{Field: fieldPortfolioAPIKey, Op: "encrypt", Err: err}
 	}
 	return encAWS, encPortfolio, nil
-}
-
-// decryptStoredSecret treats a blank column as "not configured" and returns
-// an empty plaintext. A non-empty value that is not a valid ciphertext is
-// still an error, so corrupt secrets are not reported as unset.
-func decryptStoredSecret(cipherText string) (string, error) {
-	if cipherText == "" {
-		return "", nil
-	}
-	return lib.DecryptSecret(cipherText)
 }

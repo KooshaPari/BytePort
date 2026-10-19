@@ -2,13 +2,11 @@ package lib
 
 import (
 	"byteport/models"
-	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"strings"
-	"sync"
 	"time"
 
 	"aidanwoods.dev/go-paseto"
@@ -41,74 +39,8 @@ const (
 // Bounding these calls turns an indefinite hang into a clear startup error.
 const keyringTimeout = 10 * time.Second
 
-// osKeyringDown is set the first time the OS keyring fails for a reason other
-// than a missing entry. Later calls in the same process skip the OS store so
-// a locked or absent secret service does not add another timeout per key.
-var (
-	osKeyringMu   sync.Mutex
-	osKeyringDown bool
-)
-
-func osKeyringUnavailable() bool {
-	osKeyringMu.Lock()
-	defer osKeyringMu.Unlock()
-	return osKeyringDown
-}
-
-func noteOSKeyringDown(err error) {
-	osKeyringMu.Lock()
-	defer osKeyringMu.Unlock()
-	if osKeyringDown {
-		return
-	}
-	osKeyringDown = true
-	path, pathErr := fileKeyringPath()
-	if pathErr != nil {
-		log.Printf("OS keyring unavailable (%v); file keyring path unavailable: %v", err, pathErr)
-		return
-	}
-	log.Printf("OS keyring unavailable (%v); using file keyring at %s", err, path)
-}
-
-// resetKeyringFallback clears the process-local "OS keyring is down" latch.
-// Tests share one process, so a fallback test must not force later tests
-// onto the file store.
-func resetKeyringFallback() {
-	osKeyringMu.Lock()
-	osKeyringDown = false
-	osKeyringMu.Unlock()
-}
-
-// keyringGet reads a secret from the OS keyring. A missing entry is returned
-// as keyring.ErrNotFound so the caller can create it. Any other OS failure
-// (no Secret Service, locked keychain, timeout) falls back to the file store.
+// keyringGet is keyring.Get with a deadline.
 func keyringGet(service, user string) (string, error) {
-	if osKeyringUnavailable() {
-		return fileKeyringGet(service, user)
-	}
-	secret, err := keyringGetOS(service, user)
-	if err == nil || errors.Is(err, keyring.ErrNotFound) {
-		return secret, err
-	}
-	noteOSKeyringDown(err)
-	return fileKeyringGet(service, user)
-}
-
-// keyringSet writes a secret to the OS keyring, or to the file store when
-// the OS keyring cannot accept it.
-func keyringSet(service, user, secret string) error {
-	if osKeyringUnavailable() {
-		return fileKeyringSet(service, user, secret)
-	}
-	if err := keyringSetOS(service, user, secret); err != nil {
-		noteOSKeyringDown(err)
-		return fileKeyringSet(service, user, secret)
-	}
-	return nil
-}
-
-// keyringGetOS is keyring.Get with a deadline.
-func keyringGetOS(service, user string) (string, error) {
 	type result struct {
 		secret string
 		err    error
@@ -128,8 +60,8 @@ func keyringGetOS(service, user string) (string, error) {
 	}
 }
 
-// keyringSetOS is keyring.Set with a deadline.
-func keyringSetOS(service, user, secret string) error {
+// keyringSet is keyring.Set with a deadline.
+func keyringSet(service, user, secret string) error {
 	done := make(chan error, 1)
 	go func() {
 		done <- keyring.Set(service, user, secret)
@@ -319,7 +251,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		authToken, _ := c.Cookie("authToken")
 		if authToken == "" {
 			log.Println("Auth Token Missing")
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "session cookie missing"})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header missing"})
 			c.Abort()
 			return
 		}

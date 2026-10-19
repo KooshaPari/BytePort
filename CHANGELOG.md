@@ -7,10 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-
-- Add keyring fallback and first-run API errors (PR #440)
-
 ### Fixed
 
 - DAG YAML serialization now uses serde-saphyr, removing deprecated serde_yaml

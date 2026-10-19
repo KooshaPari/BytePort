@@ -24,13 +24,6 @@ func RetrieveRepositories(c *gin.Context) {
 		return
 	}
 
-	// An account that has not linked GitHub stores an empty token. That is
-	// an empty repository list, not a decrypt failure.
-	if strings.TrimSpace(user.Git.Token) == "" {
-		c.Data(http.StatusOK, "application/json", []byte("[]"))
-		return
-	}
-
 	decryptedToken, err := lib.DecryptSecret(user.Git.Token)
 
 	if err != nil {

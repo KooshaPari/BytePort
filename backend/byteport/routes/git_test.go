@@ -64,32 +64,6 @@ func TestRetrieveRepositoriesHappyPath(t *testing.T) {
 	}
 }
 
-// TestRetrieveRepositoriesUnlinkedReturnsEmptyList covers an account that
-// has not linked GitHub. An empty token is an empty list, not HTTP 500.
-func TestRetrieveRepositoriesUnlinkedReturnsEmptyList(t *testing.T) {
-	db := setupAuthDB(t)
-	user := models.User{UUID: uuid.NewString()}
-	if err := db.Create(&user).Error; err != nil {
-		t.Fatalf("seed user: %v", err)
-	}
-
-	r := gin.New()
-	r.GET("/repos", func(c *gin.Context) {
-		c.Set("user", user)
-		RetrieveRepositories(c)
-	})
-	req := httptest.NewRequest(http.MethodGet, "/repos", nil)
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Fatalf("status = %d, want 200 (body %s)", w.Code, w.Body.String())
-	}
-	if strings.TrimSpace(w.Body.String()) != "[]" {
-		t.Errorf("body = %q, want []", w.Body.String())
-	}
-}
-
 // TestRetrieveRepositoriesDecryptError covers the decrypt-failure branch:
 // when the stored Git token is not a valid AES payload, the route must
 // respond 500 with "Failed to decrypt Git token".

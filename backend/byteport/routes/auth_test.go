@@ -13,7 +13,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 // authTestRouter returns a gin engine with /login, /signup, /authenticate, and
@@ -569,34 +568,6 @@ func TestLinkHandlerRedirectsToGitHub(t *testing.T) {
 
 // TestUpdateLinkLocalProviderNoDecrypt covers the "local" provider branch:
 // when LLMConfig.Provider == "local", UpdateLink must skip the OpenAI
-// runUpdateLink seeds the given user and drives GET /update-link through the
-// UpdateLink handler, returning the decoded user record. Shared by the
-// decrypt and fresh-account UpdateLink tests.
-func runUpdateLink(t *testing.T, db *gorm.DB, user models.User) models.User {
-	t.Helper()
-	if err := db.Create(&user).Error; err != nil {
-		t.Fatalf("seed: %v", err)
-	}
-
-	r := gin.New()
-	r.GET("/update-link", func(c *gin.Context) {
-		c.Set("user", user)
-		UpdateLink(c)
-	})
-	req := httptest.NewRequest(http.MethodGet, "/update-link", nil)
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Fatalf("status = %d, want 200 (body %s)", w.Code, w.Body.String())
-	}
-	var resp models.User
-	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
-		t.Fatalf("body not JSON: %v", err)
-	}
-	return resp
-}
-
 // decrypt and return the user with the credentials cleared.
 //
 // This is the path the UI hits when the user picks a local LLM and so has
@@ -621,40 +592,28 @@ func TestUpdateLinkLocalProviderNoDecrypt(t *testing.T) {
 			APIKey:       mustEncrypt(t, "portfolio-key"),
 		},
 	}
-	resp := runUpdateLink(t, db, user)
+	if err := db.Create(&user).Error; err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+
+	r := gin.New()
+	r.GET("/update-link", func(c *gin.Context) {
+		c.Set("user", user)
+		UpdateLink(c)
+	})
+	req := httptest.NewRequest(http.MethodGet, "/update-link", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 (body %s)", w.Code, w.Body.String())
+	}
+	var resp models.User
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("body not JSON: %v", err)
+	}
 	if resp.AwsCreds.AccessKeyID != "AKIA-test" {
 		t.Errorf("AwsCreds.AccessKeyID = %q, want AKIA-test (was not decrypted)", resp.AwsCreds.AccessKeyID)
-	}
-}
-
-// TestUpdateLinkFreshUserReturnsEmptyCredentials covers a newly signed-up
-// account: GET /user/:id/creds must answer 200 with blank secrets. Seeding
-// the default provider and then failing the lookup used to return 500, so
-// the settings page could not load.
-func TestUpdateLinkFreshUserReturnsEmptyCredentials(t *testing.T) {
-	db := setupAuthDB(t)
-	user := models.User{
-		UUID:     uuid.NewString(),
-		Email:    "fresh@example.com",
-		Name:     "Fresh",
-		Password: "x",
-	}
-	resp := runUpdateLink(t, db, user)
-	if resp.AwsCreds.AccessKeyID != "" || resp.AwsCreds.SecretAccessKey != "" {
-		t.Errorf("aws creds = %+v, want empty", resp.AwsCreds)
-	}
-	if resp.Portfolio.RootEndpoint != "" || resp.Portfolio.APIKey != "" {
-		t.Errorf("portfolio = %+v, want empty", resp.Portfolio)
-	}
-	if resp.LLMConfig.Provider != defaultLLMProvider {
-		t.Errorf("provider = %q, want %q", resp.LLMConfig.Provider, defaultLLMProvider)
-	}
-	entry, ok := resp.LLMConfig.Providers[defaultLLMProvider]
-	if !ok {
-		t.Fatalf("providers = %#v, want an entry for %s", resp.LLMConfig.Providers, defaultLLMProvider)
-	}
-	if entry.APIKey != "" {
-		t.Errorf("provider api key = %q, want empty", entry.APIKey)
 	}
 }
 

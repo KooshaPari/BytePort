@@ -162,16 +162,19 @@ func UpdateLink(c *gin.Context) {
 	if user.LLMConfig.Providers == nil {
 		user.LLMConfig.Providers = make(map[string]models.AIProvider)
 	}
-	decryptedOAI := ""
+	decryptedOAI := "err"
 	var err error
 	// ProviderEntry matches case-insensitively so a credential stored under a
 	// drifted key ("openAI") is still found, and it reports the key it came
 	// from so the entry is written back in place instead of duplicated.
-	// A fresh account has no provider entry yet. That is "not configured",
-	// not a decrypt failure: the settings page loads this endpoint on first
-	// visit and must get an empty credential rather than HTTP 500.
 	providerKey, provider, providerFound := user.LLMConfig.ProviderEntry(user.LLMConfig.Provider)
-	if providerFound && user.LLMConfig.Provider != "local" && provider.APIKey != "" {
+	if user.LLMConfig.Provider != "local" {
+		if !providerFound {
+			respondErrorWithDetails(c, http.StatusInternalServerError, "Failed to decrypt OAI", gin.H{
+				"details": fmt.Sprintf("no provider entry for %q", user.LLMConfig.Provider),
+			})
+			return
+		}
 		decryptedOAI, err = lib.DecryptSecret(provider.APIKey)
 		if err != nil {
 			respondInternalError(c, "Failed to decrypt OAI")
