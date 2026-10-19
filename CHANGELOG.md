@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Add shared ingress import-plan model (PR #439)
+
 ### Fixed
 
 - DAG YAML serialization now uses serde-saphyr, removing deprecated serde_yaml
