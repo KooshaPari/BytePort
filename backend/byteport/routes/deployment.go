@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -246,9 +247,11 @@ func TerminateInstance(c *gin.Context) {
 	}
 
 	// NanoVMS stop expects POST /v1/stop?id=<sandbox_id> with query param.
-	sandboxID := project.UUID
-	if sandboxID == "" {
-		respondBadRequest(c, "missing sandbox ID")
+	deployment, exists := project.GetDeploy()["default"]
+	sandboxID := deployment.UUID
+	if !exists || strings.TrimSpace(sandboxID) == "" || strings.TrimSpace(sandboxID) != sandboxID ||
+		deployment.Owner != user.UUID || deployment.ResUUID != project.UUID {
+		respondBadRequest(c, "missing or invalid sandbox identity")
 		return
 	}
 
