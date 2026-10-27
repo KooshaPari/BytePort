@@ -32,6 +32,7 @@ type nvmsStub struct {
 	mu      sync.Mutex
 	deploys int
 	stops   int
+	stopIDs []string
 }
 
 func newNVMSStub(t *testing.T) *nvmsStub {
@@ -45,6 +46,7 @@ func newNVMSStub(t *testing.T) *nvmsStub {
 			stub.deploys++
 		case "/v1/stop":
 			stub.stops++
+			stub.stopIDs = append(stub.stopIDs, r.URL.Query().Get("id"))
 		}
 		stub.mu.Unlock()
 
@@ -296,10 +298,11 @@ func TestTerminateInstanceStopsOwnProject(t *testing.T) {
 	alice := models.User{UUID: "alice-uuid"}
 
 	if err := db.Create(&models.Project{
-		UUID:  "alice-project",
-		ID:    "alice-project",
-		Owner: alice.UUID,
-		Name:  "alice-app",
+		UUID:            "alice-project",
+		ID:              "alice-project",
+		Owner:           alice.UUID,
+		Name:            "alice-app",
+		DeploymentsJSON: `{"default":{"UUID":"provider-different&other=escaped","Owner":"alice-uuid","ResUUID":"alice-project"}}`,
 	}).Error; err != nil {
 		t.Fatalf("seed alice's project: %v", err)
 	}
@@ -313,6 +316,12 @@ func TestTerminateInstanceStopsOwnProject(t *testing.T) {
 	if got := stub.stopCalls(); got != 1 {
 		t.Errorf("NanoVMS stop calls = %d, want 1", got)
 	}
+
+	stub.mu.Lock()
+	if len(stub.stopIDs) != 1 || stub.stopIDs[0] != "provider-different&other=escaped" {
+		t.Errorf("stop IDs = %v, want exact stored provider ID", stub.stopIDs)
+	}
+	stub.mu.Unlock()
 
 	var remaining int64
 	if err := db.Model(&models.Project{}).Where("uuid = ?", "alice-project").Count(&remaining).Error; err != nil {
