@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Add LocalStack integration test for S3 presign flow (PR #443)
+
 ### Fixed
 
 - DAG YAML serialization now uses serde-saphyr, removing deprecated serde_yaml
