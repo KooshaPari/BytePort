@@ -1,0 +1,363 @@
+{
+  "schema": "mature-recovery-work-packages/v1",
+  "product": "KooshaPari/BytePort",
+  "source_snapshot": "0232cca16fedb7963a8c6f556dc5eee5c8c1674e",
+  "packages": [
+    {
+      "id": "BP-WP-A01",
+      "tier": "A",
+      "title": "Additive domain identities",
+      "depends_on": [],
+      "merge_gate": "READY",
+      "critical": [
+        "ProjectID != ProviderResourceID",
+        "component supports built/prebuilt/non-artifact"
+      ],
+      "evidence_required": [
+        "type/value tests",
+        "fingerprint conflict"
+      ]
+    },
+    {
+      "id": "BP-WP-A02",
+      "tier": "A",
+      "title": "Legacy-safe additive persistence",
+      "depends_on": [
+        "BP-WP-A01"
+      ],
+      "merge_gate": "READY",
+      "critical": [
+        "legacy remains readable",
+        "no fake source/artifact verification"
+      ],
+      "evidence_required": [
+        "old DB migration",
+        "idempotent migration",
+        "no provider side effect"
+      ]
+    },
+    {
+      "id": "BP-WP-A03",
+      "tier": "A",
+      "title": "Common application operations",
+      "depends_on": [
+        "BP-WP-A01"
+      ],
+      "merge_gate": "READY",
+      "critical": [
+        "surface-neutral operations",
+        "plan != execute"
+      ],
+      "evidence_required": [
+        "test-double CLI/API/Desktop projection"
+      ]
+    },
+    {
+      "id": "BP-WP-A04",
+      "tier": "A",
+      "title": "BuildEngine interface",
+      "depends_on": [
+        "BP-WP-A01",
+        "BP-WP-A03"
+      ],
+      "merge_gate": "READY",
+      "critical": [
+        "immutable artifact identity",
+        "engine capability not brand"
+      ],
+      "evidence_required": [
+        "prebuilt fake",
+        "BuildKit prototype contract"
+      ]
+    },
+    {
+      "id": "BP-WP-A05",
+      "tier": "A",
+      "title": "RuntimeAdapter interface",
+      "depends_on": [
+        "BP-WP-A01",
+        "BP-WP-A03"
+      ],
+      "merge_gate": "READY",
+      "critical": [
+        "exact ProviderResource",
+        "UNKNOWN/reconcile support"
+      ],
+      "evidence_required": [
+        "fake create/observe/stop/reconcile"
+      ]
+    },
+    {
+      "id": "BP-WP-A06",
+      "tier": "A",
+      "title": "Trace and evidence qualification validator",
+      "depends_on": [
+        "BP-WP-A02",
+        "BP-WP-A03",
+        "BP-WP-A04",
+        "BP-WP-A05"
+      ],
+      "merge_gate": "READY",
+      "critical": [
+        "exact source/artifact/operation/resource identities",
+        "legacy scorecards excluded"
+      ],
+      "evidence_required": [
+        "invalid receipt fixtures"
+      ]
+    },
+    {
+      "id": "BP-WP-B01",
+      "tier": "B",
+      "title": "Provider stop remediation",
+      "depends_on": [
+        "BP-WP-A01",
+        "BP-WP-A05",
+        "BP-WP-A06"
+      ],
+      "merge_gate": "READY",
+      "blocked_by": [],
+      "evidence_required": [
+        "BP-F03 retained counterexample",
+        "zero-resource fixture",
+        "one-resource exact stop",
+        "multi-resource selection",
+        "unrelated-resource survival"
+      ],
+      "critical": [
+        "Stop resolves typed ProviderResource identity from the selected deployment generation",
+        "No ProjectID fallback",
+        "Zero/one/multiple resource selection is explicit",
+        "Unrelated provider resource survives"
+      ],
+      "qualification": "QUALIFIED run 36745277093 job 109995492856"
+    },
+    {
+      "id": "BP-WP-B02",
+      "tier": "B",
+      "title": "Durable operation journal",
+      "depends_on": [
+        "BP-WP-A01",
+        "BP-WP-A02",
+        "BP-WP-A05",
+        "BP-WP-A06"
+      ],
+      "merge_gate": "READY",
+      "blocked_by": [],
+      "evidence_required": [
+        "duplicate deploy current-behavior receipt",
+        "full operation journal model",
+        "restart fixture",
+        "lost response fixture"
+      ],
+      "critical": [
+        "Persist recoverable operation identity before provider mutation",
+        "Same OperationID/different fingerprint rejects",
+        "UNKNOWN/RECONCILING survives restart",
+        "Retry cannot blindly duplicate provider mutation"
+      ],
+      "qualification": "QUALIFIED mounted handler run 36749551929 job 110004908884 plus model jobs 110004909157/110004909035"
+    },
+    {
+      "id": "BP-WP-B03",
+      "tier": "B",
+      "title": "Source and manifest integration",
+      "depends_on": [
+        "BP-WP-A01",
+        "BP-WP-A03",
+        "BP-WP-A06"
+      ],
+      "merge_gate": "BLOCKED",
+      "blocked_by": [
+        "integration into build/runtime production path remains a separate authorization gate"
+      ],
+      "evidence_required": [
+        "branch move",
+        "mutable resolver rejection",
+        "strict valid manifest",
+        "missing name/services",
+        "duplicate names",
+        "path escape",
+        "invalid port",
+        "unknown key",
+        "malformed YAML",
+        "manifest-to-graph projection",
+        "BUILD/ENV inertness"
+      ],
+      "critical": [
+        "Mutable ref resolves once to immutable commit",
+        "Manifest exact bytes are digested before parsing",
+        "Invalid/unknown/path-escape/port errors stop before runtime mutation",
+        "BUILD/ENV parsing does not authorize execution or secret use"
+      ],
+      "qualification": "QUALIFIED on exact candidate a9b0749b3146400934b09237ab625d0952692ae4 by BytePort Mature Recovery Oracle run 36927029714: immutable source, strict exact-byte manifest, explicit-target graph projection and BUILD/ENV inertness passed"
+    },
+    {
+      "id": "BP-WP-B04",
+      "tier": "B",
+      "title": "Selected-app build integration",
+      "depends_on": [
+        "BP-WP-A04",
+        "BP-WP-B03"
+      ],
+      "merge_gate": "BLOCKED",
+      "blocked_by": [
+        "independently verifiable provenance attestation remains open",
+        "selected-app production build/runtime integration remains separate"
+      ],
+      "evidence_required": [
+        "immutable artifact",
+        "live selected-app probe",
+        "wrong-artifact-200"
+      ],
+      "critical": [
+        "Preserve Selected-app build integration mature identity/invariants; do not bypass the documented merge gate"
+      ],
+      "qualification": "Immutable artifact identity/runtime chain and wrong-manifest artifact lineage guards implemented; provenance attestation is still explicitly unqualified"
+    },
+    {
+      "id": "BP-WP-B05",
+      "tier": "B",
+      "title": "Network mode and auth",
+      "depends_on": [
+        "BP-WP-A03",
+        "BP-WP-A06"
+      ],
+      "merge_gate": "BLOCKED",
+      "blocked_by": [
+        "reachability threat review",
+        "health/metrics exposure decision",
+        "default network mode decision"
+      ],
+      "evidence_required": [
+        "expired session rejection receipt",
+        "loopback/LAN reachability fixtures",
+        "public health/metrics exposure fixture"
+      ],
+      "critical": [
+        "CORS is not authorization",
+        "Mutation boundary rechecks auth",
+        "Network placement mode is explicit"
+      ]
+    },
+    {
+      "id": "BP-WP-B06",
+      "tier": "B",
+      "title": "Portfolio projection and publisher",
+      "depends_on": [
+        "BP-WP-A01",
+        "BP-WP-A03",
+        "BP-WP-A06"
+      ],
+      "merge_gate": "BLOCKED",
+      "blocked_by": [
+        "projection/publication adapter decision"
+      ],
+      "evidence_required": [
+        "failure independence",
+        "publication idempotency"
+      ],
+      "critical": [
+        "Preserve Portfolio projection and publisher mature identity/invariants; do not bypass the documented merge gate"
+      ]
+    },
+    {
+      "id": "BP-WP-B07",
+      "tier": "B",
+      "title": "CLI Desktop API convergence",
+      "depends_on": [
+        "BP-WP-A03",
+        "BP-WP-B02",
+        "BP-WP-B03",
+        "BP-WP-B04"
+      ],
+      "merge_gate": "BLOCKED",
+      "blocked_by": [
+        "common operation integrated"
+      ],
+      "evidence_required": [
+        "same-intent cross-projection"
+      ],
+      "critical": [
+        "Preserve CLI Desktop API convergence mature identity/invariants; do not bypass the documented merge gate"
+      ]
+    },
+    {
+      "id": "BP-WP-A07",
+      "tier": "A",
+      "title": "Generalized desired infrastructure graph",
+      "depends_on": [
+        "BP-WP-A01",
+        "BP-WP-A03"
+      ],
+      "merge_gate": "READY",
+      "critical": [
+        "Application component is one DesiredResource kind",
+        "Target is provider-neutral identity",
+        "ResourcePlan is not realized state",
+        "Non-artifact infrastructure is first-class"
+      ],
+      "evidence_required": [
+        "mixed-resource graph fixture",
+        "target capability fixture",
+        "plan-vs-realized fixture"
+      ],
+      "qualification": "QUALIFIED on exact candidate a9b0749b3146400934b09237ab625d0952692ae4 by BytePort Mature Recovery Oracle run 36927029714"
+    },
+    {
+      "id": "BP-WP-B08",
+      "tier": "B",
+      "title": "Generalized infrastructure reconciliation",
+      "depends_on": [
+        "BP-WP-A05",
+        "BP-WP-A07",
+        "BP-WP-A06"
+      ],
+      "merge_gate": "BLOCKED",
+      "blocked_by": [
+        "exact CI receipt for generalized adapter + HTTP lifecycle and ambiguous DELETE",
+        "production /deploy routing remains on legacy handler",
+        "production destructive execution remains gated by exact provider authorization",
+        "network/security authority unresolved"
+      ],
+      "critical": [
+        "UNKNOWN observation cannot trigger destructive guess",
+        "Create/update/replace/delete/no-op explicit",
+        "Destruction requires exact authorized intent"
+      ],
+      "evidence_required": [
+        "mixed desired/observed graph",
+        "update fixture",
+        "unknown observation fixture",
+        "destruction safety fixture"
+      ],
+      "qualification": "Previously qualified reference/provider-fixture and generalized NanoVMS HTTP transport. Current candidate adds full generalized adapter+HTTP CREATE/OBSERVE/restart-NOOP/exact-DELETE lifecycle and maps ambiguous destructive stop to UNKNOWN with exact sandbox reconciliation identity. Exact candidate a108a3c60874b5782090426f0886a05c77715ede pending."
+    },
+    {
+      "id": "BP-WP-B09",
+      "tier": "B",
+      "title": "Bare-metal target adapter",
+      "depends_on": [
+        "BP-WP-A07",
+        "BP-WP-B08"
+      ],
+      "merge_gate": "BLOCKED",
+      "blocked_by": [
+        "bare-metal bootstrap decision",
+        "target capability contract",
+        "disposable bare-metal/VM fixture"
+      ],
+      "critical": [
+        "Bare metal not modeled as fake cloud",
+        "Provider-specific capability remains extension",
+        "Exact host/resource identity preserved"
+      ],
+      "evidence_required": [
+        "target discovery",
+        "plan/apply/observe/reconcile",
+        "restart",
+        "destroy exact resource"
+      ]
+    }
+  ]
+}

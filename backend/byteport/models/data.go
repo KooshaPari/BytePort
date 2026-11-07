@@ -106,7 +106,7 @@ func connectDatabase(dsn string) (*gorm.DB, error) {
 	}
 
 	// AutoMigrate models in the correct order
-	if err := database.AutoMigrate(&User{}, &Project{}, &Instance{}, &GitSecret{}); err != nil {
+	if err := database.AutoMigrate(&User{}, &Project{}, &Instance{}, &GitSecret{}, &RuntimeOperationRecord{}); err != nil {
 		return nil, fmt.Errorf("failed to auto-migrate SQLite database %s: %w", descriptionOf(dsn), err)
 	}
 
