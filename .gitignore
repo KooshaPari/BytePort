@@ -77,3 +77,14 @@ backend/byteport.db
 backend/byteport/byteport.db
 backend/*.db-wal
 backend/*.db-shm
+
+# Local agent-tooling artifacts (machine-generated; never repo source).
+#
+# /.agents/ is a tool-materialized mirror of the tracked .claude/skills/ tree.
+# The tracked copy at .claude/skills/byteport/SKILL.md is byte-for-byte
+# identical and is the canonical location, so the mirror is redundant.
+/.agents/
+#
+# /.ws.json is a local worktree-session state file: keyed to the worktree
+# directory name and carrying TTL/session metadata. It is machine-specific.
+/.ws.json
